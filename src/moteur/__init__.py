@@ -1,0 +1,1 @@
+"""Moteur local de candidatures."""

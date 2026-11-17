@@ -1,0 +1,73 @@
+# Copie ce fichier en config.toml (ignoré par Git) puis adapte-le.
+
+# Envoyé à Claude pour noter les offres. N'y mets rien de confidentiel :
+# le plancher salarial reste dans [criteres] et n'est jamais transmis.
+profil = """
+Décris ici ton profil en quelques lignes : métier, années d'expérience, compétences clés,
+poste visé, types de structures et secteurs préférés ou exclus, lieux acceptés.
+Exemple : Data Scientist, 5 ans d'expérience (NLP, MLOps). Vise un poste senior en
+startup ou scale-up, à Lyon ou en télétravail. Pas de cabinet de conseil.
+"""
+
+# Intitulé utilisé pour les candidatures spontanées.
+role_spontane = "Data Scientist"
+
+# Nombre d'offres notées par appel à Claude.
+taille_lot = 8
+
+[modeles]
+notation = "haiku"
+generation = "sonnet"
+
+[criteres]
+# Au moins une expression doit apparaître dans l'intitulé (mots entiers, accents ignorés).
+mots_cles = [
+  "data scientist", "machine learning engineer", "ml engineer", "ingenieur ia",
+  # Intitulés courants dans la fonction publique.
+  "science des donnees", "intelligence artificielle",
+]
+# Aucune de ces expressions ne doit apparaître dans l'intitulé.
+exclusions = ["stage", "stagiaire", "alternance", "apprenti", "intern", "internship"]
+# Vide = partout. Une offre sans lieu indiqué passe toujours.
+lieux = ["lyon", "69", "remote", "teletravail"]
+# Rejette une offre seulement si son salaire annuel maximum affiché est inférieur. 0 = pas de filtre.
+salaire_plancher = 0
+
+[france_travail]
+# Identifiants gratuits sur https://francetravail.io, à fournir par les variables
+# d'environnement FRANCE_TRAVAIL_ID et FRANCE_TRAVAIL_SECRET.
+actif = false
+recherches = ["intelligence artificielle", "data scientist", "machine learning"]
+departements = ["69"]
+publiee_depuis = 7
+
+[service_public]
+# Choisir le service public (choisirleservicepublic.gouv.fr) : les postes des ministères,
+# de la DGSE, de la DGSI, de la DINUM, de l'AMIAD, de l'ANSSI (via le SGDSN)… Sans
+# identifiants. Chaque recherche est lancée sur tout le site, puis chez les employeurs
+# ci-dessous (les résultats sont triés par pertinence, 20 par page).
+actif = true
+recherches = ["data scientist", "machine learning", "science des données"]
+# Restreint toutes les recherches à ces domaines ; vide = tous.
+# Noms reconnus : Défense, Numérique, Recherche, Renseignement, Sécurité, Environnement…
+domaines = []
+# Noms reconnus (voir EMPLOYEURS dans src/moteur/sources/service_public.py) ou identifiant
+# numérique du site : le nombre après /organisme/ dans l'adresse d'une recherche filtrée.
+employeurs = ["DINUM", "INSEE"]
+# Pages lues par recherche (20 offres par page).
+pages_max = 3
+
+# Entreprises suivies. « ats » et « identifiant » selon l'outil de la page carrières :
+#   greenhouse, lever, ashby : job-boards.greenhouse.io/<id>, jobs.lever.co/<id>, jobs.ashbyhq.com/<id>
+#   smartrecruiters : jobs.smartrecruiters.com/<id>
+#   recruitee, teamtailor : <id>.recruitee.com, <id>.teamtailor.com
+#   workday : l'adresse complète (https://<tenant>.wd3.myworkdayjobs.com/<site>),
+#             avec « recherches » = mots-clés (sinon IA, machine learning, data scientist)
+# « spontanee = true » propose une candidature spontanée quand aucune offre ne correspond.
+#
+# [[entreprises]]
+# nom = "Exemple"
+# ats = "lever"
+# identifiant = "exemple"
+# site = "https://exemple.com"
+# spontanee = true

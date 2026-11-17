@@ -1,0 +1,57 @@
+import json
+
+import pytest
+
+from moteur.echange import Decision, ErreurEchange, lire_decisions, pour_la_page, serialiser
+from moteur.modeles import Candidature, Offre
+
+
+def test_format_lu_par_la_page() -> None:
+    notee = Candidature(Offre("Acme", "Data Scientist", url="https://a"), "notee", score=80)
+    generee = Candidature(
+        Offre("Libre", "Lead AI", type="spontanee"),
+        "generee",
+        lettre_demandee=True,
+        cv_ref="Candidatures/Libre/cv.pdf",
+        lettre_ref="Candidatures/Libre/lettre.pdf",
+    )
+    premiere, seconde = pour_la_page([notee, generee])
+    assert premiere == {
+        "type": "offre",
+        "entreprise": "Acme",
+        "poste": "Data Scientist",
+        "lieu": "",
+        "url": "https://a",
+        "source": "",
+        "moteur": "B",
+        "resume": "",
+        "lettre_demandee": False,
+        "score": 80,
+    }
+    assert "id" not in premiere
+    assert "score" not in seconde
+    assert seconde["cv_ref"] == "Candidatures/Libre/cv.pdf"
+    assert json.loads(serialiser([notee])) == [premiere]
+
+
+def test_lire_decisions() -> None:
+    export = {
+        "exporte_le": "2026-11-16",
+        "candidatures": [
+            {"id": "offre_acme_data-scientist", "statut": "acceptee", "consigne": "Plus court"},
+            {"id": "offre_bolt_ai-engineer", "statut": "refusee", "consigne": None},
+            {"statut": "acceptee"},
+            "bruit",
+        ],
+    }
+    assert lire_decisions(json.dumps(export)) == [
+        Decision("offre_acme_data-scientist", "acceptee", "Plus court"),
+        Decision("offre_bolt_ai-engineer", "refusee"),
+    ]
+    assert lire_decisions("[]") == []
+
+
+@pytest.mark.parametrize("texte", ["pas du json", '{"autre": 1}', '"chaine"'])
+def test_export_illisible(texte: str) -> None:
+    with pytest.raises(ErreurEchange):
+        lire_decisions(texte)
