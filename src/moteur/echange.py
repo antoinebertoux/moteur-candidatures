@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 from collections.abc import Iterable
 from dataclasses import dataclass
+from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 from moteur.modeles import Candidature
@@ -21,7 +23,18 @@ class Decision:
     consigne: str = ""
 
 
-def pour_la_page(candidatures: Iterable[Candidature]) -> list[dict[str, Any]]:
+def _date_fichier(fichier: Path) -> str | None:
+    """Date de modification au format de `Date.toISOString()` de la page, ou None."""
+    try:
+        moment = datetime.fromtimestamp(fichier.stat().st_mtime, UTC)
+    except OSError:
+        return None
+    return moment.isoformat(timespec="milliseconds").replace("+00:00", "Z")
+
+
+def pour_la_page(
+    candidatures: Iterable[Candidature], racine: Path | None = None
+) -> list[dict[str, Any]]:
     """Format lu par le bouton « Importer » de la page.
 
     La page recalcule elle-même l'identifiant à partir du type, de l'entreprise et du
@@ -45,14 +58,19 @@ def pour_la_page(candidatures: Iterable[Candidature]) -> list[dict[str, Any]]:
             ligne["score"] = candidature.score
         if candidature.cv_ref:
             ligne["cv_ref"] = candidature.cv_ref
+            # La page ne repasse un dossier en « À valider » que s'il a été généré après
+            # la dernière consigne de retouche : un vieil export ne l'écrase pas.
+            genere_le = _date_fichier(racine / candidature.cv_ref) if racine else None
+            if genere_le:
+                ligne["genere_le"] = genere_le
         if candidature.lettre_ref:
             ligne["lettre_ref"] = candidature.lettre_ref
         lignes.append(ligne)
     return lignes
 
 
-def serialiser(candidatures: Iterable[Candidature]) -> str:
-    return json.dumps(pour_la_page(candidatures), ensure_ascii=False, indent=2)
+def serialiser(candidatures: Iterable[Candidature], racine: Path | None = None) -> str:
+    return json.dumps(pour_la_page(candidatures, racine), ensure_ascii=False, indent=2)
 
 
 def lire_decisions(texte: str) -> list[Decision]:
