@@ -3,11 +3,13 @@ from pathlib import Path
 import pytest
 
 from moteur.config import ErreurConfig, analyser
+from moteur.modeles import Offre
 from moteur.sources.service_public import (
     EMPLOYEURS,
     SourceServicePublic,
     adresse,
     date_francaise,
+    description_service_public,
     identifiant,
     offres_service_public,
     total_annonce,
@@ -120,3 +122,52 @@ def test_config_service_public() -> None:
         analyser({"service_public": {"employeurs": ["Inconnu"]}}, Path())
     with pytest.raises(ErreurConfig):
         analyser({"service_public": {"pages_max": 0}}, Path())
+
+
+# Extrait réel (raccourci) d'une page d'offre, relevé le 17/11/2026.
+PAGE_OFFRE = """<main class="dsfr main-content-single-offer">
+<div class="strate-hero-offer"><h1>TRACFIN - Data scientist H/F</h1></div>
+<div class="strate-two-columns fr-pt-3w bg-color--white"><div class="fr-container">
+<div class="fr-grid-row fr-grid-row--gutters">
+<div class="fr-col-12 fr-col-md-12 fr-col-lg-6 fr-col-offset-lg-2  col-left rte">
+  <h2>Vos missions en quelques mots</h2>
+  <div data-module="components/clamp">
+    <div class="text-clamp--text fr-mb-3w"><p>Le pôle data valorise les données du service.<br>
+    Il détecte des phénomènes d&rsquo;intérêt&nbsp;:</p></div>
+    <button class="text-clamp--cta btnlink fr-link">Afficher la suite</button>
+    <div class="text-clamp--hiddentext" hidden=""><p><br> • Gestion de projet <br> • Prototypage</p>
+    </div>
+  </div>
+  <h2 class="fr-mt-8w">Profil recherché</h2>
+  <div data-module="components/clamp">
+    <div class="text-clamp--text"><p>Bac+5 en data science.</p></div>
+  </div>
+  <div class="block-table"><h3>Niveau d'études minimum requis</h3><ul><li>Niveau 7</li></ul></div>
+  <div class="block-cards"><h2 class="fr-mb-5w">Éléments de candidature</h2></div>
+</div></div></div></div>
+<div class="strate-two-columns about-agency">
+<div class="fr-grid-row rte"><p>Qui sommes-nous</p></div></div>
+</main>"""
+
+
+def test_description_service_public() -> None:
+    assert description_service_public(PAGE_OFFRE) == (
+        "Vos missions en quelques mots\n"
+        "Le pôle data valorise les données du service.\n"
+        "Il détecte des phénomènes d’intérêt :\n"
+        "• Gestion de projet\n"
+        "• Prototypage\n"
+        "Profil recherché\n"
+        "Bac+5 en data science."
+    )
+    assert description_service_public("<html>page inattendue</html>") == ""
+
+
+def test_detailler_ouvre_la_page_de_l_offre() -> None:
+    url = "https://choisirleservicepublic.gouv.fr/offre-emploi/tracfin/"
+    client = FauxClient({url: PAGE_OFFRE})
+    source = SourceServicePublic(client, ["data"])
+    offre = source.detailler(Offre("TRACFIN", "Data scientist", url=url, source="service_public"))
+    assert offre.description.startswith("Vos missions en quelques mots")
+    assert offre.poste == "Data scientist"
+    assert client.appels == [(url, {})]

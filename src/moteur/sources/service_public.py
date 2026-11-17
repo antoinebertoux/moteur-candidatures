@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Sequence
+from dataclasses import replace
 from urllib.parse import quote
 
 from moteur.modeles import Offre, normaliser
@@ -59,6 +60,12 @@ _CARTE = re.compile(r'class="fr-card fr-card--horizontal[^"]*fr-card--offer"')
 _LIEN = re.compile(r'<h3 class="fr-card__title">\s*<a\s+href="([^"]+)"[^>]*>(.*?)</a>', re.S)
 _ELEMENT = re.compile(r'<li class="fr-icon-([a-z0-9-]+)[^"]*"[^>]*>(.*?)</li>', re.S)
 _ETIQUETTE = re.compile(r'<span class="sr-only">.*?</span>', re.S)
+# Page d'une offre : missions et profil sont dans la colonne « col-left rte », avant les
+# blocs « niveau d'études » et « éléments de candidature ».
+_DEBUT_DETAIL = re.compile(r'class="[^"]*\bcol-left rte"[^>]*>')
+_FIN_DETAIL = re.compile(r'<div class="(?:block-table|block-cards|strate)')
+_BOUTON = re.compile(r"<button\b.*?</button>", re.S)
+_SAUT = re.compile(r"<br\s*/?>|</p>|</h[1-6]>|</li>", re.I)
 _TOTAL = re.compile(r'<span class="number">\s*([\d\s]+)')
 _DATE = re.compile(r"(\d{1,2})(?:er)?\s+([a-zéû]+)\s+(\d{4})")
 _MOIS = {
@@ -120,6 +127,17 @@ def date_francaise(texte: str) -> str:
 def total_annonce(page: str) -> int | None:
     trouve = _TOTAL.search(page)
     return int(re.sub(r"\s", "", trouve.group(1))) if trouve else None
+
+
+def description_service_public(page: str) -> str:
+    """Texte (missions et profil) de la page d'une offre, une ligne par paragraphe."""
+    debut = _DEBUT_DETAIL.search(page)
+    if not debut:
+        return ""
+    fin = _FIN_DETAIL.search(page, debut.end())
+    bloc = _BOUTON.sub(" ", page[debut.end() : fin.start() if fin else len(page)])
+    lignes = (texte_brut(ligne) for ligne in _SAUT.split(bloc))
+    return "\n".join(ligne for ligne in lignes if ligne)
 
 
 def offres_service_public(page: str) -> list[Offre]:
@@ -187,6 +205,12 @@ class SourceServicePublic:
                 total is not None and page * OFFRES_PAR_PAGE >= total
             ):
                 break
+
+    def detailler(self, offre: Offre) -> Offre:
+        """L'offre avec le texte de sa page ; les résultats de recherche n'en ont pas."""
+        return replace(
+            offre, description=description_service_public(self._client.get_texte(offre.url))
+        )
 
     def collecter(self) -> list[Offre]:
         vues: dict[str, Offre] = {}

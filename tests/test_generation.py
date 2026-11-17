@@ -8,12 +8,16 @@ from moteur.config import Chemins
 from moteur.generation import (
     RACINE_LATEX,
     Compilateur,
+    ajuster_cv,
+    avec_contenu,
+    contenu_cv,
     extraire_tex,
     generer,
     generer_dossier,
     nom_dossier,
     pages_en_trop,
     preparer_modele,
+    versions_reduites,
 )
 from moteur.modeles import Candidature, Note, Offre
 from tests.conftest import FauxAssistant
@@ -36,12 +40,12 @@ def chemins(tmp_path: Path) -> Chemins:
     return Chemins(racine=tmp_path, base=tmp_path / "b.sqlite3", echange=tmp_path / "echange")
 
 
-def compilateur(*sorties: str) -> tuple[list[Path], Compilateur]:
-    appels: list[Path] = []
+def compilateur(*sorties: str) -> tuple[list[tuple[Path, str]], Compilateur]:
+    appels: list[tuple[Path, str]] = []
     restantes = list(sorties)
 
-    def compiler(dossier: Path) -> ResultatProcessus:
-        appels.append(dossier)
+    def compiler(dossier: Path, fichier: str) -> ResultatProcessus:
+        appels.append((dossier, fichier))
         return ResultatProcessus(0, restantes.pop(0) if restantes else "")
 
     return appels, compiler
@@ -80,7 +84,7 @@ def test_dossier_sans_lettre(chemins: Chemins) -> None:
     assert (dossier / "cv.tex").read_text(encoding="utf-8").startswith(RACINE_LATEX)
     assert not (dossier / "lettre.tex").exists()
     assert "https://a" in (dossier / "offre.md").read_text(encoding="utf-8")
-    assert appels == [dossier]
+    assert appels == [(dossier, "cv.tex")]
     assert len(assistant.prompts) == 1
     assert "\\pRAG" in assistant.prompts[0]
     assert "Texte de l'offre" in assistant.prompts[0]
@@ -100,13 +104,70 @@ def test_spontanee_en_anglais_avec_lettre(chemins: Chemins) -> None:
     assert "anglais" in lettre_prompt
 
 
-def test_cv_trop_long_est_redemande_une_fois(chemins: Chemins) -> None:
-    assistant = FauxAssistant(TEX)
-    appels, compiler = compilateur("⚠️  cv.pdf fait 2 pages", "")
-    generer_dossier(Candidature(OFFRE, "acceptee"), assistant, chemins, "sonnet", compiler)
-    assert len(appels) == 2
-    assert len(assistant.prompts) == 2
-    assert "2 pages" in assistant.prompts[1]
+CV_COMPLET = r"""\documentclass{x}
+\begin{document}
+\section{\secExperience} \vspace{0.2cm}
+\datedexperience{Eurofins}{\eurofinsDates}
+\explanation{\eurofinsPosteIngeIA}
+\explanationdetail{%
+\pRAG \\
+\pGCMS \\
+\pAmiante \\
+\pDevis \\
+\pTerrain \\
+\pStagiaires
+}
+
+\section{\secProjets} \vspace{0.2cm}
+\projMemoire
+\projMARL
+
+\section{\secFormation} \vspace{0.2cm}
+\formation
+\end{document}
+"""
+
+
+def test_contenu_cv_dans_l_ordre() -> None:
+    puces, projets = contenu_cv(CV_COMPLET)
+    assert puces == ["\\pRAG", "\\pGCMS", "\\pAmiante", "\\pDevis", "\\pTerrain", "\\pStagiaires"]
+    assert projets == ["\\projMemoire", "\\projMARL"]
+
+
+def test_avec_contenu_reecrit_les_blocs() -> None:
+    tex = avec_contenu(CV_COMPLET, ["\\pGCMS", "\\pRAG"], ["\\projMemoire"])
+    assert contenu_cv(tex) == (["\\pGCMS", "\\pRAG"], ["\\projMemoire"])
+    assert "\\pGCMS \\\\\n\\pRAG\n}" in tex
+    assert "\\section{\\secFormation}" in tex
+
+
+def test_versions_reduites_retire_d_abord_le_second_projet() -> None:
+    puces = [f"\\p{n}" for n in "ABCDEFG"]
+    versions = list(versions_reduites(puces, ["\\projX", "\\projY"]))
+    assert versions[0] == (puces, ["\\projX", "\\projY"])
+    assert versions[1] == (puces, ["\\projX"])
+    assert versions[2] == (puces[:6], ["\\projX"])
+    assert versions[-1] == (puces[:5], ["\\projX"])
+
+
+def test_ajuster_cv_garde_le_maximum_qui_tient(tmp_path: Path) -> None:
+    cv = tmp_path / "cv.tex"
+    cv.write_text(CV_COMPLET, encoding="utf-8")
+    trop = "⚠️  cv.pdf fait 2 pages"
+    appels, compiler = compilateur(trop, trop, "")
+    assert ajuster_cv(cv, compiler) == 1
+    assert len(appels) == 3
+    puces, projets = contenu_cv(cv.read_text(encoding="utf-8"))
+    assert puces == ["\\pRAG", "\\pGCMS", "\\pAmiante", "\\pDevis", "\\pTerrain"]
+    assert projets == ["\\projMemoire"]
+
+
+def test_ajuster_cv_signale_un_cv_qui_deborde_encore(tmp_path: Path) -> None:
+    cv = tmp_path / "cv.tex"
+    cv.write_text(CV_COMPLET, encoding="utf-8")
+    _, compiler = compilateur(*["⚠️  cv.pdf fait 2 pages"] * 10)
+    assert ajuster_cv(cv, compiler) == 2
+    assert len(contenu_cv(cv.read_text(encoding="utf-8"))[0]) == 5
 
 
 def test_retouche_repart_du_cv_existant(chemins: Chemins) -> None:
@@ -141,7 +202,7 @@ def test_generer_marque_les_reussites_et_liste_les_echecs(chemins: Chemins) -> N
 
 
 def test_echec_de_compilation(chemins: Chemins) -> None:
-    def en_echec(dossier: Path) -> ResultatProcessus:
+    def en_echec(dossier: Path, fichier: str) -> ResultatProcessus:
         return ResultatProcessus(1, "", "Undefined control sequence")
 
     with BaseLocale(":memory:") as base:

@@ -5,7 +5,7 @@ from __future__ import annotations
 import html
 import re
 from collections.abc import Mapping
-from typing import Any, Protocol
+from typing import Any, Protocol, runtime_checkable
 
 import httpx
 
@@ -44,6 +44,16 @@ class Source(Protocol):
     def nom(self) -> str: ...
 
     def collecter(self) -> list[Offre]: ...
+
+
+@runtime_checkable
+class SourceDetaillee(Protocol):
+    """Source dont les résultats n'ont pas le texte de l'offre : il faut ouvrir sa page."""
+
+    @property
+    def nom(self) -> str: ...
+
+    def detailler(self, offre: Offre) -> Offre: ...
 
 
 class ClientHttpx:

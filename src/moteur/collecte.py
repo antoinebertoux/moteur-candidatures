@@ -10,7 +10,7 @@ from pathlib import Path
 from moteur.config import Criteres, EntrepriseCible
 from moteur.filtre import filtrer
 from moteur.modeles import Offre, normaliser
-from moteur.sources.base import ErreurSource, Source
+from moteur.sources.base import ErreurSource, Source, SourceDetaillee
 
 journal = logging.getLogger(__name__)
 
@@ -53,6 +53,24 @@ def interroger(sources: Iterable[Source]) -> list[Offre]:
     return offres
 
 
+def detailler(offres: Iterable[Offre], sources: Iterable[Source]) -> list[Offre]:
+    """Ajoute le texte des offres retenues dont la source ne le donne qu'en ouvrant leur page.
+
+    Fait après le filtrage, pour n'ouvrir que les pages des offres gardées.
+    """
+    par_nom = {source.nom: source for source in sources if isinstance(source, SourceDetaillee)}
+    completees: list[Offre] = []
+    for offre in offres:
+        source = par_nom.get(offre.source)
+        if source is not None and not offre.description:
+            try:
+                offre = source.detailler(offre)
+            except ErreurSource as erreur:
+                journal.warning("Texte de l'offre %s non récupéré : %s", offre.url, erreur)
+        completees.append(offre)
+    return completees
+
+
 def spontanees(
     cibles: Sequence[EntrepriseCible], retenues: Sequence[Offre], deja_vues: set[str], role: str
 ) -> list[Offre]:
@@ -66,11 +84,11 @@ def spontanees(
 
 
 def collecter(
-    sources: Iterable[Source],
+    sources: Sequence[Source],
     criteres: Criteres,
     cibles: Sequence[EntrepriseCible],
     deja_vues: set[str],
     role_spontane: str,
 ) -> list[Offre]:
-    retenues = filtrer(interroger(sources), criteres)
+    retenues = detailler(filtrer(interroger(sources), criteres), sources)
     return retenues + spontanees(cibles, retenues, deja_vues, role_spontane)

@@ -1,6 +1,13 @@
+from dataclasses import replace
 from pathlib import Path
 
-from moteur.collecte import collecter, entreprises_deja_vues, interroger, spontanees
+from moteur.collecte import (
+    collecter,
+    detailler,
+    entreprises_deja_vues,
+    interroger,
+    spontanees,
+)
 from moteur.config import EntrepriseCible
 from moteur.modeles import Offre
 from moteur.sources.base import ErreurSource
@@ -67,3 +74,29 @@ def test_collecter_filtre_puis_ajoute_les_spontanees() -> None:
     cibles = [EntrepriseCible(nom="Libre", spontanee=True)]
     resultat = collecter([source], criteres(), cibles, set(), "Lead AI")
     assert [(o.entreprise, o.type) for o in resultat] == [("Acme", "offre"), ("Libre", "spontanee")]
+
+
+class SourceDetailleeFixe(SourceFixe):
+    def __init__(self, nom: str, en_panne: str = "") -> None:
+        super().__init__(nom, [])
+        self.ouvertes: list[str] = []
+        self._en_panne = en_panne
+
+    def detailler(self, offre: Offre) -> Offre:
+        self.ouvertes.append(offre.url)
+        if offre.url == self._en_panne:
+            raise ErreurSource("HTTP 500")
+        return replace(offre, description=f"Texte de {offre.url}")
+
+
+def test_detailler_ne_complete_que_les_offres_sans_texte_de_la_source() -> None:
+    source = SourceDetailleeFixe("service_public", en_panne="c")
+    offres = [
+        Offre("A", "Data scientist", url="a", source="service_public"),
+        Offre("B", "Data scientist", url="b", source="service_public", description="Déjà là"),
+        Offre("C", "Data scientist", url="c", source="service_public"),
+        Offre("D", "Data scientist", url="d", source="ats"),
+    ]
+    resultat = detailler(offres, [source, SourceFixe("ats", [])])
+    assert [o.description for o in resultat] == ["Texte de a", "Déjà là", "", ""]
+    assert source.ouvertes == ["a", "c"]

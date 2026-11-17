@@ -9,7 +9,7 @@ from __future__ import annotations
 import logging
 import re
 import subprocess
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from pathlib import Path
 
 from moteur.base_locale import BaseLocale
@@ -19,7 +19,8 @@ from moteur.modeles import Candidature, Langue, Offre
 
 journal = logging.getLogger(__name__)
 
-Compilateur = Callable[[Path], ResultatProcessus]
+Compilateur = Callable[[Path, str], ResultatProcessus]
+"""Compile un fichier `.tex` d'un dossier de candidature."""
 
 RACINE_LATEX = r"\def\latexroot{../../latex/}"
 _LIGNE_RACINE = re.compile(r"\\def\\latexroot\{[^}]*\}")
@@ -27,6 +28,13 @@ _BANQUE = re.compile(r"cv/banque-(?:fr|en)")
 _INTERDITS = re.compile(r'[/\\:*?"<>|\x00-\x1f]+')
 _ESPACES = re.compile(r"\s+")
 _TROP_DE_PAGES = re.compile(r"(\S+)\.pdf fait (\d+) pages")
+_EUROFINS = re.compile(
+    r"(\\datedexperience\{Eurofins\}.*?\\explanationdetail\{%?)(.*?)(\n?\s*\}\s*\n)", re.S
+)
+_PUCE = re.compile(r"\\p[A-Z]\w*")
+_PROJETS = re.compile(r"(\\section\{\\secProjets\}[^\n]*\n)(.*?)(\n\s*\\section)", re.S)
+_PROJET = re.compile(r"\\proj[A-Z]\w*")
+MIN_PUCES = 5
 
 SYSTEME_CV = """Tu adaptes un CV LaTeX à une offre d'emploi.
 Règles strictes :
@@ -34,8 +42,19 @@ Règles strictes :
 compétences, puces d'expérience, projets, centres d'intérêt.
 2. Tu n'utilises que des macros définies dans la banque fournie. Tu n'écris aucun texte \
 libre, tu n'inventes aucune expérience et aucune macro.
-3. Le CV doit tenir sur une page : garde au plus 8 puces d'expérience, les plus proches de l'offre.
-4. Tu conserves le préambule et la structure du fichier de départ.
+3. Accroche : une seule, celle de la banque dont le commentaire « Usage » correspond le \
+mieux à l'offre.
+4. Expérience Eurofins : pars de toutes les puces \\p... de la banque, retire celles qui \
+sont vraiment sans rapport avec l'offre (garde-en au moins 7), puis range les autres, \
+séparées par \\\\, de la plus pertinente à la moins pertinente. Le programme retire \
+ensuite les dernières jusqu'à ce que le CV remplisse exactement une page : l'ordre est \
+décisif.
+5. Projets académiques : mets les deux projets de la banque, le plus pertinent en premier.
+6. Centres d'intérêt : \\extraEscalade et \\extraJeux. \\extraGeoPo seulement si le poste \
+est axé défense (DGSE, ministère des Armées, DGA, AID, CND, industriel de défense) ; \
+jamais ailleurs, ni dans le reste du secteur public (justice, intérieur, finances, \
+régulateurs, etc.).
+7. Tu conserves le préambule et la structure du fichier de départ.
 Réponds uniquement par le fichier cv.tex complet, dans un bloc ```latex."""
 
 SYSTEME_LETTRE = """Tu rédiges une lettre de motivation LaTeX à partir d'un squelette.
@@ -79,12 +98,12 @@ def pages_en_trop(sortie: str) -> dict[str, int]:
 
 
 def compilateur_latex(latex: Path) -> Compilateur:
-    """Compilateur réel : lance `latex/compiler.sh <dossier>`."""
+    """Compilateur réel : lance `latex/compiler.sh <dossier> <fichier>`."""
 
-    def compiler(dossier: Path) -> ResultatProcessus:
+    def compiler(dossier: Path, fichier: str) -> ResultatProcessus:
         try:
             resultat = subprocess.run(
-                [str(latex / "compiler.sh"), str(dossier)],
+                [str(latex / "compiler.sh"), str(dossier), fichier],
                 capture_output=True,
                 text=True,
                 timeout=600,
@@ -135,12 +154,56 @@ def _ecrire_fiche(dossier: Path, offre: Offre) -> None:
     )
 
 
-def _compiler(dossier: Path, compilateur: Compilateur) -> dict[str, int]:
-    resultat = compilateur(dossier)
+def _compiler(dossier: Path, fichier: str, compilateur: Compilateur) -> dict[str, int]:
+    resultat = compilateur(dossier, fichier)
     if resultat.code != 0:
         fin = (resultat.sortie + resultat.erreur).strip()[-800:]
         raise ErreurGeneration(f"La compilation a échoué dans {dossier.name} :\n{fin}")
     return pages_en_trop(resultat.sortie)
+
+
+def contenu_cv(tex: str) -> tuple[list[str], list[str]]:
+    """Puces Eurofins et projets du CV, dans l'ordre de pertinence choisi par Claude."""
+    eurofins = _EUROFINS.search(tex)
+    projets = _PROJETS.search(tex)
+    return (
+        _PUCE.findall(eurofins.group(2)) if eurofins else [],
+        _PROJET.findall(projets.group(2)) if projets else [],
+    )
+
+
+def avec_contenu(tex: str, puces: list[str], projets: list[str]) -> str:
+    """Le CV avec seulement ces puces Eurofins et ces projets."""
+    tex = _EUROFINS.sub(
+        lambda m: m.group(1) + "\n" + " \\\\\n".join(puces) + m.group(3), tex, count=1
+    )
+    return _PROJETS.sub(lambda m: m.group(1) + "\n".join(projets) + m.group(3), tex, count=1)
+
+
+def versions_reduites(
+    puces: list[str], projets: list[str]
+) -> Iterator[tuple[list[str], list[str]]]:
+    """Du CV complet au plus court : d'abord le second projet, puis les dernières puces."""
+    yield puces, projets
+    while len(projets) > 1:
+        projets = projets[:-1]
+        yield puces, projets
+    while len(puces) > MIN_PUCES:
+        puces = puces[:-1]
+        yield puces, projets
+
+
+def ajuster_cv(cv: Path, compilateur: Compilateur) -> int:
+    """Garde le plus de contenu possible sur une page ; renvoie le nombre de pages final."""
+    tex = cv.read_text(encoding="utf-8")
+    puces, projets = contenu_cv(tex)
+    pages = 1
+    for puces_gardees, projets_gardes in versions_reduites(puces, projets):
+        cv.write_text(avec_contenu(tex, puces_gardees, projets_gardes), encoding="utf-8")
+        pages = _compiler(cv.parent, cv.name, compilateur).get(cv.stem, 1)
+        if pages == 1:
+            break
+    return pages
 
 
 def generer_dossier(
@@ -164,14 +227,11 @@ def generer_dossier(
         modele_cv = (chemins.latex / "cv" / "modele-cv.tex").read_text(encoding="utf-8")
         depart_cv = preparer_modele(modele_cv, langue)
 
-    def ecrire_cv(consigne: str) -> None:
-        prompt = _prompt(candidature, depart_cv, banque_cv, consigne)
-        cv.write_text(
-            extraire_tex(assistant.demander(prompt, systeme=SYSTEME_CV, modele=modele)),
-            encoding="utf-8",
-        )
-
-    ecrire_cv(candidature.consigne)
+    prompt_cv = _prompt(candidature, depart_cv, banque_cv, candidature.consigne)
+    cv.write_text(
+        extraire_tex(assistant.demander(prompt_cv, systeme=SYSTEME_CV, modele=modele)),
+        encoding="utf-8",
+    )
 
     lettre = dossier / "lettre.tex"
     avec_lettre = candidature.lettre_demandee or offre.type == "spontanee"
@@ -192,16 +252,12 @@ def generer_dossier(
             encoding="utf-8",
         )
 
-    trop = _compiler(dossier, compilateur)
-    if "cv" in trop:
-        rappel = (
-            f"Le CV compilé fait {trop['cv']} pages : retire des puces pour tenir sur une page."
-        )
-        depart_cv = cv.read_text(encoding="utf-8")
-        ecrire_cv(f"{candidature.consigne}\n{rappel}".strip())
-        trop = _compiler(dossier, compilateur)
-    for nom, pages in trop.items():
-        journal.warning("%s/%s.pdf fait %d pages : à reprendre à la main", dossier.name, nom, pages)
+    pages = {"cv": ajuster_cv(cv, compilateur)}
+    if avec_lettre:
+        pages.update(_compiler(dossier, lettre.name, compilateur))
+    for nom, nb in pages.items():
+        if nb > 1:
+            journal.warning("%s/%s.pdf fait %d pages : à reprendre", dossier.name, nom, nb)
 
     def reference(fichier: Path) -> str:
         return str(fichier.with_suffix(".pdf").relative_to(chemins.racine))
