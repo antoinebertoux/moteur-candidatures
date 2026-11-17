@@ -150,22 +150,37 @@ def test_versions_reduites_retire_d_abord_le_second_projet() -> None:
     assert versions[-1] == (puces[:5], ["\\projX"])
 
 
+TROP = "⚠️  cv.pdf fait 2 pages"
+
+
 def test_ajuster_cv_garde_le_maximum_qui_tient(tmp_path: Path) -> None:
     cv = tmp_path / "cv.tex"
     cv.write_text(CV_COMPLET, encoding="utf-8")
-    trop = "⚠️  cv.pdf fait 2 pages"
-    appels, compiler = compilateur(trop, trop, "")
+    # complet puis sans 2e projet : trop long ; sans pStagiaires : tient ;
+    # le 2e projet ne rentre pas, on réécrit la version qui tient.
+    appels, compiler = compilateur(TROP, TROP, "", TROP, "")
     assert ajuster_cv(cv, compiler) == 1
-    assert len(appels) == 3
+    assert len(appels) == 5
     puces, projets = contenu_cv(cv.read_text(encoding="utf-8"))
     assert puces == ["\\pRAG", "\\pGCMS", "\\pAmiante", "\\pDevis", "\\pTerrain"]
     assert projets == ["\\projMemoire"]
 
 
+def test_ajuster_cv_comble_avec_une_puce_plus_courte(tmp_path: Path) -> None:
+    huit = [f"\\p{n}" for n in "ABCDEFGH"]
+    cv = tmp_path / "cv.tex"
+    cv.write_text(avec_contenu(CV_COMPLET, huit, ["\\projX", "\\projY"]), encoding="utf-8")
+    # 8+2, 8+1, 7+1, 6+1 : trop long ; 5+1 tient. pG rentre, pH et projY non.
+    appels, compiler = compilateur(TROP, TROP, TROP, TROP, "", "", TROP, TROP, "")
+    assert ajuster_cv(cv, compiler) == 1
+    assert len(appels) == 9
+    assert contenu_cv(cv.read_text(encoding="utf-8")) == ([*huit[:5], "\\pG"], ["\\projX"])
+
+
 def test_ajuster_cv_signale_un_cv_qui_deborde_encore(tmp_path: Path) -> None:
     cv = tmp_path / "cv.tex"
     cv.write_text(CV_COMPLET, encoding="utf-8")
-    _, compiler = compilateur(*["⚠️  cv.pdf fait 2 pages"] * 10)
+    _, compiler = compilateur(*[TROP] * 10)
     assert ajuster_cv(cv, compiler) == 2
     assert len(contenu_cv(cv.read_text(encoding="utf-8"))[0]) == 5
 

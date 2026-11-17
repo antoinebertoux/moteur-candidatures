@@ -60,10 +60,22 @@ Réponds uniquement par le fichier cv.tex complet, dans un bloc ```latex."""
 SYSTEME_LETTRE = """Tu rédiges une lettre de motivation LaTeX à partir d'un squelette.
 Règles strictes :
 1. Tu conserves le préambule, les macros et la structure du squelette ; tu remplaces le \
-contenu des \\lettercontent{...} et le nom de l'entreprise.
-2. Tu pars des paragraphes de la banque fournie et tu les adaptes à l'entreprise et au poste.
-3. Tu n'inventes aucun fait sur le candidat : tout vient de la banque de paragraphes.
-4. La lettre tient sur une page, sans formule creuse. Échappe les caractères spéciaux LaTeX.
+contenu des \\lettercontent{...} et ENTREPRISE dans \\companyname.
+2. Langue : celle indiquée. En anglais, salutation « Dear Hiring Manager, » et formule \
+finale anglaise de la banque.
+3. Entre la salutation et la formule finale, quatre paragraphes : accroche (le poste \
+exact et pourquoi cette entreprise) ; une ou deux réalisations Eurofins qui répondent aux \
+exigences précises de l'offre ; ce que le candidat apporte au-delà du technique ; \
+pourquoi eux, avec des éléments concrets tirés de l'offre ou du résumé.
+4. Tu n'inventes aucun fait sur le candidat : tout vient de la banque de paragraphes, \
+dont tu respectes les « points à vérifier ». N'écris jamais que le candidat est certifié \
+en IA générative. Aucun salaire, aucune prétention. Géopolitique ou podcast Le Collimateur \
+seulement pour un poste axé défense.
+5. Candidature spontanée : pas d'offre publiée ; propose le rôle indiqué et appuie-toi \
+sur l'angle du résumé.
+6. Style direct et concret : pas de formule creuse (« passionné », « dynamique », \
+« je me permets »), pas de recopie de l'offre. 250 à 350 mots : la lettre tient sur une \
+page. Échappe les caractères spéciaux LaTeX (& % $ # _).
 Réponds uniquement par le fichier lettre.tex complet, dans un bloc ```latex."""
 
 
@@ -194,16 +206,38 @@ def versions_reduites(
 
 
 def ajuster_cv(cv: Path, compilateur: Compilateur) -> int:
-    """Garde le plus de contenu possible sur une page ; renvoie le nombre de pages final."""
+    """Garde le plus de contenu possible sur une page ; renvoie le nombre de pages final.
+
+    Retire d'abord le second projet puis les dernières puces jusqu'à tenir sur une page,
+    puis comble l'espace restant avec les éléments retirés plus courts, dans l'ordre.
+    """
     tex = cv.read_text(encoding="utf-8")
     puces, projets = contenu_cv(tex)
-    pages = 1
-    for puces_gardees, projets_gardes in versions_reduites(puces, projets):
-        cv.write_text(avec_contenu(tex, puces_gardees, projets_gardes), encoding="utf-8")
-        pages = _compiler(cv.parent, cv.name, compilateur).get(cv.stem, 1)
+
+    def essayer(p: list[str], pr: list[str]) -> int:
+        cv.write_text(avec_contenu(tex, p, pr), encoding="utf-8")
+        return _compiler(cv.parent, cv.name, compilateur).get(cv.stem, 1)
+
+    pages, gardees, gardes = 1, puces, projets
+    for gardees, gardes in versions_reduites(puces, projets):
+        pages = essayer(gardees, gardes)
         if pages == 1:
             break
-    return pages
+    if pages > 1:
+        return pages
+    # Le premier élément retiré ne tient pas ; les suivants, plus courts, peut-être.
+    candidats = [(x, True) for x in puces if x not in gardees][1:]
+    candidats += [(x, False) for x in projets if x not in gardes]
+    dernier_essai_reussi = True
+    for element, est_puce in candidats:
+        essai_puces = [x for x in puces if x in gardees or x == element] if est_puce else gardees
+        essai_projets = gardes if est_puce else [x for x in projets if x in gardes or x == element]
+        dernier_essai_reussi = essayer(essai_puces, essai_projets) == 1
+        if dernier_essai_reussi:
+            gardees, gardes = essai_puces, essai_projets
+    if not dernier_essai_reussi:
+        essayer(gardees, gardes)
+    return 1
 
 
 def generer_dossier(
