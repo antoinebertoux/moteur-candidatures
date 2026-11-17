@@ -59,6 +59,8 @@ def test_generation_puis_retouche(base: BaseLocale) -> None:
     base.marquer_generee(OFFRE.cle, "Candidatures/Acme/cv.pdf", "")
     (generee,) = base.pour_la_page()
     assert (generee.statut, generee.cv_ref) == (GENEREE, "Candidatures/Acme/cv.pdf")
+    assert not base.appliquer_decision(OFFRE.cle, "acceptee")
+    assert base.a_generer() == []
     assert base.appliquer_decision(OFFRE.cle, "acceptee", "Mets le RAG en premier")
     (a_refaire,) = base.a_generer()
     assert (a_refaire.statut, a_refaire.consigne) == (ACCEPTEE, "Mets le RAG en premier")
@@ -69,3 +71,26 @@ def test_generation_puis_retouche(base: BaseLocale) -> None:
 def test_entreprises_connues(base: BaseLocale) -> None:
     base.ajouter([OFFRE, SPONTANEE])
     assert base.entreprises_connues() == {"acme", "libre"}
+
+
+def test_offre_acceptee_inconnue_ajoutee_depuis_la_page(base: BaseLocale) -> None:
+    manuelle = Offre("Banque de France", "AI/ML Engineer", url="https://x", source="linkedin")
+    assert base.completer_depuis_la_page(manuelle.cle, manuelle, lettre_demandee=False)
+    assert not base.completer_depuis_la_page(manuelle.cle, manuelle, lettre_demandee=False)
+    (candidature,) = base.a_generer()
+    assert candidature.offre == manuelle
+
+
+def test_texte_de_l_offre_complete_sans_ecraser(base: BaseLocale) -> None:
+    sans_texte = Offre("Orano", "Data Scientist")
+    base.completer_depuis_la_page(sans_texte.cle, sans_texte, lettre_demandee=False)
+    avec_texte = Offre("Orano", "Data Scientist", description="Missions : ...")
+    assert base.completer_depuis_la_page(avec_texte.cle, avec_texte, lettre_demandee=False)
+    autre = Offre("Orano", "Data Scientist", description="Autre texte")
+    assert not base.completer_depuis_la_page(autre.cle, autre, lettre_demandee=False)
+    assert base.a_generer()[0].offre.description == "Missions : ..."
+    base.ajouter([OFFRE])
+    assert not base.completer_depuis_la_page(
+        OFFRE.cle, Offre("Acme", "Data Scientist", description="Neuf"), lettre_demandee=False
+    )
+    assert base.a_noter()[0].description == "Texte"

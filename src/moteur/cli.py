@@ -107,8 +107,16 @@ def commande_exporter(config: Config, base: BaseLocale) -> None:
 
 def commande_decisions(base: BaseLocale, fichier: Path) -> None:
     decisions = echange.lire_decisions(fichier.read_text(encoding="utf-8"))
+    completees = sum(
+        base.completer_depuis_la_page(d.cle, d.offre, d.lettre_demandee)
+        for d in decisions
+        if d.statut == "acceptee" and d.offre is not None
+    )
     changees = sum(base.appliquer_decision(d.cle, d.statut, d.consigne) for d in decisions)
-    print(f"{changees} décisions reportées, {len(base.a_generer())} dossiers à générer")
+    print(
+        f"{changees} décisions reportées, {completees} offres ajoutées ou complétées"
+        f" depuis la page, {len(base.a_generer())} dossiers à générer"
+    )
 
 
 def commande_generer(config: Config, base: BaseLocale) -> None:

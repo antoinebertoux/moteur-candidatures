@@ -7,7 +7,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Any
 
-from moteur.modeles import Candidature
+from moteur.modeles import Candidature, Offre
 
 
 class ErreurEchange(ValueError):
@@ -16,9 +16,37 @@ class ErreurEchange(ValueError):
 
 @dataclass(frozen=True, slots=True)
 class Decision:
+    """Une ligne de l'export de la page.
+
+    `offre` décrit la candidature telle que la page la connaît : elle sert à ajouter
+    dans la base locale celles qui n'en viennent pas (ajout manuel, moteur A).
+    """
+
     cle: str
     statut: str
     consigne: str = ""
+    offre: Offre | None = None
+    lettre_demandee: bool = False
+
+
+def _texte(entree: dict[str, Any], champ: str) -> str:
+    valeur = entree.get(champ)
+    return valeur.strip() if isinstance(valeur, str) else ""
+
+
+def _offre(entree: dict[str, Any]) -> Offre | None:
+    entreprise, poste = _texte(entree, "entreprise"), _texte(entree, "poste")
+    if not entreprise or not poste:
+        return None
+    return Offre(
+        entreprise=entreprise,
+        poste=poste,
+        type="spontanee" if entree.get("type") == "spontanee" else "offre",
+        lieu=_texte(entree, "lieu"),
+        url=_texte(entree, "url"),
+        source=_texte(entree, "source"),
+        description=_texte(entree, "texte_offre"),
+    )
 
 
 def pour_la_page(candidatures: Iterable[Candidature]) -> list[dict[str, Any]]:
@@ -71,6 +99,13 @@ def lire_decisions(texte: str) -> list[Decision]:
             continue
         cle, statut = entree.get("id"), entree.get("statut")
         if isinstance(cle, str) and isinstance(statut, str):
-            consigne = entree.get("consigne")
-            decisions.append(Decision(cle, statut, consigne if isinstance(consigne, str) else ""))
+            decisions.append(
+                Decision(
+                    cle,
+                    statut,
+                    _texte(entree, "consigne"),
+                    _offre(entree),
+                    entree.get("lettre_demandee") is True,
+                )
+            )
     return decisions

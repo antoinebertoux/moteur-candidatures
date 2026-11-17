@@ -157,15 +157,60 @@ class BaseLocale:
         return self._par_statut(ACCEPTEE)
 
     def appliquer_decision(self, cle: str, statut_page: str, consigne: str = "") -> bool:
-        """Reporte une décision prise dans la page. Renvoie vrai si la base a changé."""
+        """Reporte une décision prise dans la page. Renvoie vrai si la base a changé.
+
+        Un dossier déjà généré que la page montre encore « acceptée » (export pas
+        encore réimporté) n'est régénéré que si une consigne de retouche l'accompagne.
+        """
         statut = _DECISIONS.get(statut_page)
         if statut is None:
             return False
+        if statut == ACCEPTEE and not consigne:
+            condition = " AND statut != ?"
+            parametres: tuple[str, ...] = (GENEREE,)
+        else:
+            condition, parametres = "", ()
         with self._connexion:
             curseur = self._connexion.execute(
                 "UPDATE candidatures SET statut = ?, consigne = ?"
-                " WHERE cle = ? AND (statut != ? OR consigne != ?)",
-                (statut, consigne, cle, statut, consigne),
+                " WHERE cle = ? AND (statut != ? OR consigne != ?)" + condition,
+                (statut, consigne, cle, statut, consigne, *parametres),
+            )
+        return curseur.rowcount > 0
+
+    def completer_depuis_la_page(self, cle: str, offre: Offre, lettre_demandee: bool) -> bool:
+        """Ajoute une candidature acceptée dans la page mais inconnue de la base.
+
+        C'est le cas des offres ajoutées à la main ou trouvées par le moteur A. Pour une
+        candidature déjà connue, complète seulement le texte de l'offre s'il manquait.
+        Renvoie vrai si la base a changé.
+        """
+        with self._connexion:
+            curseur = self._connexion.execute(
+                "INSERT OR IGNORE INTO candidatures (cle, type, entreprise, poste, lieu, url,"
+                " source, description, statut, lettre_demandee, date_ajout)"
+                " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    cle,
+                    offre.type,
+                    offre.entreprise,
+                    offre.poste,
+                    offre.lieu,
+                    offre.url,
+                    offre.source,
+                    offre.description,
+                    ACCEPTEE,
+                    int(lettre_demandee),
+                    date.today().isoformat(),
+                ),
+            )
+            if curseur.rowcount:
+                return True
+            if not offre.description:
+                return False
+            curseur = self._connexion.execute(
+                "UPDATE candidatures SET description = ? WHERE cle = ? AND description = ''",
+                (offre.description, cle),
             )
         return curseur.rowcount > 0
 

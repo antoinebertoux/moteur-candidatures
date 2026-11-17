@@ -28,7 +28,7 @@ domaines et employeurs dans `[service_public]`.
 
 ## Données personnelles
 
-Le dépôt ne contient aucune donnée personnelle. Tout ce qui te concerne reste dans des
+Le dépôt ne contient aucune donnée personnelle. Elles restent dans des
 fichiers ignorés par Git ou hors du dépôt :
 
 | Fichier | Contenu |

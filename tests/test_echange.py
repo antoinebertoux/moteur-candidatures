@@ -55,3 +55,30 @@ def test_lire_decisions() -> None:
 def test_export_illisible(texte: str) -> None:
     with pytest.raises(ErreurEchange):
         lire_decisions(texte)
+
+
+def test_lire_decisions_avec_l_offre() -> None:
+    export = [
+        {
+            "id": "offre_axa_ingenieur-ia",
+            "statut": "acceptee",
+            "type": "offre",
+            "entreprise": "AXA",
+            "poste": "Ingénieur IA",
+            "lieu": "Paris",
+            "url": "https://www.linkedin.com/jobs/view/1/",
+            "source": "linkedin",
+            "texte_offre": "  Missions : ...  ",
+            "lettre_demandee": True,
+        }
+    ]
+    (decision,) = lire_decisions(json.dumps(export))
+    assert decision.offre == Offre(
+        "AXA",
+        "Ingénieur IA",
+        lieu="Paris",
+        url="https://www.linkedin.com/jobs/view/1/",
+        source="linkedin",
+        description="Missions : ...",
+    )
+    assert decision.lettre_demandee
