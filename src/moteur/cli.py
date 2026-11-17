@@ -157,7 +157,7 @@ def analyseur() -> argparse.ArgumentParser:
     commande("quotidien", "collecter, noter puis exporter")
     commande("decisions", "relit l'export de la page").add_argument("fichier", type=Path)
     commande("generer", "prépare CV et lettre des offres acceptées")
-    commande("servir", "sert CV, lettres et export à la page de suivi").add_argument(
+    commande("servir", "sert les CV et lettres pour les liens de la page").add_argument(
         "--port", type=int, default=PORT_PAR_DEFAUT
     )
     return parseur
@@ -194,11 +194,7 @@ def main(arguments: Sequence[str] | None = None) -> int:
                 commande_generer(config, base)
                 commande_exporter(config, base)
             if options.commande == "servir":
-                servir(
-                    config.chemins.candidatures,
-                    config.chemins.echange / FICHIER_POUR_LA_PAGE,
-                    options.port,
-                )
+                servir(config.chemins.candidatures, options.port)
     except (ErreurConfig, echange.ErreurEchange, OSError) as erreur:
         print(f"Erreur : {erreur}", file=sys.stderr)
         return 1

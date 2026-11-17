@@ -4,17 +4,12 @@ La page est hébergée sur claude.ai : un navigateur refuse d'y suivre un lien `
 Elle pointe donc vers `http://127.0.0.1:<port>/Candidatures/...`, que ce serveur sert en
 lecture seule. Seul le dossier `Candidatures/` est exposé (pas `config.toml`, `.env`,
 `latex/`…), et uniquement sur la machine elle-même.
-
-`/export` renvoie le fichier préparé pour la page, que celle-ci importe toute seule. Il
-n'est lisible que par une page de claude.ai (CORS), pas par n'importe quel site ouvert
-pendant que le serveur tourne.
 """
 
 from __future__ import annotations
 
 import contextlib
 import functools
-import logging
 import posixpath
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from io import BytesIO
@@ -24,22 +19,6 @@ from urllib.parse import unquote, urlsplit
 
 PORT_PAR_DEFAUT = 8765
 PREFIXE = "Candidatures"
-CHEMIN_EXPORT = "/export"
-# Domaines d'où la page de suivi peut être servie.
-_DOMAINES_PAGE = ("claude.ai", "claudeusercontent.com", "claude.site")
-
-journal = logging.getLogger("moteur")
-
-
-def origine_autorisee(origine: str | None) -> bool:
-    """Vrai si `origine` (en-tête Origin) est une page https de claude.ai."""
-    if not origine:
-        return False
-    morceaux = urlsplit(origine)
-    hote = morceaux.hostname or ""
-    return morceaux.scheme == "https" and any(
-        hote == d or hote.endswith("." + d) for d in _DOMAINES_PAGE
-    )
 
 
 def chemin_local(chemin_url: str, dossier: Path) -> Path | None:
@@ -55,50 +34,9 @@ def chemin_local(chemin_url: str, dossier: Path) -> Path | None:
 
 
 class _Gestionnaire(SimpleHTTPRequestHandler):
-    def __init__(self, *args: object, dossier: Path, export: Path, **kwargs: object) -> None:
+    def __init__(self, *args: object, dossier: Path, **kwargs: object) -> None:
         self._dossier = dossier
-        self._export = export
         super().__init__(*args, directory=str(dossier), **kwargs)  # type: ignore[arg-type]
-
-    def _en_tetes_cors(self) -> bool:
-        origine = self.headers.get("Origin")
-        if not origine_autorisee(origine):
-            journal.warning("Export refusé à l'origine %s", origine)
-            return False
-        self.send_header("Access-Control-Allow-Origin", origine or "")
-        self.send_header("Vary", "Origin")
-        # Accès au réseau local depuis un site public (Chrome) : demandé en pré-vol.
-        self.send_header("Access-Control-Allow-Private-Network", "true")
-        self.send_header("Access-Control-Allow-Local-Network", "true")
-        return True
-
-    def do_OPTIONS(self) -> None:
-        if urlsplit(self.path).path != CHEMIN_EXPORT:
-            self.send_error(404)
-            return
-        self.send_response(204)
-        if self._en_tetes_cors():
-            self.send_header("Access-Control-Allow-Methods", "GET")
-            self.send_header("Access-Control-Max-Age", "600")
-        self.end_headers()
-
-    def _envoyer_export(self) -> None:
-        try:
-            contenu = self._export.read_bytes()
-        except FileNotFoundError:
-            contenu = b"[]"
-        self.send_response(200)
-        self._en_tetes_cors()
-        self.send_header("Content-Type", "application/json; charset=utf-8")
-        self.send_header("Content-Length", str(len(contenu)))
-        self.end_headers()
-        self.wfile.write(contenu)
-
-    def do_GET(self) -> None:
-        if urlsplit(self.path).path == CHEMIN_EXPORT:
-            self._envoyer_export()
-            return
-        super().do_GET()
 
     def send_head(self) -> BytesIO | BinaryIO | None:
         cible = chemin_local(self.path, self._dossier)
@@ -120,13 +58,13 @@ class _Gestionnaire(SimpleHTTPRequestHandler):
         pass
 
 
-def creer_serveur(dossier: Path, export: Path, port: int = PORT_PAR_DEFAUT) -> ThreadingHTTPServer:
-    gestionnaire = functools.partial(_Gestionnaire, dossier=dossier, export=export)
+def creer_serveur(dossier: Path, port: int = PORT_PAR_DEFAUT) -> ThreadingHTTPServer:
+    gestionnaire = functools.partial(_Gestionnaire, dossier=dossier)
     return ThreadingHTTPServer(("127.0.0.1", port), gestionnaire)
 
 
-def servir(dossier: Path, export: Path, port: int = PORT_PAR_DEFAUT) -> None:
-    with creer_serveur(dossier, export, port) as serveur:
+def servir(dossier: Path, port: int = PORT_PAR_DEFAUT) -> None:
+    with creer_serveur(dossier, port) as serveur:
         print(f"CV et lettres servis sur http://127.0.0.1:{port}/{PREFIXE}/ (Ctrl+C pour arrêter)")
         with contextlib.suppress(KeyboardInterrupt):
             serveur.serve_forever()

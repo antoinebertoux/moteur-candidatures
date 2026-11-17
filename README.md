@@ -59,18 +59,16 @@ uv run moteur quotidien          # collecter + noter + exporter
 # -> exporte depuis la page, puis :
 uv run moteur decisions ~/Downloads/candidatures-export.json
 uv run moteur generer            # CV et lettre dans ../Candidatures/<Entreprise - Poste>/, puis export
-uv run moteur servir             # à laisser tourner : la page importe l'export toute seule
-                                 # et ses boutons CV / Lettre ouvrent les PDF de ton PC
+# -> dépose echange/pour-la-page.json sur la page : les dossiers passent en « À valider »
+uv run moteur servir             # à laisser tourner : boutons CV / Lettre -> PDF de ton PC
 ```
 
-Tant que `servir` tourne, la page relit l'export toutes les 20 secondes (pastille
-« Moteur local : connecté ») : les dossiers passent en « À valider » sans rien faire.
-Sinon, le bouton « Importer » reste disponible avec `echange/pour-la-page.json`.
+La page ne peut pas lire l'export toute seule : la plateforme des artefacts bloque tout
+`fetch()` vers un autre hôte, `127.0.0.1` compris. Les liens simples, eux, passent.
 
 La page est sur claude.ai : le navigateur y bloque les liens `file://`. `servir` expose
-donc **seulement** `../Candidatures/` (lecture seule) et l'export (`/export`, lisible par
-une page de claude.ai uniquement), sur `http://127.0.0.1:8765` (`--port` pour changer ;
-la page suppose 8765).
+donc **seulement** `../Candidatures/`, en lecture seule, sur `http://127.0.0.1:8765`
+(`--port` pour changer ; la page suppose 8765).
 
 Chaque étape existe aussi seule : `collecter`, `noter`, `exporter`. Ajoute `-v` pour le
 détail par source.
