@@ -17,6 +17,7 @@ from moteur.config import Config, ErreurConfig, charger
 from moteur.env import charger_env
 from moteur.generation import compilateur_latex, generer
 from moteur.notation import noter
+from moteur.serveur import PORT_PAR_DEFAUT, servir
 from moteur.sources.ats import SourceAts
 from moteur.sources.base import ClientHttp, ClientHttpx, Source
 from moteur.sources.france_travail import SourceFranceTravail
@@ -101,7 +102,7 @@ def commande_exporter(config: Config, base: BaseLocale) -> None:
     candidatures = base.pour_la_page()
     config.chemins.echange.mkdir(parents=True, exist_ok=True)
     fichier = config.chemins.echange / FICHIER_POUR_LA_PAGE
-    fichier.write_text(echange.serialiser(candidatures), encoding="utf-8")
+    fichier.write_text(echange.serialiser(candidatures, config.chemins.racine), encoding="utf-8")
     print(f"{len(candidatures)} entrées dans {fichier} : à importer dans la page de suivi")
 
 
@@ -156,6 +157,9 @@ def analyseur() -> argparse.ArgumentParser:
     commande("quotidien", "collecter, noter puis exporter")
     commande("decisions", "relit l'export de la page").add_argument("fichier", type=Path)
     commande("generer", "prépare CV et lettre des offres acceptées")
+    commande("servir", "sert CV, lettres et export à la page de suivi").add_argument(
+        "--port", type=int, default=PORT_PAR_DEFAUT
+    )
     return parseur
 
 
@@ -188,6 +192,13 @@ def main(arguments: Sequence[str] | None = None) -> int:
                 commande_decisions(base, options.fichier)
             if options.commande == "generer":
                 commande_generer(config, base)
+                commande_exporter(config, base)
+            if options.commande == "servir":
+                servir(
+                    config.chemins.candidatures,
+                    config.chemins.echange / FICHIER_POUR_LA_PAGE,
+                    options.port,
+                )
     except (ErreurConfig, echange.ErreurEchange, OSError) as erreur:
         print(f"Erreur : {erreur}", file=sys.stderr)
         return 1

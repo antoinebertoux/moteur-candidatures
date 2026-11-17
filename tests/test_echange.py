@@ -1,4 +1,6 @@
 import json
+import os
+from pathlib import Path
 
 import pytest
 
@@ -82,3 +84,15 @@ def test_lire_decisions_avec_l_offre() -> None:
         description="Missions : ...",
     )
     assert decision.lettre_demandee
+
+
+def test_date_de_generation_du_cv(tmp_path: Path) -> None:
+    cv = tmp_path / "Candidatures" / "Libre" / "cv.pdf"
+    cv.parent.mkdir(parents=True)
+    cv.write_bytes(b"%PDF")
+    os.utime(cv, (0, 1_700_000_000.5))
+    generee = Candidature(Offre("Libre", "Lead AI"), "generee", cv_ref="Candidatures/Libre/cv.pdf")
+    (ligne,) = pour_la_page([generee], tmp_path)
+    assert ligne["genere_le"] == "2023-11-14T22:13:20.500Z"
+    (sans_fichier,) = pour_la_page([generee], tmp_path / "ailleurs")
+    assert "genere_le" not in sans_fichier
