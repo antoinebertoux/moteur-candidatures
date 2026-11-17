@@ -78,3 +78,61 @@ class Candidature:
     consigne: str = ""
     cv_ref: str = ""
     lettre_ref: str = ""
+    consigne_lettre: str = ""
+
+
+# Organismes pour lesquels une lettre est faite d'office (l'interrupteur de la page peut
+# toujours la retirer). Doit rester identique à LETTRE_D_OFFICE dans la page de suivi.
+SOURCES_PUBLIQUES = ("service_public", "choisirleservicepublic.gouv.fr", "place-emploi-public")
+MOTS_PUBLIC = (
+    "ministere",
+    "direction generale",
+    "dgsi",
+    "dgse",
+    "dga",
+    "dinum",
+    "anssi",
+    "agence de l'innovation de defense",
+    "commissariat",
+    "secretariat general",
+    "autorite",
+    "tracfin",
+    "prefecture",
+    "armees",
+    "gendarmerie",
+    "police nationale",
+    "service statistique",
+    "cnes",
+    "cnrs",
+    "inria",
+    "interpol",
+    "beta.gouv",
+)
+MOTS_BANQUE = (
+    "banque",
+    "bank",
+    "bnp paribas",
+    "societe generale",
+    "credit agricole",
+    "cacib",
+    "lcl",
+    "natixis",
+    "bpce",
+    "caisse d'epargne",
+    "credit mutuel",
+    "cic",
+    "bpifrance",
+    "rothschild",
+    "lazard",
+    "hsbc",
+    "la banque postale",
+    "oddo",
+    "amundi",
+)
+
+
+def lettre_par_defaut(offre: Offre) -> bool:
+    """Vrai pour les spontanées, le secteur public et les banques."""
+    if offre.type == "spontanee" or offre.source in SOURCES_PUBLIQUES:
+        return True
+    return any(contient_expression(offre.entreprise, mot) for mot in MOTS_PUBLIC + MOTS_BANQUE)

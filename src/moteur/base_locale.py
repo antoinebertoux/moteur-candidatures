@@ -38,9 +38,13 @@ CREATE TABLE IF NOT EXISTS candidatures (
     consigne TEXT NOT NULL DEFAULT '',
     cv_ref TEXT NOT NULL DEFAULT '',
     lettre_ref TEXT NOT NULL DEFAULT '',
+    consigne_lettre TEXT NOT NULL DEFAULT '',
     date_ajout TEXT NOT NULL
 )
 """
+
+# Colonnes ajoutées après coup : créées au besoin dans les bases existantes.
+_COLONNES_AJOUTEES = {"consigne_lettre": "TEXT NOT NULL DEFAULT ''"}
 
 # Statut de la page de suivi -> statut local. Les statuts absents ne changent rien.
 _DECISIONS = {"acceptee": ACCEPTEE, "refusee": REFUSEE, "postulee": CLOSE}
@@ -67,6 +71,7 @@ def _candidature(ligne: sqlite3.Row) -> Candidature:
         consigne=ligne["consigne"],
         cv_ref=ligne["cv_ref"],
         lettre_ref=ligne["lettre_ref"],
+        consigne_lettre=ligne["consigne_lettre"],
     )
 
 
@@ -76,6 +81,15 @@ class BaseLocale:
         self._connexion.row_factory = sqlite3.Row
         with self._connexion:
             self._connexion.execute(_SCHEMA)
+            existantes = {
+                ligne["name"]
+                for ligne in self._connexion.execute("PRAGMA table_info(candidatures)")
+            }
+            for colonne, definition in _COLONNES_AJOUTEES.items():
+                if colonne not in existantes:
+                    self._connexion.execute(
+                        f"ALTER TABLE candidatures ADD COLUMN {colonne} {definition}"
+                    )
 
     def __enter__(self) -> Self:
         return self
@@ -213,6 +227,44 @@ class BaseLocale:
                 (offre.description, cle),
             )
         return curseur.rowcount > 0
+
+    def fixer_lettre(self, cle: str, avec_lettre: bool) -> bool:
+        """Reporte le choix « lettre oui / non » de la page. Renvoie vrai si la base a changé."""
+        with self._connexion:
+            curseur = self._connexion.execute(
+                "UPDATE candidatures SET lettre_demandee = ?"
+                " WHERE cle = ? AND lettre_demandee != ?",
+                (int(avec_lettre), cle, int(avec_lettre)),
+            )
+        return curseur.rowcount > 0
+
+    def lettres_manquantes(self) -> list[Candidature]:
+        """Dossiers générés pour lesquels une lettre est prévue mais pas encore faite."""
+        return [c for c in self._par_statut(GENEREE) if c.lettre_demandee and not c.lettre_ref]
+
+    def trouver(self, cle: str) -> Candidature | None:
+        ligne = self._connexion.execute(
+            "SELECT * FROM candidatures WHERE cle = ?", (cle,)
+        ).fetchone()
+        return _candidature(ligne) if ligne else None
+
+    def redemander_lettre(self, cle: str, consigne: str = "") -> bool:
+        """Remet la lettre d'un dossier généré dans la file « à générer »."""
+        with self._connexion:
+            curseur = self._connexion.execute(
+                "UPDATE candidatures SET lettre_ref = '', lettre_demandee = 1,"
+                " consigne_lettre = ? WHERE cle = ? AND statut = ?",
+                (consigne, cle, GENEREE),
+            )
+        return curseur.rowcount > 0
+
+    def marquer_lettre(self, cle: str, lettre_ref: str) -> None:
+        with self._connexion:
+            self._connexion.execute(
+                "UPDATE candidatures SET lettre_ref = ?, lettre_demandee = 1,"
+                " consigne_lettre = '' WHERE cle = ?",
+                (lettre_ref, cle),
+            )
 
     def marquer_generee(self, cle: str, cv_ref: str, lettre_ref: str) -> None:
         with self._connexion:

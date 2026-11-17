@@ -9,7 +9,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from moteur.modeles import Candidature, Offre
+from moteur.modeles import Candidature, Offre, lettre_par_defaut
 
 
 class ErreurEchange(ValueError):
@@ -29,6 +29,18 @@ class Decision:
     consigne: str = ""
     offre: Offre | None = None
     lettre_demandee: bool = False
+    lettre: bool | None = None
+    """Choix fait avec l'interrupteur de la page (champ « lettre » : « oui » ou « non »)."""
+    lettre_refaire_le: str = ""
+    """Moment où « Régénérer la lettre » a été cliqué (format `toISOString()`)."""
+    lettre_consigne: str = ""
+
+    @property
+    def avec_lettre(self) -> bool:
+        """Le choix de la page s'il existe, sinon la règle par défaut."""
+        if self.lettre is not None:
+            return self.lettre
+        return self.lettre_demandee or (self.offre is not None and lettre_par_defaut(self.offre))
 
 
 def _texte(entree: dict[str, Any], champ: str) -> str:
@@ -51,7 +63,7 @@ def _offre(entree: dict[str, Any]) -> Offre | None:
     )
 
 
-def _date_fichier(fichier: Path) -> str | None:
+def date_fichier(fichier: Path) -> str | None:
     """Date de modification au format de `Date.toISOString()` de la page, ou None."""
     try:
         moment = datetime.fromtimestamp(fichier.stat().st_mtime, UTC)
@@ -88,17 +100,29 @@ def pour_la_page(
             ligne["cv_ref"] = candidature.cv_ref
             # La page ne repasse un dossier en « À valider » que s'il a été généré après
             # la dernière consigne de retouche : un vieil export ne l'écrase pas.
-            genere_le = _date_fichier(racine / candidature.cv_ref) if racine else None
+            genere_le = date_fichier(racine / candidature.cv_ref) if racine else None
             if genere_le:
                 ligne["genere_le"] = genere_le
         if candidature.lettre_ref:
             ligne["lettre_ref"] = candidature.lettre_ref
+            # Permet à la page d'effacer sa demande de régénération une fois servie.
+            lettre_le = date_fichier(racine / candidature.lettre_ref) if racine else None
+            if lettre_le:
+                ligne["lettre_generee_le"] = lettre_le
         lignes.append(ligne)
     return lignes
 
 
 def serialiser(candidatures: Iterable[Candidature], racine: Path | None = None) -> str:
     return json.dumps(pour_la_page(candidatures, racine), ensure_ascii=False, indent=2)
+
+
+def _choix_lettre(valeur: object) -> bool | None:
+    if valeur in ("oui", True):
+        return True
+    if valeur in ("non", False):
+        return False
+    return None
 
 
 def lire_decisions(texte: str) -> list[Decision]:
@@ -124,6 +148,9 @@ def lire_decisions(texte: str) -> list[Decision]:
                     _texte(entree, "consigne"),
                     _offre(entree),
                     entree.get("lettre_demandee") is True,
+                    _choix_lettre(entree.get("lettre")),
+                    _texte(entree, "lettre_refaire_le"),
+                    _texte(entree, "lettre_consigne"),
                 )
             )
     return decisions
