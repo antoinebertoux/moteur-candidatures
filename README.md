@@ -60,7 +60,12 @@ uv run moteur quotidien          # collecter + noter + exporter
 uv run moteur decisions ~/Downloads/candidatures-export.json
 uv run moteur generer            # CV et lettre dans ../Candidatures/<Entreprise - Poste>/
 uv run moteur exporter           # -> réimporte : les dossiers passent en « À valider »
+uv run moteur servir             # boutons CV / Lettre de la page -> PDF de ton PC
 ```
+
+La page est sur claude.ai : le navigateur y bloque les liens `file://`. `servir` expose
+donc **seulement** `../Candidatures/`, en lecture seule, sur `http://127.0.0.1:8765`
+(`--port` pour changer ; la page suppose 8765). Laisse-le tourner pendant la relecture.
 
 Chaque étape existe aussi seule : `collecter`, `noter`, `exporter`. Ajoute `-v` pour le
 détail par source.
@@ -84,6 +89,7 @@ uv run pytest
 | `notation.py` | score et résumé, par lots | Haiku |
 | `generation.py` | CV et lettre LaTeX, compilation | Sonnet |
 | `echange.py` | fichiers échangés avec la page de suivi | non |
+| `serveur.py` | sert les PDF de `Candidatures/` à la page | non |
 
 Les identifiants de candidature (`Offre.cle`) sont calculés comme dans la page de suivi :
 ne change pas `normaliser` d'un seul côté.
