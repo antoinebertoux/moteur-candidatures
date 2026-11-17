@@ -58,8 +58,8 @@ uv run moteur quotidien          # collecter + noter + exporter
 # -> importe echange/pour-la-page.json dans la page de suivi, réponds oui / non
 # -> exporte depuis la page, puis :
 uv run moteur decisions ~/Downloads/candidatures-export.json
-uv run moteur generer            # CV et lettre dans ../Candidatures/<Entreprise - Poste>/
-uv run moteur exporter           # -> réimporte : les dossiers passent en « À valider »
+uv run moteur generer            # CV et lettre dans ../Candidatures/<Entreprise - Poste>/, puis export
+# -> réimporte echange/pour-la-page.json : les dossiers passent en « À valider » avec leurs liens
 uv run moteur servir             # boutons CV / Lettre de la page -> PDF de ton PC
 ```
 

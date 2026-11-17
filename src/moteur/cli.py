@@ -184,6 +184,7 @@ def main(arguments: Sequence[str] | None = None) -> int:
                 commande_decisions(base, options.fichier)
             if options.commande == "generer":
                 commande_generer(config, base)
+                commande_exporter(config, base)
             if options.commande == "servir":
                 servir(config.chemins.candidatures, options.port)
     except (ErreurConfig, echange.ErreurEchange, OSError) as erreur:
