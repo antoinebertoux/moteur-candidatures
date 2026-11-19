@@ -6,7 +6,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 from moteur import echange
-from moteur.base_locale import BaseLocale
+from moteur.base_locale import ACCEPTEE, CLOSE, BaseLocale
 
 
 @dataclass(frozen=True, slots=True)
@@ -18,6 +18,8 @@ class Bilan:
     lettres: int
     a_generer: int
     lettres_a_ajouter: int
+    preparations: int = 0
+    """New interview preparation requests recorded (PREP-01)."""
 
     def en_dict(self) -> dict[str, int]:
         return asdict(self)
@@ -26,7 +28,8 @@ class Bilan:
         return (
             f"{self.decisions} décisions reportées, {self.completees} offres ajoutées ou"
             f" complétées depuis la page, {self.lettres} choix ou régénérations de lettre,"
-            f" {self.a_generer} dossiers à générer, {self.lettres_a_ajouter} lettres à ajouter"
+            f" {self.a_generer} dossiers à générer, {self.lettres_a_ajouter} lettres à ajouter,"
+            f" {self.preparations} préparations d'entretien demandées"
         )
 
 
@@ -45,8 +48,27 @@ def lettres_a_refaire(decisions: list[echange.Decision], base: BaseLocale, racin
     return redemandees
 
 
+def preparations_demandees(base: BaseLocale, decisions: list[echange.Decision]) -> int:
+    """Stores the page's preparation requests (BASE-12); returns how many are new.
+
+    An application unknown to engine B is first added from the page's document (PREP-03).
+    """
+    nouvelles = 0
+    for decision in decisions:
+        if decision.preparation is None:
+            continue
+        if decision.offre is not None and base.trouver(decision.cle) is None:
+            statut = ACCEPTEE if decision.statut == "acceptee" else CLOSE
+            base.completer_depuis_la_page(
+                decision.cle, decision.offre, decision.avec_lettre, statut
+            )
+        nouvelles += base.demander_preparation(decision.cle, decision.preparation)
+    return nouvelles
+
+
 def appliquer(base: BaseLocale, decisions: list[echange.Decision], racine: Path) -> Bilan:
-    """ECH-12 order: unknown accepted ones, letter choices, statuses, letter regenerations."""
+    """ECH-12 order: unknown accepted ones, letter choices, statuses, letter
+    regenerations, then interview preparation requests."""
     completees = sum(
         base.completer_depuis_la_page(d.cle, d.offre, d.avec_lettre)
         for d in decisions
@@ -64,6 +86,12 @@ def appliquer(base: BaseLocale, decisions: list[echange.Decision], racine: Path)
         if d.statut == "refusee"
     )
     lettres += lettres_a_refaire(decisions, base, racine)
+    preparations = preparations_demandees(base, decisions)
     return Bilan(
-        changees, completees, lettres, len(base.a_generer()), len(base.lettres_manquantes())
+        changees,
+        completees,
+        lettres,
+        len(base.a_generer()),
+        len(base.lettres_manquantes()),
+        preparations,
     )

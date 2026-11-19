@@ -6,8 +6,8 @@ profile sent to Claude, the sorting criteria, the sources and the tracked compan
 - **CONF-01** · If `config.toml` is missing, the engine stops and says to copy
   `config.exemple.toml`; if it is malformed, it stops and quotes the TOML error.
 - **CONF-02** · Defaults: 8 ads per scoring batch, models `haiku` for scoring and
-  `sonnet` for writing, France Travail and Choisir le service public disabled, no salary
-  floor, root folder `..` (the parent of `moteur/`).
+  `sonnet` for writing and for interview preparation, France Travail and Choisir le
+  service public disabled, no salary floor, root folder `..` (the parent of `moteur/`).
 - **CONF-03** · A value of the wrong type is rejected with a message naming the key;
   `taille_lot` and `pages_max` must be at least 1.
 - **CONF-04** · Every tracked company has a name. Its recruiting tool (`ats`) is empty

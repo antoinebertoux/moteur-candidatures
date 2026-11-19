@@ -11,6 +11,7 @@
 | `moteur decisions <file>` | reads the page's export |
 | `moteur generer` | folders of accepted applications, missing letters, then export |
 | `moteur lettre [id…]` | letters only, then export |
+| `moteur preparer [id…]` | interview preparation sheets (PREP-40), then export |
 | `moteur servir [--port N]` | serves the PDFs to the page |
 | `moteur mcp` | direct link with the page (ECH-20), started by the Claude desktop app |
 | `moteur detecter <address…> [--nom N]` | recognises the recruiting tool of career pages and prints the `[[entreprises]]` block to paste |

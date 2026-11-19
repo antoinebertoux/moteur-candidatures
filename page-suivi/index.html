@@ -96,6 +96,14 @@ a.doc{display:inline-block;border:1px solid var(--accent);border-radius:6px;padd
 a.doc:hover{background:var(--accent-soft)}
 body.depot .wrap{outline:3px dashed var(--accent);outline-offset:-6px}
 @media (max-width:640px){.pipeline{grid-template-columns:repeat(3,minmax(0,1fr))}.head{grid-template-columns:1fr}}
+.fiche{border-top:1px solid var(--line);padding:12px 16px;font-size:14px;line-height:1.5;overflow-wrap:anywhere}
+.fiche .row{justify-content:space-between}
+.fiche h1{font-family:var(--display);font-size:20px;margin:8px 0 4px}
+.fiche h2{font-family:var(--display);font-size:17px;margin:18px 0 4px;color:var(--accent)}
+.fiche h3{font-size:15px;margin:12px 0 2px}
+.fiche p,.fiche ul,.fiche ol{margin:4px 0;max-width:75ch}
+.fiche ul,.fiche ol{padding-left:22px}
+.fiche code{font-family:var(--mono);font-size:13px;background:var(--sunken);border-radius:4px;padding:0 4px}
 @media (prefers-reduced-motion:no-preference){button{transition:border-color .15s,background .15s}}
 </style>
 </head>
@@ -202,13 +210,48 @@ function safeUrl(u){u=String(u||"").trim();return /^https?:\/\//i.test(u)?u:"";}
 // Les PDF locaux passent par `uv run moteur servir` : un lien file:// est bloqué depuis claude.ai.
 var SERVEUR_LOCAL="http://127.0.0.1:8765/";
 function docUrl(ref){ref=String(ref||"").trim();if(!ref)return "";if(/^https?:\/\//i.test(ref))return ref;if(/^[a-z]+:/i.test(ref))return "";return SERVEUR_LOCAL+ref.replace(/^\/+/,"").split("/").map(encodeURIComponent).join("/");}
-function docLinks(d){var h="",c=docUrl(d.cv_ref),l=docUrl(d.lettre_ref);if(c)h+='<a class="doc" href="'+esc(c)+'" target="_blank" rel="noopener noreferrer">CV</a>';if(l)h+='<a class="doc" href="'+esc(l)+'" target="_blank" rel="noopener noreferrer">Lettre</a>';return h;}
+function docLinks(d){var h="",c=docUrl(d.cv_ref),l=docUrl(d.lettre_ref);if(c)h+='<a class="doc" href="'+esc(c)+'" target="_blank" rel="noopener noreferrer">CV</a>';if(l)h+='<a class="doc" href="'+esc(l)+'" target="_blank" rel="noopener noreferrer">Lettre</a>';if(d.preparation)h+='<button data-act="fiche" aria-expanded="'+(state.fiche===d.id)+'">Préparation</button>';return h;}
 // Lettre faite d'office : spontanées, secteur public, banques. L'interrupteur (champ
 // « lettre » : « oui » ou « non ») l'emporte. Doit rester identique à
 // lettre_par_defaut dans moteur/modeles.py.
 var SOURCES_PUBLIQUES=["service_public","choisirleservicepublic.gouv.fr","place-emploi-public"];
 var MOTS_LETTRE=["ministere","direction generale","dgsi","dgse","dga","dinum","anssi","agence de l'innovation de defense","commissariat","secretariat general","autorite","tracfin","prefecture","armees","gendarmerie","police nationale","service statistique","cnes","cnrs","inria","interpol","beta.gouv",
   "banque","bank","bnp paribas","societe generale","credit agricole","cacib","lcl","natixis","bpce","caisse d'epargne","credit mutuel","cic","bpifrance","rothschild","lazard","hsbc","la banque postale","oddo","amundi"];
+// Interview preparation (PAGE-11): pending while the request is more recent than the sheet.
+function prepEnCours(d){return !!d.preparation_demandee_le&&String(d.preparation_demandee_le)>String(d.preparation_le||"");}
+function prepPossible(d){return d.statut==="postulee"&&d.suite==="entretien";}
+// Minimal Markdown for the sheet: everything is escaped first, only http(s) links are kept.
+function mdInline(t){
+  return esc(t).replace(/`([^`]+)`/g,"<code>$1</code>").replace(/\*\*([^*]+)\*\*/g,"<strong>$1</strong>")
+    .replace(/(^|[^*])\*([^*\s][^*]*)\*/g,"$1<em>$2</em>")
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,function(_,txt,u){return '<a href="'+u+'" target="_blank" rel="noopener noreferrer">'+txt+'</a>';});
+}
+function md(src){
+  var out="",liste="",para=[];
+  function fermer(){if(para.length){out+="<p>"+para.map(mdInline).join("<br>")+"</p>";para=[];}if(liste){out+="</"+liste+">";liste="";}}
+  String(src||"").split(/\r?\n/).forEach(function(l){
+    var m;
+    if(!l.trim()){fermer();return;}
+    if((m=/^(#{1,4})\s+(.*)$/.exec(l))){fermer();var n=Math.min(m[1].length,3);out+="<h"+n+">"+mdInline(m[2])+"</h"+n+">";return;}
+    if((m=/^\s*(?:[-*]|(\d+)[.)])\s+(.*)$/.exec(l))){
+      var type=m[1]?"ol":"ul";
+      if(para.length){out+="<p>"+para.map(mdInline).join("<br>")+"</p>";para=[];}
+      if(liste!==type){if(liste)out+="</"+liste+">";out+="<"+type+">";liste=type;}
+      out+="<li>"+mdInline(m[2])+"</li>";return;
+    }
+    // An indented line right under a list item (a suggested answer) stays in that item.
+    if(liste&&/^\s+\S/.test(l)&&/<\/li>$/.test(out)){out=out.slice(0,-5)+"<br>"+mdInline(l.trim())+"</li>";return;}
+    if(liste){out+="</"+liste+">";liste="";}
+    para.push(l.trim());
+  });
+  fermer();
+  return out;
+}
+function dateFiche(s){var d=new Date(s);return isNaN(d)?"":d.toLocaleString("fr-FR",{day:"numeric",month:"long",hour:"2-digit",minute:"2-digit"});}
+function fiche(d){
+  return '<div class="fiche"><div class="row"><span class="sub" style="margin:0">Préparation'+(d.preparation_le?" du "+esc(dateFiche(d.preparation_le)):"")+'</span><button class="ghost" data-act="fiche">Fermer</button></div>'+md(d.preparation)+'</div>';
+}
+
 function lettreDefaut(d){
   if(d.type==="spontanee"||SOURCES_PUBLIQUES.indexOf(d.source||"")>=0)return true;
   var e="-"+norm(d.entreprise)+"-";
@@ -303,7 +346,14 @@ function detail(d){
     SUITES.forEach(function(s){h+='<option value="'+s[0]+'"'+((d.suite||"")===s[0]?" selected":"")+'>'+s[1]+'</option>';});
     h+='</select></label>';
   }
+  if(prepPossible(d)){
+    h+='<div class="sub" style="margin:0">Préparation de l\'entretien (tout est facultatif, gardé pour la prochaine demande)</div>';
+    h+='<div class="grid2">'+field(d.id,"pretentions","Salaire annoncé",d)+field(d.id,"entretien_infos","Entretien : date, format, interlocuteurs",d)+'</div>';
+    h+=field(d.id,"preparation_consigne","Consigne pour la préparation",d,"area");
+    if(prepEnCours(d))h+='<div class="note">Préparation demandée'+(moteur.ok?" : le moteur B la rédige, la fiche arrivera ici dans quelques minutes.":". Le moteur B n\'est pas connecté : ouvre la page dans l\'app Claude desktop, ou lance <code>uv run moteur preparer</code>.")+'</div>';
+  }
   h+='<div class="row"><button data-act="save">Enregistrer</button>';
+  if(prepPossible(d))h+='<button class="primary" data-act="preparer">'+(d.preparation?"Refaire la préparation":"Préparer l\'entretien")+'</button>';
   if(d.statut==="acceptee")h+='<button data-act="pret">CV prêt, passer à valider</button>';
   if(d.statut==="prete"||d.statut==="validee")h+='<button data-act="retouche">Redemander avec la consigne</button>';
   if(d.lettre_ref&&(d.statut==="prete"||d.statut==="validee"))h+='<button data-act="relettre">Régénérer la lettre</button>';
@@ -341,10 +391,12 @@ function renderList(list){
       if(d.suite==="entretien"||d.suite==="offre")html+='<span class="chip ok">'+(d.suite==="offre"?"Proposition":"Entretien")+'</span>';
       if(d.suite==="refus")html+='<span class="chip bad">Refus</span>';
       if(d.suite==="relance")html+='<span class="chip">Relancée</span>';
+      if(prepEnCours(d))html+='<span class="chip warn">Préparation en cours</span>';
     } else if(d.date_ajout)html+='<span>ajoutée le '+esc(d.date_ajout)+'</span>';
     if(d.statut==="refusee"&&d.motif_refus)html+='<span class="chip bad">'+esc(motifLabel(d.motif_refus))+(d.motif_detail?" · "+esc(d.motif_detail):"")+'</span>';
     html+='</div></div><div class="row">'+docLinks(d)+lettreBouton(d)+actions(d)+'</div></div>';
     if(state.refusing===d.id)html+=motifPicker(d);
+    if(state.fiche===d.id&&d.preparation)html+=fiche(d);
     if(state.open===d.id)html+=detail(d);
     html+='</article>';
   });
@@ -397,6 +449,7 @@ $("list").addEventListener("click",function(e){
   var done=function(){delete state.drafts[id];};
   if(act==="toggle"){state.open=state.open===id?null:id;state.confirmDel=null;render();return;}
   if(act==="del"){state.confirmDel=id;render();return;}
+  if(act==="fiche"){state.fiche=state.fiche===id?null:id;render();return;}
   // « Non » et « Abandonner » demandent d'abord le motif (PAGE-10).
   if(act==="non"){state.refusing=state.refusing===id?null:id;render();return;}
   if(act==="motif-annuler"){state.refusing=null;render();return;}
@@ -415,6 +468,10 @@ $("list").addEventListener("click",function(e){
   else if(act==="pret")f.statut="prete";
   else if(act==="valider")f.statut="validee";
   else if(act==="postulee"){f.statut="postulee";f.date_postulee=today();}
+  else if(act==="preparer"){
+    f.preparation_demandee_le=new Date().toISOString();
+    ["pretentions","entretien_infos","preparation_consigne"].forEach(function(k){if(f[k]!=null)f[k]=String(f[k]).trim().slice(0,2000);});
+  }
   else if(act==="relettre"){f.lettre_refaire_le=new Date().toISOString();f.lettre_consigne=String(f.lettre_consigne||"").trim();}
   else if(act==="retouche"){
     if(!String(f.consigne||"").trim()){say("Écris d'abord la consigne de retouche.","bad");b.disabled=false;return;}
@@ -456,7 +513,7 @@ function importRows(arr,auto){
   if(!col){if(!auto)say("La base n'est pas disponible dans cette vue.","bad");return Promise.resolve();}
   var known={};state.docs.forEach(function(d){known[d.id]=d;});
   var added=0,updated=0,skipped=0,chain=Promise.resolve();
-  var GEN=["cv_ref","lettre_ref","resume","score","lettre_demandee"];
+  var GEN=["cv_ref","lettre_ref","resume","score","lettre_demandee","preparation","preparation_le"];
   arr.forEach(function(raw){
     if(!raw||typeof raw!=="object"||!raw.entreprise){skipped++;return;}
     var d={type:raw.type==="spontanee"?"spontanee":"offre",entreprise:String(raw.entreprise),poste:String(raw.poste||""),lieu:String(raw.lieu||""),
@@ -533,10 +590,13 @@ function echecMoteur(e){
   afficherMoteur();
 }
 // Seuls les champs que le moteur lit (ECH-11) ; le texte de l'offre n'est utile qu'aux acceptées.
-var CHAMPS_MOTEUR=["id","statut","consigne","lettre_demandee","lettre","lettre_refaire_le","lettre_consigne","type","entreprise","poste","lieu","url","source"];
+var CHAMPS_MOTEUR=["id","statut","consigne","lettre_demandee","lettre","lettre_refaire_le","lettre_consigne","type","entreprise","poste","lieu","url","source","motif_refus","motif_detail"];
+// A preparation request also carries what the page knows of the follow-up (PREP-10).
+var CHAMPS_PREPARATION=["preparation_demandee_le","pretentions","entretien_infos","preparation_consigne","date_postulee","suite","contact","notes","texte_offre"];
 function pourLeMoteur(d){
   var o={};CHAMPS_MOTEUR.forEach(function(k){if(d[k]!=null&&d[k]!=="")o[k]=d[k];});
   if(d.statut==="acceptee"&&d.texte_offre)o.texte_offre=d.texte_offre;
+  if(d.preparation_demandee_le)CHAMPS_PREPARATION.forEach(function(k){if(d[k]!=null&&d[k]!=="")o[k]=d[k];});
   return o;
 }
 // Page → moteur (PAGE-37) : un seul appel à la fois, les changements rapprochés partent ensemble.

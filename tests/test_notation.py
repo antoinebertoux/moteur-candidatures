@@ -86,18 +86,13 @@ def test_scoring_sends_the_refusals_from_the_database() -> None:
     from moteur.base_locale import BaseLocale
     from tests.conftest import FauxAssistant
 
-    systems: list[str] = []
-
-    class Spy(FauxAssistant):
-        def demander(self, prompt: str, *, systeme: str, modele: str) -> str:
-            systems.append(systeme)
-            return super().demander(prompt, systeme=systeme, modele=modele)
+    spy = FauxAssistant("[]")
+    systems = spy.systemes
 
     with BaseLocale(":memory:") as base:
         refusee, nouvelle = Offre("Sopra", "Data Scientist"), Offre("Acme", "Lead AI")
         base.ajouter([refusee, nouvelle])
         base.appliquer_decision(refusee.cle, "refusee")
         base.set_refusal_reason(refusee.cle, "conseil", "")
-        assistant = Spy("[]")
-        noter(base, assistant, profil="p", modele="haiku", taille_lot=8)
+        noter(base, spy, profil="p", modele="haiku", taille_lot=8)
         assert "Sopra — Data Scientist : Conseil / ESN" in systems[0]

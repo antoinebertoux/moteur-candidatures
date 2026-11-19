@@ -18,6 +18,10 @@ capability). Engine B therefore offers two channels carrying the same content:
   CV PDF), and if it has a letter `lettre_ref` and `lettre_generee_le`. Dates use the
   format `2026-11-17T21:45:48.123Z`, comparable with the page's.
 
+- **ECH-03** · An application with a preparation sheet (PREP-32) adds `preparation`
+  (the Markdown text) and `preparation_le` (date of the sheet, same format), whatever its
+  status in engine B.
+
 ## Page → engine B: `candidatures-export.json`
 
 - **ECH-10** · Accepted as `{"candidatures": [...]}` or directly as the array. A file that
@@ -25,11 +29,13 @@ capability). Engine B therefore offers two channels carrying the same content:
   `statut` are ignored.
 - **ECH-11** · Fields read: `id`, `statut`, `consigne`, `lettre_demandee`, `lettre`
   (`oui` / `non` or boolean; missing = no choice), `lettre_refaire_le`,
-  `lettre_consigne`, `motif_refus`, `motif_detail`, and enough to rebuild the ad if `entreprise` and `poste` are
+  `lettre_consigne`, `motif_refus`, `motif_detail`, `preparation_demandee_le`,
+  `pretentions`, `entretien_infos`, `preparation_consigne`, and enough to rebuild the ad if `entreprise` and `poste` are
   present (`type`, `lieu`, `url`, `source`, `texte_offre`).
 - **ECH-12** · `moteur decisions <file>` applies, in this order: adding unknown accepted
   applications (BASE-07); letter choice of accepted, ready or approved applications
-  (BASE-08); status decisions (BASE-05, BASE-06); letter regenerations (LET-07). It then
+  (BASE-08); status decisions (BASE-05, BASE-06); letter regenerations (LET-07); preparation
+  requests (BASE-12). It then
   prints the summary and what is left to generate. *(untested)*
 
 ## Direct link: MCP server `moteur mcp`
@@ -43,7 +49,8 @@ capability). Engine B therefore offers two channels carrying the same content:
 - **ECH-22** · Tool `decisions` (input: `{"candidatures": [...]}`, the page's documents,
   same format as ECH-10 and ECH-11): applies them exactly like `moteur decisions`
   (ECH-12) and returns the counts: decisions applied, applications added or completed,
-  letter choices or regenerations, folders to generate, letters to add. Applying the same
+  letter choices or regenerations, folders to generate, letters to add, preparations
+  requested. Applying the same
   documents twice changes nothing the second time.
 - **ECH-23** · An invalid input to `decisions` returns a tool error with the message of
   ECH-10, and changes nothing.
@@ -51,3 +58,6 @@ capability). Engine B therefore offers two channels carrying the same content:
   that `moteur` commands run from a terminal at the same time are not blocked.
 - **ECH-25** · The tools never call Claude and never generate a CV or a letter: they
   only read and record (generation stays `moteur generer`, which takes minutes).
+- **ECH-26** · Single exception to ECH-25: `decisions` starts `moteur preparer` in the
+  background when it records a new preparation request (PREP-41). It does not wait for
+  it, and its answer does not depend on it.

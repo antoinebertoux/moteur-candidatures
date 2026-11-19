@@ -53,6 +53,9 @@ particulière : les règles par défaut (seul le propriétaire écrit).
 | `contact`, `notes`, `texte_offre` | texte | libre |
 | `consigne`, `retouche_le`, `lettre_consigne`, `lettre_refaire_le` | texte | demandes de retouche |
 | `suite` | texte | après envoi : vide, `relance`, `entretien`, `refus`, `offre` |
+| `motif_refus`, `motif_detail` | texte | motif du refus (PAGE-10) |
+| `preparation_demandee_le`, `pretentions`, `entretien_infos`, `preparation_consigne` | texte | demande de préparation d'entretien (PAGE-11) |
+| `preparation`, `preparation_le` | texte | fiche de préparation (Markdown) et sa date, écrites par le moteur B |
 | `date_ajout`, `date_maj`, `date_postulee` | texte | `AAAA-MM-JJ` |
 
 ## Sauvegarde et restauration

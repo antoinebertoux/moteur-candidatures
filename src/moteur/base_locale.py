@@ -9,7 +9,7 @@ from pathlib import Path
 from types import TracebackType
 from typing import Self
 
-from moteur.modeles import Candidature, Note, Offre, normaliser
+from moteur.modeles import Candidature, DemandePreparation, Note, Offre, normaliser
 from moteur.refusal import DUPLICATE, Refusal
 
 A_NOTER = "a_noter"
@@ -50,7 +50,18 @@ _COLONNES_AJOUTEES = {
     "motif_refus": "TEXT NOT NULL DEFAULT ''",
     "motif_detail": "TEXT NOT NULL DEFAULT ''",
     "refusee_le": "TEXT NOT NULL DEFAULT ''",
+    "preparation_demandee_le": "TEXT NOT NULL DEFAULT ''",
+    "pretentions": "TEXT NOT NULL DEFAULT ''",
+    "entretien_infos": "TEXT NOT NULL DEFAULT ''",
+    "preparation_consigne": "TEXT NOT NULL DEFAULT ''",
+    "contexte_page": "TEXT NOT NULL DEFAULT ''",
+    "preparation": "TEXT NOT NULL DEFAULT ''",
+    "preparation_le": "TEXT NOT NULL DEFAULT ''",
 }
+
+# A request is pending while it is more recent than the sheet, or there is no sheet
+# (PREP-02). Both times use the `toISOString()` format, so they compare as text.
+_EN_ATTENTE = "preparation_demandee_le != '' AND preparation_demandee_le > preparation_le"
 
 # Statut de la page de suivi -> statut local. Les statuts absents ne changent rien.
 _DECISIONS = {"acceptee": ACCEPTEE, "refusee": REFUSEE, "postulee": CLOSE}
@@ -78,6 +89,8 @@ def _candidature(ligne: sqlite3.Row) -> Candidature:
         cv_ref=ligne["cv_ref"],
         lettre_ref=ligne["lettre_ref"],
         consigne_lettre=ligne["consigne_lettre"],
+        preparation=ligne["preparation"],
+        preparation_le=ligne["preparation_le"],
     )
 
 
@@ -170,8 +183,14 @@ class BaseLocale:
             )
 
     def pour_la_page(self) -> list[Candidature]:
-        """Ce que la page de suivi doit connaître : propositions notées et dossiers générés."""
-        return self._par_statut(NOTEE, GENEREE)
+        """What the page must know: scored proposals, ready folders (BASE-04) and every
+        application with a preparation sheet, whatever its status (ECH-03)."""
+        lignes = self._connexion.execute(
+            "SELECT * FROM candidatures WHERE statut IN (?, ?) OR preparation != ''"
+            " ORDER BY date_ajout, cle",
+            (NOTEE, GENEREE),
+        ).fetchall()
+        return [_candidature(ligne) for ligne in lignes]
 
     def a_generer(self) -> list[Candidature]:
         return self._par_statut(ACCEPTEE)
@@ -239,7 +258,9 @@ class BaseLocale:
         ).fetchall()
         return [Refusal(*ligne) for ligne in lignes]
 
-    def completer_depuis_la_page(self, cle: str, offre: Offre, lettre_demandee: bool) -> bool:
+    def completer_depuis_la_page(
+        self, cle: str, offre: Offre, lettre_demandee: bool, statut: str = ACCEPTEE
+    ) -> bool:
         """Ajoute une candidature acceptée dans la page mais inconnue de la base.
 
         C'est le cas des offres ajoutées à la main ou trouvées par le moteur A. Pour une
@@ -260,7 +281,7 @@ class BaseLocale:
                     offre.url,
                     offre.source,
                     offre.description,
-                    ACCEPTEE,
+                    statut,
                     int(lettre_demandee),
                     date.today().isoformat(),
                 ),
@@ -319,6 +340,54 @@ class BaseLocale:
                 "UPDATE candidatures SET statut = ?, cv_ref = ?, lettre_ref = ?, consigne = ''"
                 " WHERE cle = ?",
                 (GENEREE, cv_ref, lettre_ref, cle),
+            )
+
+    def demander_preparation(self, cle: str, demande: DemandePreparation) -> bool:
+        """Stores a preparation request (BASE-12); an older or identical one changes nothing.
+
+        Returns true if the request is new. The status is never changed.
+        """
+        with self._connexion:
+            curseur = self._connexion.execute(
+                "UPDATE candidatures SET preparation_demandee_le = ?, pretentions = ?,"
+                " entretien_infos = ?, preparation_consigne = ?, contexte_page = ?"
+                " WHERE cle = ? AND preparation_demandee_le < ?",
+                (
+                    demande.demandee_le,
+                    demande.pretentions,
+                    demande.entretien_infos,
+                    demande.consigne,
+                    demande.contexte,
+                    cle,
+                    demande.demandee_le,
+                ),
+            )
+        return curseur.rowcount > 0
+
+    def demande_preparation(self, cle: str) -> DemandePreparation | None:
+        """The last preparation request of an application, or None if there is none."""
+        ligne = self._connexion.execute(
+            "SELECT preparation_demandee_le, pretentions, entretien_infos,"
+            " preparation_consigne, contexte_page FROM candidatures"
+            " WHERE cle = ? AND preparation_demandee_le != ''",
+            (cle,),
+        ).fetchone()
+        return DemandePreparation(*ligne) if ligne else None
+
+    def preparations_en_attente(self) -> list[str]:
+        """Identifiers of the applications whose preparation is pending (PREP-02)."""
+        lignes = self._connexion.execute(
+            f"SELECT cle FROM candidatures WHERE {_EN_ATTENTE}"
+            " ORDER BY preparation_demandee_le, cle"
+        ).fetchall()
+        return [ligne["cle"] for ligne in lignes]
+
+    def enregistrer_preparation(self, cle: str, texte: str, faite_le: str) -> None:
+        """Stores a successful sheet (PREP-32); the status does not change."""
+        with self._connexion:
+            self._connexion.execute(
+                "UPDATE candidatures SET preparation = ?, preparation_le = ? WHERE cle = ?",
+                (texte, faite_le, cle),
             )
 
     def entreprises_connues(self) -> set[str]:

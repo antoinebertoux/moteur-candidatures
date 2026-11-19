@@ -9,7 +9,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from moteur.modeles import Candidature, Offre, lettre_par_defaut
+from moteur.modeles import Candidature, DemandePreparation, Offre, lettre_par_defaut
 from moteur.refusal import normalise_detail, normalise_reason
 
 
@@ -38,6 +38,8 @@ class Decision:
     motif_refus: str = ""
     """Refusal reason code chosen in the page (PAGE-10), `autre` if unknown."""
     motif_detail: str = ""
+    preparation: DemandePreparation | None = None
+    """Interview preparation request (PREP-01), None if the page made none."""
 
     @property
     def avec_lettre(self) -> bool:
@@ -64,6 +66,34 @@ def _offre(entree: dict[str, Any]) -> Offre | None:
         url=_texte(entree, "url"),
         source=_texte(entree, "source"),
         description=_texte(entree, "texte_offre"),
+    )
+
+
+_CONTEXTE = (
+    ("date_postulee", "Envoyée le"),
+    ("suite", "Suite"),
+    ("contact", "Contact"),
+    ("notes", "Notes"),
+)
+MAX_CHAMP_PREPARATION = 2_000
+
+
+def _preparation(entree: dict[str, Any]) -> DemandePreparation | None:
+    """The page's preparation request, with what it knows of the follow-up (PREP-10)."""
+    demandee_le = _texte(entree, "preparation_demandee_le")
+    if not demandee_le:
+        return None
+    contexte = [
+        f"{libelle} : {_texte(entree, champ)}"
+        for champ, libelle in _CONTEXTE
+        if _texte(entree, champ)
+    ]
+    return DemandePreparation(
+        demandee_le,
+        _texte(entree, "pretentions")[:MAX_CHAMP_PREPARATION],
+        _texte(entree, "entretien_infos")[:MAX_CHAMP_PREPARATION],
+        _texte(entree, "preparation_consigne")[:MAX_CHAMP_PREPARATION],
+        "\n".join(contexte)[:10_000],
     )
 
 
@@ -113,6 +143,9 @@ def pour_la_page(
             lettre_le = date_fichier(racine / candidature.lettre_ref) if racine else None
             if lettre_le:
                 ligne["lettre_generee_le"] = lettre_le
+        if candidature.preparation:
+            ligne["preparation"] = candidature.preparation
+            ligne["preparation_le"] = candidature.preparation_le
         lignes.append(ligne)
     return lignes
 
@@ -162,6 +195,7 @@ def decisions_depuis(donnees: object) -> list[Decision]:
                     _texte(entree, "lettre_consigne"),
                     normalise_reason(entree.get("motif_refus")),
                     normalise_detail(entree.get("motif_detail")),
+                    _preparation(entree),
                 )
             )
     return decisions

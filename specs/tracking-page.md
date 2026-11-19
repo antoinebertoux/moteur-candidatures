@@ -11,7 +11,9 @@ appear. These rules are checked by hand.
 missing = `manuel`), `statut`, `score`, `resume`, `lettre_demandee`, `lettre`
 (`oui`/`non`), `cv_ref`, `lettre_ref`, `contact`, `notes`, `texte_offre`, `consigne`,
 `retouche_le`, `lettre_refaire_le`, `lettre_consigne`, `suite`, `motif_refus`,
-`motif_detail`, `date_ajout`, `date_maj`, `date_postulee`.
+`motif_detail`, `date_ajout`, `date_maj`, `date_postulee`, `preparation_demandee_le`,
+`pretentions`, `entretien_infos`, `preparation_consigne`, `preparation`,
+`preparation_le`.
 
 ## Workflow
 
@@ -57,6 +59,14 @@ missing = `manuel`), `statut`, `score`, `resume`, `lettre_demandee`, `lettre`
   `ml_pur`, `entreprise`, `doublon`, `autre`), with an optional free-text detail
   (`motif_detail`, at most 200 characters). "Refuser sans motif" stays possible. In
   Refusée the reason shows as a chip and can be changed; **Remettre à traiter** clears it.
+- **PAGE-11** · Interview preparation ([interview-prep.md](interview-prep.md)): on a
+  Postulée application whose follow-up is Entretien, a "Préparer l'entretien" button
+  opens a short form — salary announced, interview details (date, format,
+  interviewers), instruction, all optional and kept from one request to the next — and
+  records `preparation_demandee_le`. While the request is more recent than the sheet, a
+  "Préparation en cours" chip shows. Once `preparation` has arrived, a "Préparation"
+  button opens the sheet (Markdown shown formatted, readable on mobile) with its date,
+  and the request button becomes "Refaire la préparation".
 - **PAGE-09** · Every change sets `date_maj` to today; a failed save shows a message
   without losing the input.
 
@@ -74,7 +84,7 @@ missing = `manuel`), `statut`, `score`, `resume`, `lettre_demandee`, `lettre`
   otherwise `B`). An entry without a company is ignored. A summary is shown (added,
   updated, ignored).
 - **PAGE-31** · A known entry only receives updates to `cv_ref`, `lettre_ref`, `resume`,
-  `score` and `lettre_demandee`. User's decisions are never overwritten.
+  `score`, `lettre_demandee`, `preparation` and `preparation_le`. User's decisions are never overwritten.
 - **PAGE-32** · When a CV arrives for an application in À préparer, it moves to À valider
   and its instruction is cleared — unless an edit was requested after that CV was
   generated (PDF older than the request).

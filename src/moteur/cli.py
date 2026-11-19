@@ -11,7 +11,7 @@ from pathlib import Path
 
 from moteur import echange
 from moteur.base_locale import BaseLocale
-from moteur.claude_cli import ClaudeCli
+from moteur.claude_cli import ClaudeCli, binaire_claude
 from moteur.collecte import collecter, entreprises_deja_vues
 from moteur.config import Config, ErreurConfig, charger
 from moteur.decisions import appliquer as appliquer_decisions
@@ -21,6 +21,7 @@ from moteur.generation import compilateur_latex, generer
 from moteur.lettre import generer_lettres
 from moteur.liaison import lancer as lancer_liaison
 from moteur.notation import noter
+from moteur.preparation import lancer_en_arriere_plan, preparer_seul
 from moteur.serveur import PORT_PAR_DEFAUT, servir
 from moteur.sources.ats import SourceAts
 from moteur.sources.base import ClientHttp, ClientHttpx, Source
@@ -100,7 +101,7 @@ def commande_collecter(config: Config, base: BaseLocale) -> None:
 def commande_noter(config: Config, base: BaseLocale) -> None:
     notees = noter(
         base,
-        ClaudeCli(),
+        ClaudeCli(binaire=binaire_claude()),
         profil=config.profil,
         modele=config.modele_notation,
         taille_lot=config.taille_lot,
@@ -124,7 +125,7 @@ def commande_decisions(base: BaseLocale, fichier: Path, racine: Path) -> None:
 def commande_generer(config: Config, base: BaseLocale) -> None:
     reussites, echecs = generer(
         base,
-        ClaudeCli(),
+        ClaudeCli(binaire=binaire_claude()),
         config.chemins,
         config.modele_generation,
         compilateur_latex(config.chemins.latex),
@@ -141,13 +142,32 @@ def commande_lettre(config: Config, base: BaseLocale, cles: list[str]) -> None:
         return
     reussites, echecs = generer_lettres(
         base,
-        ClaudeCli(),
+        ClaudeCli(binaire=binaire_claude()),
         config.chemins,
         config.modele_generation,
         compilateur_latex(config.chemins.latex),
         cles,
     )
     print(f"{reussites} lettres ajoutées, {len(echecs)} en échec")
+    for echec in echecs:
+        print(f"  - {echec}")
+
+
+def commande_preparer(config: Config, base: BaseLocale, cles: list[str]) -> None:
+    """Interview preparation sheets: the given identifiers, or every pending request."""
+    resultat = preparer_seul(
+        base,
+        ClaudeCli(binaire=binaire_claude()),
+        config.chemins,
+        config.modele_preparation,
+        config.profil,
+        cles,
+    )
+    if resultat is None:
+        print("Une préparation est déjà en cours : elle traitera les demandes en attente")
+        return
+    reussites, echecs = resultat
+    print(f"{reussites} fiches de préparation écrites, {len(echecs)} en échec")
     for echec in echecs:
         print(f"  - {echec}")
 
@@ -178,6 +198,9 @@ def analyseur() -> argparse.ArgumentParser:
     commande("generer", "prépare CV et lettre des offres acceptées")
     commande(
         "lettre", "ajoute la lettre aux dossiers déjà générés (toutes celles qui manquent)"
+    ).add_argument("cles", nargs="*", help="identifiants précis (même format que la page)")
+    commande(
+        "preparer", "fiches de préparation d'entretien (toutes les demandes en attente)"
     ).add_argument("cles", nargs="*", help="identifiants précis (même format que la page)")
     commande("mcp", "liaison directe avec la page, lancée par l'app Claude desktop")
     detecter = commande("detecter", "reconnaît l'outil de recrutement de pages carrières")
@@ -217,7 +240,10 @@ def main(arguments: Sequence[str] | None = None) -> int:
         config = charger(options.config)
         if options.commande == "mcp":
             # ECH-24: the server opens the database for each call, never for its whole life.
-            lancer_liaison(config.chemins)
+            fichier_config = options.config.resolve()
+            lancer_liaison(
+                config.chemins, lambda: lancer_en_arriere_plan(fichier_config, config.chemins)
+            )
             return 0
         with BaseLocale(config.chemins.base) as base:
             if options.commande in ("collecter", "quotidien"):
@@ -233,6 +259,9 @@ def main(arguments: Sequence[str] | None = None) -> int:
                 commande_exporter(config, base)
             if options.commande == "lettre":
                 commande_lettre(config, base, options.cles)
+                commande_exporter(config, base)
+            if options.commande == "preparer":
+                commande_preparer(config, base, options.cles)
                 commande_exporter(config, base)
             if options.commande == "servir":
                 servir(config.chemins.candidatures, options.port)

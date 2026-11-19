@@ -15,7 +15,7 @@ from moteur.claude_cli import (
 def cli(
     resultat: ResultatProcessus, appels: list[tuple[list[str], str]] | None = None
 ) -> ClaudeCli:
-    def executeur(commande: Sequence[str], entree: str) -> ResultatProcessus:
+    def executeur(commande: Sequence[str], entree: str, delai: int) -> ResultatProcessus:
         if appels is not None:
             appels.append((list(commande), entree))
         return resultat

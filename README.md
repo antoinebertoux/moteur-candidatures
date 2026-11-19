@@ -58,7 +58,14 @@ suivi/entreprises_vues.csv     # facultatif : colonnes « entreprise;…;statut 
 uv run moteur quotidien          # collecter + noter + exporter
 uv run moteur generer            # CV et lettre dans ../Candidatures/<Entreprise - Poste>/
 uv run moteur servir             # à laisser tourner : boutons CV / Lettre -> PDF de ton PC
+uv run moteur preparer           # fiches de préparation d'entretien en attente
 ```
+
+Interview preparation: on a Postulée application whose follow-up is Entretien, the page's
+"Préparer l'entretien" button records a request; `moteur mcp` then starts
+`moteur preparer` in the background, which writes `preparation-entretien.md` in the
+application's folder and sends the sheet back to the page (`specs/interview-prep.md`).
+The output of the last background run is in `echange/preparation.log`.
 
 ### Direct link with the page (`moteur mcp`)
 
@@ -137,6 +144,7 @@ uv run pytest
 | `base_locale.py` | SQLite : déjà vu, noté, à générer | non |
 | `notation.py` | score et résumé, par lots | Haiku |
 | `generation.py` | CV et lettre LaTeX, compilation | Sonnet |
+| `preparation.py` | interview preparation sheet, with web search | Sonnet |
 | `echange.py` | fichiers échangés avec la page de suivi | non |
 | `decisions.py` | applies the page's decisions (file or direct link) | non |
 | `liaison.py` | MCP server `moteur mcp`, direct link with the page | non |

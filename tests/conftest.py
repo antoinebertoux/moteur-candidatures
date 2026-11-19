@@ -54,10 +54,24 @@ class FauxAssistant:
         self.reponses = list(reponses)
         self.prompts: list[str] = []
         self.modeles: list[str] = []
+        self.systemes: list[str] = []
+        self.outils: list[tuple[str, ...]] = []
+        self.delais: list[int] = []
 
-    def demander(self, prompt: str, *, systeme: str, modele: str) -> str:
+    def demander(
+        self,
+        prompt: str,
+        *,
+        systeme: str,
+        modele: str,
+        outils: tuple[str, ...] = (),
+        delai: int = 600,
+    ) -> str:
         self.prompts.append(prompt)
         self.modeles.append(modele)
+        self.systemes.append(systeme)
+        self.outils.append(outils)
+        self.delais.append(delai)
         return self.reponses.pop(0) if len(self.reponses) > 1 else self.reponses[0]
 
 

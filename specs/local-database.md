@@ -27,5 +27,9 @@
 - **BASE-11** · The page's refusal reason and detail (PAGE-10) are stored with a `refusee`
   application, and replaced when the page changes them; an unknown reason is stored as
   `autre`. Leaving `refusee` clears them.
+- **BASE-12** · A preparation request from the page (PREP-01) is stored with its time,
+  salary announced, interview details and instruction, whatever the application's state;
+  an older or identical request changes nothing. A successful sheet stores its text and
+  date (PREP-32). The application's status is never changed by a preparation.
 - **BASE-10** · A database created by an older version gets the columns added since, if
   needed, without data loss.

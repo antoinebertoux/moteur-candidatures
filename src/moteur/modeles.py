@@ -79,6 +79,23 @@ class Candidature:
     cv_ref: str = ""
     lettre_ref: str = ""
     consigne_lettre: str = ""
+    preparation: str = ""
+    """Interview preparation sheet (Markdown), empty if none (PREP-32)."""
+    preparation_le: str = ""
+    """Time the sheet was written, in the page's `toISOString()` format."""
+
+
+@dataclass(frozen=True, slots=True)
+class DemandePreparation:
+    """An interview preparation request from the page (PREP-01)."""
+
+    demandee_le: str
+    """Time of the click, in the page's `toISOString()` format."""
+    pretentions: str = ""
+    entretien_infos: str = ""
+    consigne: str = ""
+    contexte: str = ""
+    """What the page knows of the follow-up: sent date, follow-up, contact, notes."""
 
 
 # Organismes pour lesquels une lettre est faite d'office (l'interrupteur de la page peut

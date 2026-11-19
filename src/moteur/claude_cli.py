@@ -1,16 +1,19 @@
-"""Appels à Claude par `claude -p`, donc avec l'abonnement et sans clé API.
+"""Calls to Claude through `claude -p`, so with the subscription and no API key.
 
-Chaque appel part sans outils, sans serveurs MCP et avec un prompt système court :
-c'est ce qui garde la consommation de quota au minimum.
+Every call runs without MCP servers and with a short system prompt, which keeps quota
+use to a minimum. Only the interview preparation is given tools: web search and page
+fetching (CLA-04).
 """
 
 from __future__ import annotations
 
 import json
 import re
+import shutil
 import subprocess
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Protocol
 
 DELAI_SECONDES = 600
@@ -28,29 +31,50 @@ class ResultatProcessus:
     erreur: str = ""
 
 
-Executeur = Callable[[Sequence[str], str], ResultatProcessus]
+Executeur = Callable[[Sequence[str], str, int], ResultatProcessus]
+"""Runs a command with the given standard input and a time limit in seconds."""
 
 
 class Assistant(Protocol):
-    def demander(self, prompt: str, *, systeme: str, modele: str) -> str: ...
+    def demander(
+        self,
+        prompt: str,
+        *,
+        systeme: str,
+        modele: str,
+        outils: tuple[str, ...] = (),
+        delai: int = DELAI_SECONDES,
+    ) -> str: ...
 
 
-def executer(commande: Sequence[str], entree: str) -> ResultatProcessus:
-    """Lance une commande en lui passant `entree` sur l'entrée standard."""
+def executer(commande: Sequence[str], entree: str, delai: int) -> ResultatProcessus:
+    """Runs a command, passing `entree` on its standard input."""
     try:
         resultat = subprocess.run(
             list(commande),
             input=entree,
             capture_output=True,
             text=True,
-            timeout=DELAI_SECONDES,
+            timeout=delai,
             check=False,
         )
     except FileNotFoundError as erreur:
         raise ErreurClaude(f"Commande introuvable : {commande[0]}") from erreur
     except subprocess.TimeoutExpired as erreur:
-        raise ErreurClaude(f"{commande[0]} n'a pas répondu en {DELAI_SECONDES} s") from erreur
+        raise ErreurClaude(f"{commande[0]} n'a pas répondu en {delai} s") from erreur
     return ResultatProcessus(resultat.returncode, resultat.stdout, resultat.stderr)
+
+
+def binaire_claude() -> str:
+    """`claude` from the PATH, or its usual install place when the PATH lacks it.
+
+    A process started by the desktop app (PREP-41) may not have `~/.local/bin` in its PATH.
+    """
+    trouve = shutil.which("claude")
+    if trouve:
+        return trouve
+    installe = Path.home() / ".local" / "bin" / "claude"
+    return str(installe) if installe.exists() else "claude"
 
 
 class ClaudeCli:
@@ -58,7 +82,9 @@ class ClaudeCli:
         self._executeur = executeur
         self._binaire = binaire
 
-    def commande(self, *, systeme: str, modele: str) -> list[str]:
+    def commande(self, *, systeme: str, modele: str, outils: tuple[str, ...] = ()) -> list[str]:
+        # CLA-01: no tools at all, except the web tools of the interview preparation.
+        autorises = ["--allowedTools", ",".join(outils)] if outils else []
         return [
             self._binaire,
             "-p",
@@ -69,15 +95,25 @@ class ClaudeCli:
             "--system-prompt",
             systeme,
             "--tools",
-            "",
+            ",".join(outils),
+            *autorises,
             "--disallowedTools",
             "mcp__*",
             "--strict-mcp-config",
             "--no-session-persistence",
         ]
 
-    def demander(self, prompt: str, *, systeme: str, modele: str) -> str:
-        resultat = self._executeur(self.commande(systeme=systeme, modele=modele), prompt)
+    def demander(
+        self,
+        prompt: str,
+        *,
+        systeme: str,
+        modele: str,
+        outils: tuple[str, ...] = (),
+        delai: int = DELAI_SECONDES,
+    ) -> str:
+        commande = self.commande(systeme=systeme, modele=modele, outils=outils)
+        resultat = self._executeur(commande, prompt, delai)
         if resultat.code != 0:
             detail = (resultat.erreur or resultat.sortie).strip()[:500]
             raise ErreurClaude(f"claude a échoué (code {resultat.code}) : {detail}")

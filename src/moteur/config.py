@@ -98,6 +98,7 @@ class Config:
     service_public: ServicePublic
     entreprises: tuple[EntrepriseCible, ...]
     chemins: Chemins
+    modele_preparation: str = "sonnet"
 
 
 def _table(donnees: Mapping[str, Any], cle: str) -> Mapping[str, Any]:
@@ -226,6 +227,7 @@ def analyser(donnees: Mapping[str, Any], dossier: Path) -> Config:
             base=dossier / "moteur.sqlite3",
             echange=dossier / "echange",
         ),
+        modele_preparation=_chaine(modeles, "preparation", "sonnet"),
     )
 
 

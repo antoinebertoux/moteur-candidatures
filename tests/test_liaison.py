@@ -83,7 +83,14 @@ def test_decisions_applique_comme_la_commande(chemins: Chemins) -> None:
     bilan = decisions(chemins, {"candidatures": [page("acceptee")]})
     assert bilan["decisions"] == 1
     assert bilan["a_generer"] == 1
-    assert set(bilan) == {"decisions", "completees", "lettres", "a_generer", "lettres_a_ajouter"}
+    assert set(bilan) == {
+        "decisions",
+        "completees",
+        "lettres",
+        "a_generer",
+        "lettres_a_ajouter",
+        "preparations",
+    }
     assert statut(chemins) == "acceptee"
 
 

@@ -18,6 +18,8 @@ taille_lot = 8
 [modeles]
 notation = "haiku"
 generation = "sonnet"
+# Interview preparation sheets (with web search).
+preparation = "sonnet"
 
 [criteres]
 # Au moins une expression doit apparaître dans l'intitulé (mots entiers, accents ignorés).

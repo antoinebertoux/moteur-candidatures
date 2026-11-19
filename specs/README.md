@@ -34,7 +34,8 @@ reference: when the code and a spec disagree, one of them is wrong and must be f
  Fallback without the desktop app: exporter ─JSON─▶ Importer, Exporter ─JSON─▶ decisions
 ```
 
-Claude is only called to **score** (Haiku) and to **write** (Sonnet), through
+Claude is only called to **score** (Haiku), to **write** (Sonnet) and to **prepare an
+interview** (Sonnet, with web search), through
 `claude -p` with User's subscription, never an API key. Everything else is plain
 code, at 0 tokens.
 
@@ -62,6 +63,7 @@ code, at 0 tokens.
 | [scoring.md](scoring.md) | `NOT`, `CLA` | scoring by Claude, `claude -p` calls |
 | [generation.md](generation.md) | `CV`, `LET`, `GEN` | LaTeX CV and cover letter |
 | [exchange.md](exchange.md) | `ECH` | files exchanged with the page |
+| [interview-prep.md](interview-prep.md) | `PREP` | interview preparation sheet |
 | [cli.md](cli.md) | `CLI`, `SRV` | commands and local PDF server |
 | [tracking-page.md](tracking-page.md) | `PAGE` | tracking page (claude.ai artifact) |
 | [scheduled-tasks.md](scheduled-tasks.md) | `TACHE` | engine A: scheduled tasks |
