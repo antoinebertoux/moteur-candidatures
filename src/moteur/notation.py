@@ -9,11 +9,13 @@ from collections.abc import Sequence
 from moteur.base_locale import BaseLocale
 from moteur.claude_cli import Assistant, ErreurClaude, extraire_json
 from moteur.modeles import Note, Offre
+from moteur.refusal import Refusal
 
 journal = logging.getLogger(__name__)
 
 LONGUEUR_DESCRIPTION = 1500
 LONGUEUR_RESUME = 400
+REFUSALS_SHOWN = 40
 
 _CONSIGNES = """Tu tries des offres d'emploi pour le candidat décrit ci-dessous.
 Pour chaque offre reçue, réponds par un objet JSON avec exactement ces champs :
@@ -28,8 +30,19 @@ Candidat :
 """
 
 
-def systeme(profil: str) -> str:
-    return _CONSIGNES + profil
+_REFUSALS = """
+
+Offres que le candidat a récemment refusées, avec son motif. Baisse nettement la note \
+des offres semblables pour le même motif :
+"""
+
+
+def systeme(profil: str, refusals: Sequence[Refusal] = ()) -> str:
+    """Scoring instructions, the profile, then past refusals when there are some (NOT-08)."""
+    texte = _CONSIGNES + profil
+    if refusals:
+        texte += _REFUSALS + "\n".join(refusal.line() for refusal in refusals)
+    return texte
 
 
 def construire_prompt(offres: Sequence[Offre]) -> str:
@@ -80,13 +93,12 @@ def noter(
 ) -> int:
     """Note toutes les offres en attente. Un lot en échec reste à noter au prochain passage."""
     offres = base.a_noter()
+    consignes = systeme(profil, base.recent_refusals(REFUSALS_SHOWN))
     notees = 0
     for debut in range(0, len(offres), taille_lot):
         lot = offres[debut : debut + taille_lot]
         try:
-            reponse = assistant.demander(
-                construire_prompt(lot), systeme=systeme(profil), modele=modele
-            )
+            reponse = assistant.demander(construire_prompt(lot), systeme=consignes, modele=modele)
             notes = analyser_reponse(reponse, {offre.cle for offre in lot})
         except ErreurClaude as erreur:
             journal.warning("Lot de %d offres non noté : %s", len(lot), erreur)

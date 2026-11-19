@@ -11,8 +11,8 @@ requested, language), in one short call to Claude per batch.
   `a_noter`: it will be retried on the next run. The other batches carry on.
 - **NOT-03** · For each ad, Claude receives only: identifier, company, title, location,
   salary label and the first 1,500 characters of the text.
-- **NOT-04** · The system prompt holds the scoring instructions followed by the
-  `profil` from `config.toml`, and nothing else (not the salary floor).
+- **NOT-04** · The system prompt holds the scoring instructions, the `profil` from
+  `config.toml` and the past refusals of NOT-08, and nothing else (not the salary floor).
 - **NOT-05** · Claude answers with a JSON array. For each entry: identifier copied back;
   score from 0 to 100; two-sentence summary in French (the role, then the strong or
   blocking point); `lettre_demandee` true only if the ad asks for a cover letter;
@@ -22,6 +22,10 @@ requested, language), in one short call to Claude per batch.
   non-numeric score is ignored (the ad stays `a_noter`); the score is rounded and clamped
   between 0 and 100; the summary is cut at 400 characters; any language other than `en`
   means `fr`. A response that is not an array fails the batch.
+- **NOT-08** · Past refusals: the 40 most recent `refusee` applications that have a reason
+  other than `doublon` are listed in the system prompt (company, title, reason label and
+  detail), with the instruction to lower the score of similar ads for the same reason.
+  With no such refusal, the section is left out.
 - **NOT-07** · The command prints the number of ads scored and the number still waiting.
   *(untested)*
 

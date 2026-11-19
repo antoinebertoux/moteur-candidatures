@@ -10,8 +10,8 @@ appear. These rules are checked by hand.
 `type`, `entreprise`, `poste`, `lieu`, `url`, `source`, `moteur` (`A`, `B`, `manuel`;
 missing = `manuel`), `statut`, `score`, `resume`, `lettre_demandee`, `lettre`
 (`oui`/`non`), `cv_ref`, `lettre_ref`, `contact`, `notes`, `texte_offre`, `consigne`,
-`retouche_le`, `lettre_refaire_le`, `lettre_consigne`, `suite`, `date_ajout`,
-`date_maj`, `date_postulee`.
+`retouche_le`, `lettre_refaire_le`, `lettre_consigne`, `suite`, `motif_refus`,
+`motif_detail`, `date_ajout`, `date_maj`, `date_postulee`.
 
 ## Workflow
 
@@ -49,6 +49,14 @@ missing = `manuel`), `statut`, `score`, `resume`, `lettre_demandee`, `lettre`
   CV will be generic.
 - **PAGE-08** · Postulée: the follow-up is En attente, Relancée, Entretien, Refus de
   l'entreprise or Proposition reçue, and shows as a chip.
+- **PAGE-10** · Refusal reason: **Non** (À traiter) and **Abandonner** open a short choice
+  of reasons before moving the application to Refusée: Compétences inadaptées, Trop
+  senior, Trop junior, Salaire, Lieu / télétravail, Secteur ou mission, Conseil / ESN,
+  Trop recherche / ML pur, Entreprise, Doublon, Autre — stored as `motif_refus`
+  (`competences`, `trop_senior`, `trop_junior`, `salaire`, `lieu`, `secteur`, `conseil`,
+  `recherche`, `entreprise`, `doublon`, `autre`), with an optional free-text detail
+  (`motif_detail`, at most 200 characters). "Refuser sans motif" stays possible. In
+  Refusée the reason shows as a chip and can be changed; **Remettre à traiter** clears it.
 - **PAGE-09** · Every change sets `date_maj` to today; a failed save shows a message
   without losing the input.
 

@@ -101,3 +101,16 @@ def test_date_de_generation_du_cv(tmp_path: Path) -> None:
     assert ligne["genere_le"] == "2023-11-14T22:13:20.500Z"
     (sans_fichier,) = pour_la_page([generee], tmp_path / "ailleurs")
     assert "genere_le" not in sans_fichier
+
+
+@pytest.mark.spec("ECH-11", "BASE-11")
+def test_refusal_reason_is_read_from_the_page() -> None:
+    export = [
+        {"id": "a", "statut": "refusee", "motif_refus": "salaire", "motif_detail": " 45 K€ "},
+        {"id": "b", "statut": "refusee", "motif_refus": "inconnu", "motif_detail": "x" * 300},
+        {"id": "c", "statut": "refusee"},
+    ]
+    a, b, c = lire_decisions(json.dumps(export))
+    assert (a.motif_refus, a.motif_detail) == ("salaire", "45 K€")
+    assert (b.motif_refus, len(b.motif_detail)) == ("autre", 200)
+    assert (c.motif_refus, c.motif_detail) == ("", "")

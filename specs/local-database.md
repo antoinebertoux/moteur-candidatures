@@ -24,5 +24,8 @@
   *missing letter* is a `generee` file with a letter planned but no letter PDF yet.
 - **BASE-09** · A successful generation moves the file to `generee`, stores its PDFs and
   clears the edit instruction; a successful letter clears the letter instruction.
+- **BASE-11** · The page's refusal reason and detail (PAGE-10) are stored with a `refusee`
+  application, and replaced when the page changes them; an unknown reason is stored as
+  `autre`. Leaving `refusee` clears them.
 - **BASE-10** · A database created by an older version gets the columns added since, if
   needed, without data loss.

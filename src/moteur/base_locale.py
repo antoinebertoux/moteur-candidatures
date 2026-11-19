@@ -10,6 +10,7 @@ from types import TracebackType
 from typing import Self
 
 from moteur.modeles import Candidature, Note, Offre, normaliser
+from moteur.refusal import DUPLICATE, Refusal
 
 A_NOTER = "a_noter"
 NOTEE = "notee"
@@ -44,7 +45,12 @@ CREATE TABLE IF NOT EXISTS candidatures (
 """
 
 # Colonnes ajoutées après coup : créées au besoin dans les bases existantes.
-_COLONNES_AJOUTEES = {"consigne_lettre": "TEXT NOT NULL DEFAULT ''"}
+_COLONNES_AJOUTEES = {
+    "consigne_lettre": "TEXT NOT NULL DEFAULT ''",
+    "motif_refus": "TEXT NOT NULL DEFAULT ''",
+    "motif_detail": "TEXT NOT NULL DEFAULT ''",
+    "refusee_le": "TEXT NOT NULL DEFAULT ''",
+}
 
 # Statut de la page de suivi -> statut local. Les statuts absents ne changent rien.
 _DECISIONS = {"acceptee": ACCEPTEE, "refusee": REFUSEE, "postulee": CLOSE}
@@ -184,13 +190,54 @@ class BaseLocale:
             parametres: tuple[str, ...] = (GENEREE,)
         else:
             condition, parametres = "", ()
+        # Leaving `refusee` clears the reason; entering it records the day (BASE-11).
         with self._connexion:
             curseur = self._connexion.execute(
-                "UPDATE candidatures SET statut = ?, consigne = ?"
+                "UPDATE candidatures SET"
+                " motif_refus = CASE WHEN ? = ? THEN motif_refus ELSE '' END,"
+                " motif_detail = CASE WHEN ? = ? THEN motif_detail ELSE '' END,"
+                " refusee_le = CASE WHEN ? != ? THEN '' WHEN statut != ? THEN ?"
+                " ELSE refusee_le END,"
+                " statut = ?, consigne = ?"
                 " WHERE cle = ? AND (statut != ? OR consigne != ?)" + condition,
-                (statut, consigne, cle, statut, consigne, *parametres),
+                (
+                    statut,
+                    REFUSEE,
+                    statut,
+                    REFUSEE,
+                    statut,
+                    REFUSEE,
+                    REFUSEE,
+                    date.today().isoformat(),
+                    statut,
+                    consigne,
+                    cle,
+                    statut,
+                    consigne,
+                    *parametres,
+                ),
             )
         return curseur.rowcount > 0
+
+    def set_refusal_reason(self, cle: str, reason: str, detail: str) -> bool:
+        """Stores the page's refusal reason of a `refusee` application (BASE-11)."""
+        with self._connexion:
+            curseur = self._connexion.execute(
+                "UPDATE candidatures SET motif_refus = ?, motif_detail = ?"
+                " WHERE cle = ? AND statut = ? AND (motif_refus != ? OR motif_detail != ?)",
+                (reason, detail, cle, REFUSEE, reason, detail),
+            )
+        return curseur.rowcount > 0
+
+    def recent_refusals(self, limit: int) -> list[Refusal]:
+        """Most recent refusals that have a reason, duplicates excepted (NOT-08)."""
+        lignes = self._connexion.execute(
+            "SELECT entreprise, poste, motif_refus, motif_detail FROM candidatures"
+            " WHERE statut = ? AND motif_refus NOT IN ('', ?)"
+            " ORDER BY refusee_le DESC, date_ajout DESC, cle LIMIT ?",
+            (REFUSEE, DUPLICATE, limit),
+        ).fetchall()
+        return [Refusal(*ligne) for ligne in lignes]
 
     def completer_depuis_la_page(self, cle: str, offre: Offre, lettre_demandee: bool) -> bool:
         """Ajoute une candidature acceptée dans la page mais inconnue de la base.

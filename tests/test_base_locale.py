@@ -1,4 +1,5 @@
 from collections.abc import Iterator
+from pathlib import Path
 
 import pytest
 
@@ -102,3 +103,54 @@ def test_texte_de_l_offre_complete_sans_ecraser(base: BaseLocale) -> None:
         OFFRE.cle, Offre("Acme", "Data Scientist", description="Neuf"), lettre_demandee=False
     )
     assert base.a_noter()[0].description == "Texte"
+
+
+@pytest.mark.spec("BASE-11")
+def test_refusal_reason_is_stored_then_cleared(base: BaseLocale) -> None:
+    base.ajouter([OFFRE])
+    assert not base.set_refusal_reason(OFFRE.cle, "salaire", "")  # not refused yet
+    base.appliquer_decision(OFFRE.cle, "refusee")
+    assert base.set_refusal_reason(OFFRE.cle, "salaire", "50 K€ affichés")
+    assert not base.set_refusal_reason(OFFRE.cle, "salaire", "50 K€ affichés")
+    assert base.set_refusal_reason(OFFRE.cle, "lieu", "")
+    assert [(r.reason, r.detail) for r in base.recent_refusals(10)] == [("lieu", "")]
+    base.appliquer_decision(OFFRE.cle, "acceptee")
+    assert base.recent_refusals(10) == []
+    base.appliquer_decision(OFFRE.cle, "refusee")
+    assert base.recent_refusals(10) == []  # the old reason does not come back
+
+
+@pytest.mark.spec("BASE-11", "NOT-08")
+def test_recent_refusals_skip_duplicates_and_missing_reasons(base: BaseLocale) -> None:
+    autres = [Offre(f"E{i}", "Data Scientist") for i in range(3)]
+    base.ajouter([OFFRE, *autres])
+    for offre, reason in zip(
+        [OFFRE, *autres], ["conseil", "doublon", "", "trop_senior"], strict=True
+    ):
+        base.appliquer_decision(offre.cle, "refusee")
+        base.set_refusal_reason(offre.cle, reason, "")
+    assert {r.reason for r in base.recent_refusals(10)} == {"conseil", "trop_senior"}
+    assert len(base.recent_refusals(1)) == 1
+
+
+@pytest.mark.spec("BASE-10")
+def test_older_database_gets_the_refusal_columns(tmp_path: Path) -> None:
+    import sqlite3
+
+    chemin = tmp_path / "ancienne.sqlite3"
+    with sqlite3.connect(chemin) as connexion:
+        connexion.execute(
+            "CREATE TABLE candidatures (cle TEXT PRIMARY KEY, type TEXT NOT NULL,"
+            " entreprise TEXT NOT NULL, poste TEXT NOT NULL, lieu TEXT NOT NULL DEFAULT '',"
+            " url TEXT NOT NULL DEFAULT '', source TEXT NOT NULL DEFAULT '',"
+            " description TEXT NOT NULL DEFAULT '', salaire TEXT NOT NULL DEFAULT '',"
+            " date_publication TEXT NOT NULL DEFAULT '', statut TEXT NOT NULL, score INTEGER,"
+            " resume TEXT NOT NULL DEFAULT '', lettre_demandee INTEGER NOT NULL DEFAULT 0,"
+            " langue TEXT NOT NULL DEFAULT 'fr', consigne TEXT NOT NULL DEFAULT '',"
+            " cv_ref TEXT NOT NULL DEFAULT '', lettre_ref TEXT NOT NULL DEFAULT '',"
+            " date_ajout TEXT NOT NULL)"
+        )
+    with BaseLocale(chemin) as ancienne:
+        ancienne.ajouter([OFFRE])
+        ancienne.appliquer_decision(OFFRE.cle, "refusee")
+        assert ancienne.set_refusal_reason(OFFRE.cle, "secteur", "")

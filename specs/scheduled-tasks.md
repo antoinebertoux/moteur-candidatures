@@ -32,6 +32,9 @@ Checked by hand.
   on-site, internships. Floor €65k gross (€70k ideally) for the private sector, none for
   French public administration; it is never written to the database. Better 3 excellent
   proposals than 10 average ones, or none.
+- **TACHE-07** · Calibration from refusals: the task reads `motif_refus` and `motif_detail`
+  of `refusee` documents (except `doublon`) and avoids proposing ads that would be refused
+  for the same reason.
 - **TACHE-05** · Each ad is written as a new document `candidatures/<identifier ID-02>`
   with `moteur` = `A`, `statut` = `a_traiter`, a score from 0 to 100, a 3–5 sentence
   summary and `lettre_demandee`. **An existing document is never changed nor deleted.**

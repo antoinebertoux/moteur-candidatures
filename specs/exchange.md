@@ -25,7 +25,7 @@ capability). Engine B therefore offers two channels carrying the same content:
   `statut` are ignored.
 - **ECH-11** · Fields read: `id`, `statut`, `consigne`, `lettre_demandee`, `lettre`
   (`oui` / `non` or boolean; missing = no choice), `lettre_refaire_le`,
-  `lettre_consigne`, and enough to rebuild the ad if `entreprise` and `poste` are
+  `lettre_consigne`, `motif_refus`, `motif_detail`, and enough to rebuild the ad if `entreprise` and `poste` are
   present (`type`, `lieu`, `url`, `source`, `texte_offre`).
 - **ECH-12** · `moteur decisions <file>` applies, in this order: adding unknown accepted
   applications (BASE-07); letter choice of accepted, ready or approved applications

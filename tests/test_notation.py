@@ -65,3 +65,39 @@ def test_noter_par_lots_et_garde_les_echecs_en_attente() -> None:
         assert base.a_noter() == [B]
         assert [c.score for c in base.pour_la_page()] == [70]
     assert assistant.modeles == ["haiku", "haiku"]
+
+
+@pytest.mark.spec("NOT-04", "NOT-08")
+def test_system_prompt_lists_past_refusals() -> None:
+    from moteur.refusal import Refusal
+
+    assert "refusées" not in systeme("profil")
+    texte = systeme(
+        "profil",
+        [Refusal("Capgemini", "Data Scientist", "conseil", "ESN"), Refusal("X", "Y", "lieu")],
+    )
+    assert "profil" in texte
+    assert "- Capgemini — Data Scientist : Conseil / ESN (ESN)" in texte
+    assert "- X — Y : Lieu / télétravail" in texte
+
+
+@pytest.mark.spec("NOT-08")
+def test_scoring_sends_the_refusals_from_the_database() -> None:
+    from moteur.base_locale import BaseLocale
+    from tests.conftest import FauxAssistant
+
+    systems: list[str] = []
+
+    class Spy(FauxAssistant):
+        def demander(self, prompt: str, *, systeme: str, modele: str) -> str:
+            systems.append(systeme)
+            return super().demander(prompt, systeme=systeme, modele=modele)
+
+    with BaseLocale(":memory:") as base:
+        refusee, nouvelle = Offre("Sopra", "Data Scientist"), Offre("Acme", "Lead AI")
+        base.ajouter([refusee, nouvelle])
+        base.appliquer_decision(refusee.cle, "refusee")
+        base.set_refusal_reason(refusee.cle, "conseil", "")
+        assistant = Spy("[]")
+        noter(base, assistant, profil="p", modele="haiku", taille_lot=8)
+        assert "Sopra — Data Scientist : Conseil / ESN" in systems[0]

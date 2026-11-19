@@ -58,6 +58,11 @@ def appliquer(base: BaseLocale, decisions: list[echange.Decision], racine: Path)
         if d.statut in ("acceptee", "prete", "validee") and d.offre is not None
     )
     changees = sum(base.appliquer_decision(d.cle, d.statut, d.consigne) for d in decisions)
+    changees += sum(
+        base.set_refusal_reason(d.cle, d.motif_refus, d.motif_detail)
+        for d in decisions
+        if d.statut == "refusee"
+    )
     lettres += lettres_a_refaire(decisions, base, racine)
     return Bilan(
         changees, completees, lettres, len(base.a_generer()), len(base.lettres_manquantes())

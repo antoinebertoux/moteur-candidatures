@@ -184,7 +184,10 @@ var STATUTS=[
 ];
 var SUITES=[["","En attente"],["relance","Relancée"],["entretien","Entretien"],["refus","Refus de l'entreprise"],["offre","Proposition reçue"]];
 var MOTEURS={A:"Moteur A (Claude)",B:"Moteur B (PC)",manuel:"Ajout manuel"};
-var state={docs:[],loaded:false,tab:"a_traiter",open:null,drafts:{},confirmDel:null};
+// Motifs de refus (PAGE-10) : mêmes codes que REASONS dans moteur/refusal.py.
+var MOTIFS=[["competences","Compétences inadaptées"],["trop_senior","Trop senior"],["trop_junior","Trop junior"],["salaire","Salaire"],["lieu","Lieu / télétravail"],["secteur","Secteur ou mission"],["conseil","Conseil / ESN"],["recherche","Trop recherche / ML pur"],["entreprise","Entreprise"],["doublon","Doublon"],["autre","Autre"]];
+function motifLabel(c){for(var i=0;i<MOTIFS.length;i++)if(MOTIFS[i][0]===c)return MOTIFS[i][1];return c?"Autre":"";}
+var state={docs:[],loaded:false,tab:"a_traiter",open:null,drafts:{},confirmDel:null,refusing:null};
 var db=null,downloads=null,col=null;
 // Liaison directe avec le moteur B (PAGE-35 à PAGE-38) : serveur MCP `moteur mcp` du PC.
 var SRV="host:moteur";
@@ -257,6 +260,14 @@ function actions(d){
   return a;
 }
 
+function motifPicker(d){
+  var h='<div class="detail motifs"><div class="sub" style="margin:0">Pourquoi refuser ? (sert à mieux trier les prochaines offres)</div><div class="row">';
+  MOTIFS.forEach(function(m){h+='<button data-act="motif" data-motif="'+m[0]+'">'+esc(m[1])+'</button>';});
+  h+='</div><label>Précision (facultatif)<input type="text" id="i-motif-detail" maxlength="200" placeholder="ex. 45 K€ affichés, 100 % sur site"></label>';
+  h+='<div class="row"><button class="ghost" data-act="motif" data-motif="">Refuser sans motif</button><button class="ghost" data-act="motif-annuler">Annuler</button></div></div>';
+  return h;
+}
+
 function field(id,key,lab,d,type){
   var v=state.drafts[id]&&state.drafts[id][key]!=null?state.drafts[id][key]:(d[key]||"");
   if(type==="area")return '<label>'+lab+'<textarea data-f="'+key+'" id="i-'+key+'">'+esc(v)+'</textarea></label>';
@@ -279,6 +290,13 @@ function detail(d){
   if(d.lettre_ref&&(d.statut==="prete"||d.statut==="validee")){
     if(d.lettre_refaire_le)h+='<div class="note">Régénération de la lettre demandée'+(d.lettre_consigne?" (consigne : "+esc(d.lettre_consigne)+")":"")+'. '+(moteur.ok?'Lance <code>uv run moteur lettre</code>':'Exporte, puis lance <code>uv run moteur decisions</code> et <code>uv run moteur lettre</code>')+' : le nouveau PDF remplacera l\'ancien.</div>';
     h+=field(d.id,"lettre_consigne","Consigne pour la lettre (facultatif : vide = réécrite de zéro)",d,"area");
+  }
+  if(d.statut==="refusee"){
+    h+='<div class="grid2"><label>Motif du refus<select data-motif-sel="1">';
+    var connu=MOTIFS.some(function(m){return m[0]===d.motif_refus;});
+    h+='<option value=""'+(d.motif_refus?"":" selected")+'>Non précisé</option>';
+    MOTIFS.forEach(function(m){h+='<option value="'+m[0]+'"'+((d.motif_refus===m[0]||(m[0]==="autre"&&d.motif_refus&&!connu))?" selected":"")+'>'+esc(m[1])+'</option>';});
+    h+='</select></label>'+field(d.id,"motif_detail","Précision du motif",d)+'</div>';
   }
   if(d.statut==="postulee"){
     h+='<label style="max-width:260px">Suite donnée<select data-suite="1" id="i-suite">';
@@ -324,7 +342,9 @@ function renderList(list){
       if(d.suite==="refus")html+='<span class="chip bad">Refus</span>';
       if(d.suite==="relance")html+='<span class="chip">Relancée</span>';
     } else if(d.date_ajout)html+='<span>ajoutée le '+esc(d.date_ajout)+'</span>';
+    if(d.statut==="refusee"&&d.motif_refus)html+='<span class="chip bad">'+esc(motifLabel(d.motif_refus))+(d.motif_detail?" · "+esc(d.motif_detail):"")+'</span>';
     html+='</div></div><div class="row">'+docLinks(d)+lettreBouton(d)+actions(d)+'</div></div>';
+    if(state.refusing===d.id)html+=motifPicker(d);
     if(state.open===d.id)html+=detail(d);
     html+='</article>';
   });
@@ -366,8 +386,9 @@ $("list").addEventListener("input",function(e){
   state.drafts[id]=state.drafts[id]||{};state.drafts[id][e.target.getAttribute("data-f")]=e.target.value;
 });
 $("list").addEventListener("change",function(e){
-  if(!e.target.hasAttribute("data-suite"))return;
-  var card=e.target.closest(".card");write(card.getAttribute("data-id"),{suite:e.target.value});
+  var card=e.target.closest(".card");if(!card)return;
+  if(e.target.hasAttribute("data-suite"))write(card.getAttribute("data-id"),{suite:e.target.value});
+  else if(e.target.hasAttribute("data-motif-sel"))write(card.getAttribute("data-id"),{motif_refus:e.target.value});
 });
 $("list").addEventListener("click",function(e){
   var b=e.target.closest("[data-act]");if(!b)return;
@@ -376,13 +397,21 @@ $("list").addEventListener("click",function(e){
   var done=function(){delete state.drafts[id];};
   if(act==="toggle"){state.open=state.open===id?null:id;state.confirmDel=null;render();return;}
   if(act==="del"){state.confirmDel=id;render();return;}
+  // « Non » et « Abandonner » demandent d'abord le motif (PAGE-10).
+  if(act==="non"){state.refusing=state.refusing===id?null:id;render();return;}
+  if(act==="motif-annuler"){state.refusing=null;render();return;}
   if(act==="del2"){col.doc(id).delete().then(function(){state.open=null;state.confirmDel=null;}).catch(function(){say("La suppression a échoué. Réessaie dans un instant.","bad");});return;}
   b.disabled=true;
   var f=draft;
   if(act==="lettre"){write(id,{lettre:lettrePrevue(state.docs.filter(function(x){return x.id===id;})[0]||{})?"non":"oui"}).then(function(){say("");}).catch(function(){b.disabled=false;});return;}
   if(act==="oui")f.statut="acceptee";
-  else if(act==="non")f.statut="refusee";
-  else if(act==="rouvrir")f.statut="a_traiter";
+  else if(act==="motif"){
+    var precision=card.querySelector("#i-motif-detail");
+    f.statut="refusee";f.motif_refus=b.getAttribute("data-motif")||"";
+    f.motif_detail=f.motif_refus&&precision?precision.value.trim().slice(0,200):"";
+    state.refusing=null;
+  }
+  else if(act==="rouvrir"){f.statut="a_traiter";f.motif_refus="";f.motif_detail="";}
   else if(act==="pret")f.statut="prete";
   else if(act==="valider")f.statut="validee";
   else if(act==="postulee"){f.statut="postulee";f.date_postulee=today();}

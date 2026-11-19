@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from moteur.modeles import Candidature, Offre, lettre_par_defaut
+from moteur.refusal import normalise_detail, normalise_reason
 
 
 class ErreurEchange(ValueError):
@@ -34,6 +35,9 @@ class Decision:
     lettre_refaire_le: str = ""
     """Moment où « Régénérer la lettre » a été cliqué (format `toISOString()`)."""
     lettre_consigne: str = ""
+    motif_refus: str = ""
+    """Refusal reason code chosen in the page (PAGE-10), `autre` if unknown."""
+    motif_detail: str = ""
 
     @property
     def avec_lettre(self) -> bool:
@@ -156,6 +160,8 @@ def decisions_depuis(donnees: object) -> list[Decision]:
                     _choix_lettre(entree.get("lettre")),
                     _texte(entree, "lettre_refaire_le"),
                     _texte(entree, "lettre_consigne"),
+                    normalise_reason(entree.get("motif_refus")),
+                    normalise_detail(entree.get("motif_detail")),
                 )
             )
     return decisions
