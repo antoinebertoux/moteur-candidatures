@@ -56,16 +56,42 @@ suivi/entreprises_vues.csv     # facultatif : colonnes « entreprise;…;statut 
 
 ```bash
 uv run moteur quotidien          # collecter + noter + exporter
-# -> importe echange/pour-la-page.json dans la page de suivi, réponds oui / non
-# -> exporte depuis la page, puis :
-uv run moteur decisions ~/Downloads/candidatures-export.json
-uv run moteur generer            # CV et lettre dans ../Candidatures/<Entreprise - Poste>/, puis export
-# -> dépose echange/pour-la-page.json sur la page : les dossiers passent en « À valider »
+uv run moteur generer            # CV et lettre dans ../Candidatures/<Entreprise - Poste>/
 uv run moteur servir             # à laisser tourner : boutons CV / Lettre -> PDF de ton PC
 ```
 
-La page ne peut pas lire l'export toute seule : la plateforme des artefacts bloque tout
-`fetch()` vers un autre hôte, `127.0.0.1` compris. Les liens simples, eux, passent.
+### Direct link with the page (`moteur mcp`)
+
+When the page is open in the Claude desktop app on this PC, it talks to engine B through
+an MCP server (rules ECH-20 to ECH-25, PAGE-35 to PAGE-38): it imports the proposals and
+ready folders at load and every minute, and sends its decisions a few seconds after each
+change. No JSON file to move by hand. The app starts the server itself; declare it once
+in `~/.config/Claude/claude_desktop_config.json`, then restart the app:
+
+```json
+{
+  "mcpServers": {
+    "moteur": {
+      "command": "/usr/bin/uv",
+      "args": ["--directory", "/chemin/vers/moteur", "run", "moteur", "mcp"]
+    }
+  }
+}
+```
+
+The "Moteur B" chip in the page header shows whether the link is up.
+
+### Fallback: JSON files
+
+Elsewhere (phone, browser, app closed), exchange by hand:
+
+```bash
+uv run moteur exporter           # -> importe echange/pour-la-page.json dans la page
+uv run moteur decisions ~/Downloads/candidatures-export.json   # après « Exporter »
+```
+
+La page ne peut pas `fetch()` le PC : la plateforme des artefacts bloque tout appel vers
+un autre hôte, `127.0.0.1` compris. Seul le serveur MCP passe, par l'app desktop.
 
 La page est sur claude.ai : le navigateur y bloque les liens `file://`. `servir` expose
 donc **seulement** `../Candidatures/`, en lecture seule, sur `http://127.0.0.1:8765`
@@ -112,6 +138,8 @@ uv run pytest
 | `notation.py` | score et résumé, par lots | Haiku |
 | `generation.py` | CV et lettre LaTeX, compilation | Sonnet |
 | `echange.py` | fichiers échangés avec la page de suivi | non |
+| `decisions.py` | applies the page's decisions (file or direct link) | non |
+| `liaison.py` | MCP server `moteur mcp`, direct link with the page | non |
 | `serveur.py` | sert les PDF de `Candidatures/` à la page | non |
 
 Les identifiants de candidature (`Offre.cle`) sont calculés comme dans la page de suivi :

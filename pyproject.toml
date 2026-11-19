@@ -4,7 +4,10 @@ version = "0.1.0"
 description = "Moteur local : collecte, tri et préparation de candidatures, avec Claude appelé seulement pour noter et rédiger."
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = ["httpx>=0.27"]
+dependencies = [
+    "httpx>=0.27",
+    "mcp>=2.3,<3",
+]
 
 [project.scripts]
 moteur = "moteur.cli:main"

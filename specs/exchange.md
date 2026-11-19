@@ -1,8 +1,13 @@
 # Files exchanged with the page
 
-The page is a claude.ai artifact: it cannot call the PC (the platform blocks every
-`fetch()` to another host, `127.0.0.1` included). Both sides therefore exchange JSON files
-that User drops in by hand.
+The page is a claude.ai artifact: it cannot `fetch()` the PC (the platform blocks every
+request to another host, `127.0.0.1` included). It can however call an MCP server running
+on the PC, through the Claude desktop app (`host:` servers of the artifact `mcp`
+capability). Engine B therefore offers two channels carrying the same content:
+
+- the **direct link** (`moteur mcp`, rules ECH-20 and following), used whenever the page
+  is open in the Claude desktop app on the PC;
+- the **JSON files** below, kept as a fallback (phone, browser, engine stopped).
 
 ## Engine B → page: `echange/pour-la-page.json`
 
@@ -26,3 +31,23 @@ that User drops in by hand.
   applications (BASE-07); letter choice of accepted, ready or approved applications
   (BASE-08); status decisions (BASE-05, BASE-06); letter regenerations (LET-07). It then
   prints the summary and what is left to generate. *(untested)*
+
+## Direct link: MCP server `moteur mcp`
+
+- **ECH-20** · `moteur mcp` runs an MCP server over stdio, named `moteur`, started by the
+  Claude desktop app (`mcpServers` of `claude_desktop_config.json`). It exposes exactly the
+  two tools below and nothing else: no access to files, the configuration or `.env`.
+- **ECH-21** · Tool `propositions` (annotated read-only, no input): returns
+  `{"candidatures": [...]}`, the same entries as `pour-la-page.json` (ECH-01, ECH-02),
+  read straight from the local database at call time. No file is written.
+- **ECH-22** · Tool `decisions` (input: `{"candidatures": [...]}`, the page's documents,
+  same format as ECH-10 and ECH-11): applies them exactly like `moteur decisions`
+  (ECH-12) and returns the counts: decisions applied, applications added or completed,
+  letter choices or regenerations, folders to generate, letters to add. Applying the same
+  documents twice changes nothing the second time.
+- **ECH-23** · An invalid input to `decisions` returns a tool error with the message of
+  ECH-10, and changes nothing.
+- **ECH-24** · Each call opens the local database and closes it before answering, so
+  that `moteur` commands run from a terminal at the same time are not blocked.
+- **ECH-25** · The tools never call Claude and never generate a CV or a letter: they
+  only read and record (generation stays `moteur generer`, which takes minutes).

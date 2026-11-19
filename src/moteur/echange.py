@@ -126,11 +126,16 @@ def _choix_lettre(valeur: object) -> bool | None:
 
 
 def lire_decisions(texte: str) -> list[Decision]:
-    """Lit l'export de la page (`{"candidatures": [...]}` ou directement le tableau)."""
+    """Reads the page's export (`{"candidatures": [...]}` or the array itself)."""
     try:
         donnees = json.loads(texte)
     except json.JSONDecodeError as erreur:
         raise ErreurEchange("Export illisible : ce n'est pas du JSON") from erreur
+    return decisions_depuis(donnees)
+
+
+def decisions_depuis(donnees: object) -> list[Decision]:
+    """Decisions from already decoded page documents (file export or direct link)."""
     if isinstance(donnees, dict):
         donnees = donnees.get("candidatures")
     if not isinstance(donnees, list):

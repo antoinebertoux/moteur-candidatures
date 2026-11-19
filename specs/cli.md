@@ -12,6 +12,7 @@
 | `moteur generer` | folders of accepted applications, missing letters, then export |
 | `moteur lettre [id…]` | letters only, then export |
 | `moteur servir [--port N]` | serves the PDFs to the page |
+| `moteur mcp` | direct link with the page (ECH-20), started by the Claude desktop app |
 
 - **CLI-01** · The commands above exist and chain the steps shown. *(untested)*
 - **CLI-02** · `--config <file>` (default `config.toml` in the current folder) and `-v`

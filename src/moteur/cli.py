@@ -14,9 +14,11 @@ from moteur.base_locale import BaseLocale
 from moteur.claude_cli import ClaudeCli
 from moteur.collecte import collecter, entreprises_deja_vues
 from moteur.config import Config, ErreurConfig, charger
+from moteur.decisions import appliquer as appliquer_decisions
 from moteur.env import charger_env
 from moteur.generation import compilateur_latex, generer
 from moteur.lettre import generer_lettres
+from moteur.liaison import lancer as lancer_liaison
 from moteur.notation import noter
 from moteur.serveur import PORT_PAR_DEFAUT, servir
 from moteur.sources.ats import SourceAts
@@ -113,41 +115,9 @@ def commande_exporter(config: Config, base: BaseLocale) -> None:
     print(f"{len(candidatures)} entrées dans {fichier} : à importer dans la page de suivi")
 
 
-def lettres_a_refaire(decisions: list[echange.Decision], base: BaseLocale, racine: Path) -> int:
-    """Lettres dont la page demande la régénération depuis la dernière génération."""
-    redemandees = 0
-    for decision in decisions:
-        if not decision.lettre_refaire_le:
-            continue
-        candidature = base.trouver(decision.cle)
-        if candidature is None or not candidature.lettre_ref:
-            continue
-        faite_le = echange.date_fichier(racine / candidature.lettre_ref)
-        if faite_le is None or faite_le < decision.lettre_refaire_le:
-            redemandees += base.redemander_lettre(decision.cle, decision.lettre_consigne)
-    return redemandees
-
-
 def commande_decisions(base: BaseLocale, fichier: Path, racine: Path) -> None:
     decisions = echange.lire_decisions(fichier.read_text(encoding="utf-8"))
-    completees = sum(
-        base.completer_depuis_la_page(d.cle, d.offre, d.avec_lettre)
-        for d in decisions
-        if d.statut == "acceptee" and d.offre is not None
-    )
-    lettres = sum(
-        base.fixer_lettre(d.cle, d.avec_lettre)
-        for d in decisions
-        if d.statut in ("acceptee", "prete", "validee") and d.offre is not None
-    )
-    changees = sum(base.appliquer_decision(d.cle, d.statut, d.consigne) for d in decisions)
-    lettres += lettres_a_refaire(decisions, base, racine)
-    print(
-        f"{changees} décisions reportées, {completees} offres ajoutées ou complétées"
-        f" depuis la page, {lettres} choix ou régénérations de lettre,"
-        f" {len(base.a_generer())} dossiers à générer,"
-        f" {len(base.lettres_manquantes())} lettres à ajouter"
-    )
+    print(appliquer_decisions(base, decisions, racine).phrase())
 
 
 def commande_generer(config: Config, base: BaseLocale) -> None:
@@ -208,6 +178,7 @@ def analyseur() -> argparse.ArgumentParser:
     commande(
         "lettre", "ajoute la lettre aux dossiers déjà générés (toutes celles qui manquent)"
     ).add_argument("cles", nargs="*", help="identifiants précis (même format que la page)")
+    commande("mcp", "liaison directe avec la page, lancée par l'app Claude desktop")
     commande("servir", "sert les CV et lettres pour les liens de la page").add_argument(
         "--port", type=int, default=PORT_PAR_DEFAUT
     )
@@ -232,6 +203,10 @@ def main(arguments: Sequence[str] | None = None) -> int:
     try:
         charger_env(options.config.resolve().parent / ".env")
         config = charger(options.config)
+        if options.commande == "mcp":
+            # ECH-24: the server opens the database for each call, never for its whole life.
+            lancer_liaison(config.chemins)
+            return 0
         with BaseLocale(config.chemins.base) as base:
             if options.commande in ("collecter", "quotidien"):
                 commande_collecter(config, base)

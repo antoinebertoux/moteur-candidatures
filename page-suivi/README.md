@@ -4,13 +4,15 @@
 artefact claude.ai. C'est un seul fichier HTML (styles et script inclus), sans
 dépendance. Ses règles sont décrites dans [`specs/tracking-page.md`](../specs/tracking-page.md).
 
-La page ne fonctionne qu'ouverte depuis Claude : elle s'appuie sur deux capacités de
+La page ne fonctionne qu'ouverte depuis Claude : elle s'appuie sur ces capacités de
 l'artefact, fournies par `window.claude.use(...)` :
 
 | Capacité | Usage |
 | --- | --- |
 | `db` | base hébergée par Claude, collection `candidatures` (un document par candidature) |
 | `downloads` | bouton « Exporter » (`candidatures-export.json`) |
+| `user` | déclarée sur la page publiée |
+| `mcp` | serveur local `host:moteur` (outils `propositions`, `decisions`) : liaison directe avec le moteur B, seulement dans l'app Claude desktop du PC |
 
 Ouverte hors de Claude (en local dans un navigateur), elle affiche « La base n'est pas
 disponible dans cette vue ».
@@ -18,7 +20,8 @@ disponible dans cette vue ».
 ## Installer sa propre page
 
 1. Dans une conversation Claude, demande : « Publie `page-suivi/index.html` comme
-   artefact, avec les capacités `db` et `downloads` ». Claude crée un artefact privé
+   artefact, avec les capacités `db`, `downloads`, `user` et `mcp` (`host:moteur`, outils
+   `propositions` et `decisions`) ». Claude crée un artefact privé
    et te donne son lien.
 2. Note le **slug** de l'artefact (l'identifiant UUID que Claude te donne, ou visible
    dans ses outils). Les tâches planifiées en ont besoin (`<SLUG_DE_TA_PAGE>` dans

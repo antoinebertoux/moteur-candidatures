@@ -126,7 +126,7 @@ def test_generer_lettres_signale_une_lettre_trop_longue_et_une_cle_inconnue(
 
 @pytest.mark.spec("LET-07")
 def test_regenerer_la_lettre_seulement_si_la_demande_est_plus_recente(tmp_path: Path) -> None:
-    from moteur.cli import lettres_a_refaire
+    from moteur.decisions import lettres_a_refaire
 
     lettre = tmp_path / "Candidatures" / "x" / "lettre.pdf"
     lettre.parent.mkdir(parents=True)

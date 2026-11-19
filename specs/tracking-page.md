@@ -76,6 +76,23 @@ missing = `manuel`), `statut`, `score`, `resume`, `lettre_demandee`, `lettre`
   (`{"exporte_le": …, "candidatures": [all documents]}`); if downloading is not possible,
   the content is shown for copying.
 
+## Direct link with engine B
+
+- **PAGE-35** · The page declares the MCP server `host:moteur` (tools `propositions` and
+  `decisions`, ECH-20). When it answers, a "Moteur B : connecté" chip shows, with the time
+  of the last synchronisation; otherwise "Moteur B : non connecté" and the import and
+  export buttons stay the way to exchange (PAGE-30 to PAGE-34).
+- **PAGE-36** · Engine B → page: at load, then every minute while the page is visible,
+  and on the "Synchroniser" button, the page reads `propositions` and imports them with
+  the rules PAGE-30 to PAGE-33, without a summary when nothing changed.
+- **PAGE-37** · Page → engine B: after the first successful read, then a few seconds
+  after any change in the database (a decision, a letter choice, an edit request, a
+  scheduled task adding an entry), the page sends all its documents to `decisions`.
+  Changes made in quick succession are sent together, one call at a time.
+- **PAGE-38** · A failed call does not block the page: the chip says why (engine not
+  running, access refused in the app) and the next synchronisation tries again; a
+  refused access is not asked again in a loop.
+
 ## Links
 
 - **PAGE-40** · The CV and Lettre buttons open `cv_ref` / `lettre_ref`: an http(s) link as

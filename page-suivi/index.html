@@ -107,6 +107,8 @@ body.depot .wrap{outline:3px dashed var(--accent);outline-offset:-6px}
       <p class="sub" id="sub">Chargement…</p>
     </div>
     <div class="row">
+      <span class="chip" id="moteur-etat" title="Liaison directe avec le moteur local (app Claude desktop)">Moteur B : recherche…</span>
+      <button id="btn-sync" hidden>Synchroniser</button>
       <button id="btn-add" class="primary">Ajouter</button>
       <button id="btn-import" title="Ou dépose pour-la-page.json n'importe où sur la page">Importer (moteur local)</button>
       <button id="btn-export">Exporter</button>
@@ -184,6 +186,9 @@ var SUITES=[["","En attente"],["relance","Relancée"],["entretien","Entretien"],
 var MOTEURS={A:"Moteur A (Claude)",B:"Moteur B (PC)",manuel:"Ajout manuel"};
 var state={docs:[],loaded:false,tab:"a_traiter",open:null,drafts:{},confirmDel:null};
 var db=null,downloads=null,col=null;
+// Liaison directe avec le moteur B (PAGE-35 à PAGE-38) : serveur MCP `moteur mcp` du PC.
+var SRV="host:moteur";
+var moteur={mcp:null,ok:false,erreur:"",derniere:null,lu:false,refus:false,occupe:false,encore:false,minuteur:null};
 var $=function(id){return document.getElementById(id);};
 
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
@@ -272,7 +277,7 @@ function detail(d){
   }
   if(d.statut==="prete"||d.statut==="validee")h+=field(d.id,"consigne","Consigne de retouche pour le CV ou la lettre",d,"area");
   if(d.lettre_ref&&(d.statut==="prete"||d.statut==="validee")){
-    if(d.lettre_refaire_le)h+='<div class="note">Régénération de la lettre demandée'+(d.lettre_consigne?" (consigne : "+esc(d.lettre_consigne)+")":"")+'. Exporte, puis lance <code>uv run moteur decisions</code> et <code>uv run moteur lettre</code> : le nouveau PDF remplacera l\'ancien.</div>';
+    if(d.lettre_refaire_le)h+='<div class="note">Régénération de la lettre demandée'+(d.lettre_consigne?" (consigne : "+esc(d.lettre_consigne)+")":"")+'. '+(moteur.ok?'Lance <code>uv run moteur lettre</code>':'Exporte, puis lance <code>uv run moteur decisions</code> et <code>uv run moteur lettre</code>')+' : le nouveau PDF remplacera l\'ancien.</div>';
     h+=field(d.id,"lettre_consigne","Consigne pour la lettre (facultatif : vide = réécrite de zéro)",d,"area");
   }
   if(d.statut==="postulee"){
@@ -484,20 +489,75 @@ $("export-copy").addEventListener("click",function(){
     .catch(function(){$("export-text").select();say("Copie impossible ici : sélectionne le texte et copie-le à la main.","bad");});
 });
 
+function heure(d){return d.toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"});}
+function afficherMoteur(){
+  var c=$("moteur-etat");
+  if(moteur.ok){c.className="chip ok";c.textContent="Moteur B : connecté"+(moteur.derniere?" · synchro "+heure(moteur.derniere):"");}
+  else{c.className="chip"+(moteur.erreur?" warn":"");c.textContent="Moteur B : non connecté"+(moteur.erreur?" ("+moteur.erreur+")":"");}
+  $("btn-sync").hidden=!moteur.mcp;
+}
+function echecMoteur(e){
+  var code=e&&e.code;moteur.ok=false;
+  if(code==="server_not_connected"||code==="capability_disabled"||code==="not_granted")moteur.erreur="moteur arrêté ou page hors de l'app desktop";
+  else if(code==="not_in_manifest"||code==="cancelled"||code==="approval_required"){moteur.refus=true;moteur.erreur="accès refusé dans l'app, clique sur Synchroniser pour redemander";}
+  else moteur.erreur="erreur "+(code||"inconnue");
+  afficherMoteur();
+}
+// Seuls les champs que le moteur lit (ECH-11) ; le texte de l'offre n'est utile qu'aux acceptées.
+var CHAMPS_MOTEUR=["id","statut","consigne","lettre_demandee","lettre","lettre_refaire_le","lettre_consigne","type","entreprise","poste","lieu","url","source"];
+function pourLeMoteur(d){
+  var o={};CHAMPS_MOTEUR.forEach(function(k){if(d[k]!=null&&d[k]!=="")o[k]=d[k];});
+  if(d.statut==="acceptee"&&d.texte_offre)o.texte_offre=d.texte_offre;
+  return o;
+}
+// Page → moteur (PAGE-37) : un seul appel à la fois, les changements rapprochés partent ensemble.
+function envoyer(){
+  if(!moteur.mcp||!moteur.lu||moteur.refus||!state.loaded)return;
+  if(moteur.occupe){moteur.encore=true;return;}
+  moteur.occupe=true;
+  moteur.mcp.callTool(SRV,"decisions",{candidatures:state.docs.map(pourLeMoteur)},{cache:false})
+    .then(function(){moteur.ok=true;moteur.erreur="";moteur.derniere=new Date();afficherMoteur();})
+    .catch(echecMoteur)
+    .then(function(){moteur.occupe=false;if(moteur.encore){moteur.encore=false;planifierEnvoi();}});
+}
+function planifierEnvoi(){if(!moteur.lu)return;clearTimeout(moteur.minuteur);moteur.minuteur=setTimeout(envoyer,3000);}
+// Moteur → page (PAGE-36) : propositions et dossiers prêts, importés comme un fichier.
+function synchroniser(manuel){
+  if(!moteur.mcp||!col)return;
+  if(moteur.refus&&!manuel)return;
+  if(manuel)moteur.refus=false;
+  moteur.mcp.callTool(SRV,"propositions",{},{cache:false}).then(function(r){
+    var p=r&&r.payload,arr=p&&Array.isArray(p.candidatures)?p.candidatures:null;
+    if(!arr)throw {code:"reponse_illisible"};
+    return importRows(arr,true).then(function(){
+      moteur.ok=true;moteur.erreur="";moteur.derniere=new Date();
+      var premier=!moteur.lu;moteur.lu=true;afficherMoteur();
+      if(premier||manuel)envoyer();
+    });
+  }).catch(echecMoteur);
+}
+$("btn-sync").addEventListener("click",function(){synchroniser(true);});
+setInterval(function(){if(document.visibilityState==="visible")synchroniser(false);},60000);
+document.addEventListener("visibilitychange",function(){if(document.visibilityState==="visible")synchroniser(false);});
+
 render();
 
 var timer=setTimeout(function(){if(!state.loaded)say("La base ne répond pas encore. Les données s'afficheront dès qu'elle sera joignable.");},10000);
 function start(){
-  if(!window.claude||!window.claude.use){clearTimeout(timer);state.loaded=true;say("La base n'est pas disponible dans cette vue. Ouvre la page depuis Claude.","bad");render();return;}
+  if(!window.claude||!window.claude.use){clearTimeout(timer);state.loaded=true;afficherMoteur();say("La base n'est pas disponible dans cette vue. Ouvre la page depuis Claude.","bad");render();return;}
   window.claude.use("downloads").then(function(d){downloads=d;}).catch(function(){});
+  window.claude.use("mcp").then(function(m){moteur.mcp=m;afficherMoteur();if(state.loaded&&col)synchroniser(false);}).catch(function(){afficherMoteur();});
   window.claude.use("db").then(function(d){
     if(!d){clearTimeout(timer);state.loaded=true;say("La base n'est pas disponible dans cette vue. Ouvre la page depuis Claude en étant connecté.","bad");render();return;}
     db=d;col=db.collection("candidatures");
     col.onSnapshot(function(snap){
       state.docs=snap.docs.map(function(s){var o=Object.assign({},s.data());o.id=s.id;return o;});
       if(!snap.metadata.fromCache||snap.docs.length){state.loaded=true;}
-      if(!snap.metadata.fromCache){clearTimeout(timer);state.loaded=true;if($("msg").className==="note")say("");}
-      render();
+      if(!snap.metadata.fromCache){
+        clearTimeout(timer);var premier=!state.synchro;state.loaded=true;state.synchro=true;if($("msg").className==="note")say("");
+        if(premier&&moteur.mcp)synchroniser(false);
+      }
+      render();planifierEnvoi();
     },function(e){
       clearTimeout(timer);state.loaded=true;
       say("La connexion à la base s'est arrêtée ("+(e&&e.code||"erreur")+"). Recharge la page pour reprendre.","bad");render();

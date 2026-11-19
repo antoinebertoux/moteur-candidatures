@@ -24,12 +24,14 @@ reference: when the code and a spec disagree, one of them is wrong and must be f
             └─────────────────────────────────┬──────────────────────────────┘
                                               ▼
  Engine B (this repo, on the PC)       "Suivi des candidatures" page
- collecter → noter → exporter ─JSON─▶  (claude.ai artifact + its database)
+ collecter → noter                     (claude.ai artifact + its database)
+ moteur mcp ── propositions ────────▶  imported at load and every minute
+            ◀── decisions ───────────  sent after each change
                                         User sorts: yes / no, letter, edits
- decisions ◀──────────────JSON──────── Exporter
- generer / lettre  → PDFs in ../Candidatures/
- exporter ────────────────JSON─────▶  Importer: files move to "À valider"
+ generer / lettre  → PDFs in ../Candidatures/, picked up by the next "propositions"
  servir  ◀── CV / Lettre links ───────  User reviews, approves, applies himself
+
+ Fallback without the desktop app: exporter ─JSON─▶ Importer, Exporter ─JSON─▶ decisions
 ```
 
 Claude is only called to **score** (Haiku) and to **write** (Sonnet), through
