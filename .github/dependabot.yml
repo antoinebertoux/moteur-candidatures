@@ -1,0 +1,8 @@
+# Opens a weekly pull request when a GitHub Action used by the CI has a new version,
+# so the workflow does not drift onto deprecated runtimes again.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
