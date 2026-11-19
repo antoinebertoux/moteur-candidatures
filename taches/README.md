@@ -1,6 +1,6 @@
 # Moteur A : tâches planifiées dans Claude
 
-Le texte des trois tâches planifiées qui alimentent la page de suivi. Leurs règles sont
+Le texte des quatre tâches planifiées qui alimentent la page de suivi. Leurs règles sont
 décrites dans [`specs/scheduled-tasks.md`](../specs/scheduled-tasks.md).
 
 | Fichier | Tâche | Quand (heure de Paris) |
@@ -8,6 +8,7 @@ décrites dans [`specs/scheduled-tasks.md`](../specs/scheduled-tasks.md).
 | `emploi-2-grands-groupes.md` | offres de l'État et des grands groupes | mardi 19 h 44 |
 | `emploi-4-startups.md` | offres de start-ups et scale-ups | lundi 19 h 53 |
 | `emploi-3-relances.md` | réponses reçues et brouillons de relance | vendredi 19 h 38 |
+| `emploi-5-boite-mail.md` | lecture et classement des e-mails reçus | mercredi et dimanche 19 h 44 |
 
 Les fichiers sont des **gabarits** : le profil, le nom, les salaires et le slug de la
 page sont remplacés par des repères entre chevrons (`<PRÉNOM>`, `<PROFIL : …>`,

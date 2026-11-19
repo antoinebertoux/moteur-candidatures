@@ -12,6 +12,7 @@ Checked by hand.
 | Emploi 2 – Grands groupes et administration | Tuesday 19:44 | public sector and large companies |
 | Emploi 4 – Start-ups offres publiées | Monday 19:53 | start-ups and scale-ups |
 | Emploi 3 – Relances candidatures | Friday 19:38 | replies received and follow-ups |
+| Emploi 5 – Boîte mail | Wednesday and Sunday 19:44 | sorts the emails received |
 
 ## Job search (Emploi 2 and 4)
 
@@ -55,6 +56,22 @@ Checked by hand.
   dropping, without a new follow-up.
 - **TACHE-13** · The task only changes `suite`, `notes` (appending only, never erasing)
   and `date_maj`; it never changes the status, and never creates or deletes a document.
+
+## Mailbox (Emploi 5)
+
+- **TACHE-14** · Twice a week the task reads the emails received in the last 5 days
+  (job alerts, newsletters and User's own emails excepted) and matches them with the
+  applications in the database.
+- **TACHE-15** · A matching email updates the application: acknowledgement → notes only;
+  rejection → `suite` = refus, with the reason given by the company (never guessed);
+  interview, call or test → `suite` = entretien; offer → `suite` = offre; request for
+  information → notes only. Each case appends one dated line to the notes, never twice.
+- **TACHE-16** · A direct approach by a recruiter or a company for a fitting role is
+  added as a new À traiter ad (`source` = "approche par e-mail"); replies about
+  applications absent from the database are only reported.
+- **TACHE-17** · The task never sends, answers, drafts, deletes or archives an email,
+  never accepts an interview slot and never creates a calendar event. It does not prepare
+  follow-ups (Emploi 3) nor read job alerts (Emploi 2 and 4).
 
 ## Common
 
