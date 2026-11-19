@@ -11,6 +11,7 @@ import pytest
 from moteur.serveur import chemin_local, creer_serveur
 
 
+@pytest.mark.spec("SRV-02")
 def test_chemin_local_reste_dans_le_dossier(tmp_path: Path) -> None:
     assert (
         chemin_local("/Candidatures/A%20-%20B/cv.pdf", tmp_path)
@@ -35,6 +36,7 @@ def adresse(tmp_path: Path) -> Iterator[str]:
     serveur.server_close()
 
 
+@pytest.mark.spec("SRV-03")
 def test_sert_un_pdf(adresse: str) -> None:
     with urllib.request.urlopen(f"{adresse}/Candidatures/Acme%20-%20Lead%20AI/cv.pdf") as reponse:
         assert reponse.read() == b"%PDF-1.5"
@@ -51,6 +53,7 @@ def test_sert_un_pdf(adresse: str) -> None:
         "/Candidatures/%2e%2e/secret.txt",
     ],
 )
+@pytest.mark.spec("SRV-02")
 def test_refuse_le_reste(adresse: str, chemin: str) -> None:
     with pytest.raises(urllib.error.HTTPError) as erreur:
         urllib.request.urlopen(adresse + chemin)

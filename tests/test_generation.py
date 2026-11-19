@@ -51,11 +51,13 @@ def compilateur(*sorties: str) -> tuple[list[tuple[Path, str]], Compilateur]:
     return appels, compiler
 
 
+@pytest.mark.spec("CV-01")
 def test_nom_dossier() -> None:
     assert nom_dossier(Offre("A/B: Corp.", 'Lead "AI" ?')) == "A B Corp. - Lead AI"
     assert nom_dossier(Offre("Libre", "Lead AI", type="spontanee")) == "Libre - spontanée"
 
 
+@pytest.mark.spec("CV-03")
 def test_preparer_modele() -> None:
     prepare = preparer_modele(MODELE, "en")
     assert RACINE_LATEX in prepare
@@ -63,17 +65,20 @@ def test_preparer_modele() -> None:
     assert "cv/banque-fr" not in prepare
 
 
+@pytest.mark.spec("CV-13")
 def test_extraire_tex_corrige_la_racine_et_refuse_un_fichier_incomplet() -> None:
     assert extraire_tex(TEX).startswith(RACINE_LATEX)
     with pytest.raises(ErreurClaude):
         extraire_tex("Désolé, je ne peux pas.")
 
 
+@pytest.mark.spec("GEN-01")
 def test_pages_en_trop() -> None:
     assert pages_en_trop("ok\n⚠️  cv.pdf fait 2 pages\n") == {"cv": 2}
     assert pages_en_trop("ok") == {}
 
 
+@pytest.mark.spec("LET-01")
 def test_dossier_sans_lettre(chemins: Chemins) -> None:
     assistant = FauxAssistant(TEX)
     appels, compiler = compilateur()
@@ -90,6 +95,7 @@ def test_dossier_sans_lettre(chemins: Chemins) -> None:
     assert "Texte de l'offre" in assistant.prompts[0]
 
 
+@pytest.mark.spec("CV-03", "CV-11", "LET-01")
 def test_spontanee_en_anglais_avec_lettre(chemins: Chemins) -> None:
     assistant = FauxAssistant(TEX)
     _, compiler = compilateur()
@@ -128,12 +134,14 @@ CV_COMPLET = r"""\documentclass{x}
 """
 
 
+@pytest.mark.spec("CV-14")
 def test_contenu_cv_dans_l_ordre() -> None:
     puces, projets = contenu_cv(CV_COMPLET)
     assert puces == ["\\pRAG", "\\pGCMS", "\\pAmiante", "\\pDevis", "\\pTerrain", "\\pStagiaires"]
     assert projets == ["\\projMemoire", "\\projMARL"]
 
 
+@pytest.mark.spec("CV-14")
 def test_avec_contenu_reecrit_les_blocs() -> None:
     tex = avec_contenu(CV_COMPLET, ["\\pGCMS", "\\pRAG"], ["\\projMemoire"])
     assert contenu_cv(tex) == (["\\pGCMS", "\\pRAG"], ["\\projMemoire"])
@@ -141,6 +149,7 @@ def test_avec_contenu_reecrit_les_blocs() -> None:
     assert "\\section{\\secFormation}" in tex
 
 
+@pytest.mark.spec("CV-14")
 def test_versions_reduites_retire_d_abord_le_second_projet() -> None:
     puces = [f"\\p{n}" for n in "ABCDEFG"]
     versions = list(versions_reduites(puces, ["\\projX", "\\projY"]))
@@ -153,6 +162,7 @@ def test_versions_reduites_retire_d_abord_le_second_projet() -> None:
 TROP = "⚠️  cv.pdf fait 2 pages"
 
 
+@pytest.mark.spec("CV-14")
 def test_ajuster_cv_garde_le_maximum_qui_tient(tmp_path: Path) -> None:
     cv = tmp_path / "cv.tex"
     cv.write_text(CV_COMPLET, encoding="utf-8")
@@ -166,6 +176,7 @@ def test_ajuster_cv_garde_le_maximum_qui_tient(tmp_path: Path) -> None:
     assert projets == ["\\projMemoire"]
 
 
+@pytest.mark.spec("CV-14")
 def test_ajuster_cv_comble_avec_une_puce_plus_courte(tmp_path: Path) -> None:
     huit = [f"\\p{n}" for n in "ABCDEFGH"]
     cv = tmp_path / "cv.tex"
@@ -177,6 +188,7 @@ def test_ajuster_cv_comble_avec_une_puce_plus_courte(tmp_path: Path) -> None:
     assert contenu_cv(cv.read_text(encoding="utf-8")) == ([*huit[:5], "\\pG"], ["\\projX"])
 
 
+@pytest.mark.spec("CV-15")
 def test_ajuster_cv_signale_un_cv_qui_deborde_encore(tmp_path: Path) -> None:
     cv = tmp_path / "cv.tex"
     cv.write_text(CV_COMPLET, encoding="utf-8")
@@ -185,6 +197,7 @@ def test_ajuster_cv_signale_un_cv_qui_deborde_encore(tmp_path: Path) -> None:
     assert len(contenu_cv(cv.read_text(encoding="utf-8"))[0]) == 5
 
 
+@pytest.mark.spec("CV-10")
 def test_retouche_repart_du_cv_existant(chemins: Chemins) -> None:
     dossier = chemins.candidatures / "Acme - Data Scientist"
     dossier.mkdir(parents=True)
@@ -197,6 +210,7 @@ def test_retouche_repart_du_cv_existant(chemins: Chemins) -> None:
     assert "Mets le RAG en premier" in assistant.prompts[0]
 
 
+@pytest.mark.spec("BASE-09", "GEN-02")
 def test_generer_marque_les_reussites_et_liste_les_echecs(chemins: Chemins) -> None:
     autre = Offre("Bolt", "AI Engineer")
     assistant = FauxAssistant(TEX, "Désolé.")
@@ -216,6 +230,7 @@ def test_generer_marque_les_reussites_et_liste_les_echecs(chemins: Chemins) -> N
         ]
 
 
+@pytest.mark.spec("GEN-01")
 def test_echec_de_compilation(chemins: Chemins) -> None:
     def en_echec(dossier: Path, fichier: str) -> ResultatProcessus:
         return ResultatProcessus(1, "", "Undefined control sequence")

@@ -7,6 +7,7 @@ from moteur.config import ErreurConfig, analyser, charger
 RACINE = Path(__file__).resolve().parent.parent
 
 
+@pytest.mark.spec("CONF-06")
 def test_la_config_d_exemple_est_valide() -> None:
     config = charger(RACINE / "config.exemple.toml")
     assert config.modele_notation == "haiku"
@@ -17,6 +18,7 @@ def test_la_config_d_exemple_est_valide() -> None:
     assert config.chemins.base == RACINE / "moteur.sqlite3"
 
 
+@pytest.mark.spec("CONF-02", "CONF-07")
 def test_valeurs_par_defaut(tmp_path: Path) -> None:
     config = analyser({}, tmp_path)
     assert (config.taille_lot, config.modele_generation) == (8, "sonnet")
@@ -24,6 +26,7 @@ def test_valeurs_par_defaut(tmp_path: Path) -> None:
     assert config.chemins.candidatures == tmp_path.parent / "Candidatures"
 
 
+@pytest.mark.spec("CONF-04")
 def test_entreprises() -> None:
     donnees = {
         "entreprises": [
@@ -36,6 +39,7 @@ def test_entreprises() -> None:
     assert (libre.ats, libre.site, libre.spontanee) == ("", "https://libre.io", False)
 
 
+@pytest.mark.spec("CONF-04")
 def test_entreprise_workday_avec_recherches() -> None:
     donnees = {
         "entreprises": [
@@ -66,11 +70,13 @@ def test_entreprise_workday_avec_recherches() -> None:
         {"entreprises": [{"ats": "lever", "identifiant": "x"}]},
     ],
 )
+@pytest.mark.spec("CONF-03")
 def test_config_invalide(donnees: dict[str, object]) -> None:
     with pytest.raises(ErreurConfig):
         analyser(donnees, Path())
 
 
+@pytest.mark.spec("CONF-01")
 def test_fichier_absent_ou_illisible(tmp_path: Path) -> None:
     with pytest.raises(ErreurConfig, match=r"config\.exemple\.toml"):
         charger(tmp_path / "config.toml")

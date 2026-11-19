@@ -1,6 +1,8 @@
 from dataclasses import replace
 from pathlib import Path
 
+import pytest
+
 from moteur.collecte import (
     collecter,
     detailler,
@@ -29,6 +31,7 @@ class SourceFixe:
         return self._offres
 
 
+@pytest.mark.spec("COL-04")
 def test_entreprises_deja_vues(tmp_path: Path) -> None:
     fichier = tmp_path / "entreprises_vues.csv"
     fichier.write_text(
@@ -38,6 +41,7 @@ def test_entreprises_deja_vues(tmp_path: Path) -> None:
     assert entreprises_deja_vues(tmp_path / "absent.csv") == set()
 
 
+@pytest.mark.spec("COL-04")
 def test_entreprises_deja_vues_ignore_l_historique(tmp_path: Path) -> None:
     fichier = tmp_path / "entreprises_vues.csv"
     fichier.write_text(
@@ -49,11 +53,13 @@ def test_entreprises_deja_vues_ignore_l_historique(tmp_path: Path) -> None:
     assert entreprises_deja_vues(fichier) == {"acme"}
 
 
+@pytest.mark.spec("COL-01")
 def test_une_source_en_panne_n_arrete_pas_les_autres() -> None:
     offre = Offre("Acme", "Data Scientist")
     assert interroger([SourceFixe("a"), SourceFixe("b", [offre])]) == [offre]
 
 
+@pytest.mark.spec("COL-03")
 def test_spontanees_seulement_pour_les_cibles_sans_offre_et_jamais_vues() -> None:
     cibles = [
         EntrepriseCible(nom="Acme", spontanee=True),
@@ -67,6 +73,7 @@ def test_spontanees_seulement_pour_les_cibles_sans_offre_et_jamais_vues() -> Non
     ]
 
 
+@pytest.mark.spec("COL-02")
 def test_collecter_filtre_puis_ajoute_les_spontanees() -> None:
     source = SourceFixe(
         "a", [Offre("Acme", "Data Scientist", lieu="Paris"), Offre("Acme", "Commercial")]
@@ -89,6 +96,7 @@ class SourceDetailleeFixe(SourceFixe):
         return replace(offre, description=f"Texte de {offre.url}")
 
 
+@pytest.mark.spec("COL-02")
 def test_detailler_ne_complete_que_les_offres_sans_texte_de_la_source() -> None:
     source = SourceDetailleeFixe("service_public", en_panne="c")
     offres = [

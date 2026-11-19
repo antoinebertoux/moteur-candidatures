@@ -35,4 +35,5 @@ files = ["src", "tests"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-q"
+addopts = "-q --strict-markers"
+markers = ["spec(*regles): règles de specs/ vérifiées par ce test"]

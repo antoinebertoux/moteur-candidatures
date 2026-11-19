@@ -14,6 +14,7 @@ from tests.conftest import FauxClient
 EXEMPLE = "https://exemple.wd3.myworkdayjobs.com/fr-FR/Careers"
 
 
+@pytest.mark.spec("SRC-40")
 def test_decouper_une_adresse_workday() -> None:
     site = decouper(EXEMPLE)
     assert (site.hote, site.tenant, site.site) == (
@@ -27,6 +28,7 @@ def test_decouper_une_adresse_workday() -> None:
         decouper("https://exemple.fr/carrieres")
 
 
+@pytest.mark.spec("SRC-41")
 def test_offres_workday() -> None:
     reponse = {
         "total": 1,
@@ -59,6 +61,7 @@ def _page(debut: int, nombre: int, total: int) -> dict[str, object]:
     }
 
 
+@pytest.mark.spec("SRC-41")
 def test_workday_pagine_et_dedoublonne() -> None:
     api = decouper(EXEMPLE).api
     # Total annoncé sur la première page seulement, comme le fait Workday.
@@ -78,6 +81,7 @@ def test_workday_pagine_et_dedoublonne() -> None:
     assert source.nom == "workday:Exemple"
 
 
+@pytest.mark.spec("SRC-31")
 def test_smartrecruiters() -> None:
     reponse = {
         "content": [
@@ -99,6 +103,7 @@ def test_smartrecruiters() -> None:
     assert offre.url == "https://jobs.smartrecruiters.com/Acme1/744"
 
 
+@pytest.mark.spec("SRC-31")
 def test_recruitee() -> None:
     reponse = {
         "offers": [
@@ -134,6 +139,7 @@ FLUX = """<?xml version="1.0" encoding="UTF-8"?>
 </rss>"""
 
 
+@pytest.mark.spec("SRC-31")
 def test_teamtailor() -> None:
     (offre,) = offres_teamtailor("Acme", FLUX)
     assert (offre.poste, offre.lieu, offre.url) == (
@@ -145,6 +151,7 @@ def test_teamtailor() -> None:
     assert offres_teamtailor("Acme", "pas du xml") == []
 
 
+@pytest.mark.spec("SRC-30")
 def test_source_ats_teamtailor_lit_le_flux_rss() -> None:
     url = URLS["teamtailor"].format(id="acme")
     client = FauxClient({url: FLUX})
@@ -153,6 +160,7 @@ def test_source_ats_teamtailor_lit_le_flux_rss() -> None:
     assert client.appels == [(url, {})]
 
 
+@pytest.mark.spec("SRC-30")
 def test_source_ats_smartrecruiters_appelle_la_bonne_adresse() -> None:
     url = URLS["smartrecruiters"].format(id="Acme1")
     client = FauxClient({url: {"content": [{"id": "1", "name": "ML Engineer"}]}})

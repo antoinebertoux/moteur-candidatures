@@ -46,6 +46,7 @@ def _page(debut: int, nombre: int, total: int) -> str:
     return f'<p><span class="number">{total}</span> offres</p><ul>{cartes}</ul>'
 
 
+@pytest.mark.spec("SRC-23")
 def test_offres_service_public() -> None:
     (offre,) = offres_service_public(_page(7, 1, 1))
     assert offre.poste == "Ingénieur IA n°7 H/F"
@@ -56,6 +57,7 @@ def test_offres_service_public() -> None:
     assert offres_service_public("<html></html>") == []
 
 
+@pytest.mark.spec("SRC-21")
 def test_adresse_respecte_l_ordre_des_filtres() -> None:
     assert adresse() == "https://choisirleservicepublic.gouv.fr/nos-offres/filtres/"
     assert adresse("intelligence artificielle", (3522,), (5, 364), page=2) == (
@@ -64,6 +66,7 @@ def test_adresse_respecte_l_ordre_des_filtres() -> None:
     )
 
 
+@pytest.mark.spec("SRC-23")
 def test_date_et_total() -> None:
     assert date_francaise("En ligne depuis le 16 février 2026") == "2026-02-16"
     assert date_francaise("En ligne depuis peu") == ""
@@ -71,6 +74,7 @@ def test_date_et_total() -> None:
     assert total_annonce("") is None
 
 
+@pytest.mark.spec("CONF-05")
 def test_identifiant_par_nom_ou_nombre() -> None:
     assert identifiant("dgse", EMPLOYEURS) == 364
     assert identifiant("Ministere des Armees", EMPLOYEURS) == 5
@@ -78,6 +82,7 @@ def test_identifiant_par_nom_ou_nombre() -> None:
     assert identifiant("Inconnu", EMPLOYEURS) is None
 
 
+@pytest.mark.spec("SRC-20", "SRC-22")
 def test_source_pagine_puis_cherche_chez_les_employeurs() -> None:
     general = adresse("ia")
     client = FauxClient(
@@ -98,12 +103,14 @@ def test_source_pagine_puis_cherche_chez_les_employeurs() -> None:
     assert source.nom == "service_public"
 
 
+@pytest.mark.spec("SRC-22")
 def test_source_s_arrete_a_pages_max() -> None:
     client = FauxClient({adresse("ia"): _page(0, 20, 500)})
     SourceServicePublic(client, ("ia",), pages_max=1).collecter()
     assert len(client.appels) == 1
 
 
+@pytest.mark.spec("CONF-05")
 def test_config_service_public() -> None:
     donnees = {
         "service_public": {
@@ -150,6 +157,7 @@ PAGE_OFFRE = """<main class="dsfr main-content-single-offer">
 </main>"""
 
 
+@pytest.mark.spec("SRC-24")
 def test_description_service_public() -> None:
     assert description_service_public(PAGE_OFFRE) == (
         "Vos missions en quelques mots\n"
@@ -163,6 +171,7 @@ def test_description_service_public() -> None:
     assert description_service_public("<html>page inattendue</html>") == ""
 
 
+@pytest.mark.spec("SRC-24")
 def test_detailler_ouvre_la_page_de_l_offre() -> None:
     url = "https://choisirleservicepublic.gouv.fr/offre-emploi/tracfin/"
     client = FauxClient({url: PAGE_OFFRE})

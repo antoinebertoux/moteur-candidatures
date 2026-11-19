@@ -23,6 +23,7 @@ def cli(
     return ClaudeCli(executeur)
 
 
+@pytest.mark.spec("CLA-01")
 def test_demander_passe_le_prompt_sur_l_entree_et_coupe_les_outils() -> None:
     appels: list[tuple[list[str], str]] = []
     sortie = json.dumps({"result": "Bonjour", "is_error": False})
@@ -49,16 +50,19 @@ def test_demander_passe_le_prompt_sur_l_entree_et_coupe_les_outils() -> None:
         ResultatProcessus(0, json.dumps(["liste"])),
     ],
 )
+@pytest.mark.spec("CLA-02")
 def test_demander_signale_les_echecs(resultat: ResultatProcessus) -> None:
     with pytest.raises(ErreurClaude):
         cli(resultat).demander("q", systeme="s", modele="haiku")
 
 
+@pytest.mark.spec("CLA-03")
 def test_extraire_bloc() -> None:
     assert extraire_bloc("Voici :\n```latex\n\\documentclass{a}\n```\nFin") == "\\documentclass{a}"
     assert extraire_bloc("  sans bloc ") == "sans bloc"
 
 
+@pytest.mark.spec("CLA-03")
 def test_extraire_json() -> None:
     assert extraire_json('Résultat :\n```json\n[{"a": 1}]\n```') == [{"a": 1}]
     assert extraire_json('texte {"a": [1, 2]} texte') == {"a": [1, 2]}

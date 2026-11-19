@@ -19,12 +19,14 @@ RESULTAT = {
 }
 
 
+@pytest.mark.spec("SRC-02")
 def test_texte_brut_retire_le_html_echappe() -> None:
     assert texte_brut("&lt;p&gt;Bonjour &amp;amp; <b>bienvenue</b>&lt;/p&gt;") == (
         "Bonjour & bienvenue"
     )
 
 
+@pytest.mark.spec("SRC-12")
 def test_resultat_france_travail() -> None:
     offre = offre_depuis_resultat(RESULTAT)
     assert offre is not None
@@ -38,6 +40,7 @@ def test_resultat_france_travail() -> None:
     assert offre.source == "france_travail"
 
 
+@pytest.mark.spec("SRC-01", "SRC-12")
 def test_resultat_france_travail_incomplet() -> None:
     assert offre_depuis_resultat({"id": "1"}) is None
     offre = offre_depuis_resultat({"id": "9", "intitule": "Ingénieur IA"})
@@ -46,6 +49,7 @@ def test_resultat_france_travail_incomplet() -> None:
     assert offre.url.endswith("/9")
 
 
+@pytest.mark.spec("SRC-11")
 def test_france_travail_demande_un_jeton_puis_cherche() -> None:
     client = FauxClient(
         {
@@ -64,6 +68,7 @@ def test_france_travail_demande_un_jeton_puis_cherche() -> None:
     }
 
 
+@pytest.mark.spec("SRC-11")
 def test_france_travail_sans_resultat_ni_jeton() -> None:
     vide = FauxClient({france_travail.URL_JETON: {"access_token": "jeton"}})
     assert SourceFranceTravail(vide, "id", "secret", ["ia"]).collecter() == []
@@ -71,6 +76,7 @@ def test_france_travail_sans_resultat_ni_jeton() -> None:
         SourceFranceTravail(FauxClient({}), "id", "secret", ["ia"]).collecter()
 
 
+@pytest.mark.spec("SRC-31")
 def test_greenhouse() -> None:
     reponse = {
         "jobs": [
@@ -89,6 +95,7 @@ def test_greenhouse() -> None:
     assert offre.date_publication == "2026-11-01"
 
 
+@pytest.mark.spec("SRC-31")
 def test_lever() -> None:
     reponse = [
         {
@@ -106,6 +113,7 @@ def test_lever() -> None:
     )
 
 
+@pytest.mark.spec("SRC-01", "SRC-31")
 def test_ashby_et_reponses_inattendues() -> None:
     reponse = {"jobs": [{"title": "Head of AI", "location": "Remote", "jobUrl": "https://a/1"}]}
     (offre,) = offres_ashby("Acme", reponse)
@@ -115,6 +123,7 @@ def test_ashby_et_reponses_inattendues() -> None:
     assert offres_lever("Acme", {"pas": "une liste"}) == []
 
 
+@pytest.mark.spec("SRC-30")
 def test_source_ats_appelle_la_bonne_adresse() -> None:
     url = URLS["lever"].format(id="acme")
     client = FauxClient({url: [{"text": "AI Engineer"}]})
@@ -124,6 +133,7 @@ def test_source_ats_appelle_la_bonne_adresse() -> None:
     assert source.nom == "lever:Acme"
 
 
+@pytest.mark.spec("SRC-30")
 def test_source_ats_refuse_une_entreprise_sans_ats() -> None:
     with pytest.raises(ValueError, match="ATS"):
         SourceAts(FauxClient({}), EntrepriseCible(nom="Acme"))

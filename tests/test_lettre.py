@@ -38,10 +38,12 @@ def compilateur(sortie: str = "") -> tuple[list[str], Compilateur]:
         (Offre("Publicis", "DS"), False),
     ],
 )
+@pytest.mark.spec("ID-04")
 def test_lettre_par_defaut(offre: Offre, attendu: bool) -> None:
     assert lettre_par_defaut(offre) is attendu
 
 
+@pytest.mark.spec("LET-02", "ECH-11")
 def test_l_interrupteur_de_la_page_l_emporte_sur_la_regle() -> None:
     (banque_sans,) = lire_decisions(
         json.dumps(
@@ -77,6 +79,7 @@ def test_l_interrupteur_de_la_page_l_emporte_sur_la_regle() -> None:
     assert startup_defaut.avec_lettre is False
 
 
+@pytest.mark.spec("BASE-08")
 def test_fixer_lettre_et_lettres_manquantes(tmp_path: Path) -> None:
     with BaseLocale(tmp_path / "b.sqlite3") as base:
         base.ajouter([OFFRE])
@@ -91,6 +94,7 @@ def test_fixer_lettre_et_lettres_manquantes(tmp_path: Path) -> None:
         assert base.lettres_manquantes() == []
 
 
+@pytest.mark.spec("LET-04")
 def test_generer_lettre_ne_touche_pas_au_cv(chemins: Chemins) -> None:  # noqa: F811
     dossier = chemins.candidatures / "Banque de France - AI ML Engineer"
     dossier.mkdir(parents=True)
@@ -103,6 +107,7 @@ def test_generer_lettre_ne_touche_pas_au_cv(chemins: Chemins) -> None:  # noqa: 
     assert ref.endswith("lettre.pdf")
 
 
+@pytest.mark.spec("LET-06")
 def test_generer_lettres_signale_une_lettre_trop_longue_et_une_cle_inconnue(
     chemins: Chemins,  # noqa: F811
 ) -> None:
@@ -119,6 +124,7 @@ def test_generer_lettres_signale_une_lettre_trop_longue_et_une_cle_inconnue(
         assert base.trouver(OFFRE.cle).lettre_ref == ""  # type: ignore[union-attr]
 
 
+@pytest.mark.spec("LET-07")
 def test_regenerer_la_lettre_seulement_si_la_demande_est_plus_recente(tmp_path: Path) -> None:
     from moteur.cli import lettres_a_refaire
 
@@ -146,6 +152,7 @@ def test_regenerer_la_lettre_seulement_si_la_demande_est_plus_recente(tmp_path: 
         assert base.trouver(OFFRE.cle).consigne_lettre == ""  # type: ignore[union-attr]
 
 
+@pytest.mark.spec("LET-05")
 def test_la_consigne_de_lettre_repart_de_la_lettre_existante(chemins: Chemins) -> None:  # noqa: F811
     dossier = chemins.candidatures / "Banque de France - AI ML Engineer"
     dossier.mkdir(parents=True)
@@ -158,6 +165,7 @@ def test_la_consigne_de_lettre_repart_de_la_lettre_existante(chemins: Chemins) -
     assert "Plus court" in assistant.prompts[0]
 
 
+@pytest.mark.spec("ECH-02")
 def test_export_donne_la_date_de_la_lettre(tmp_path: Path) -> None:
     (tmp_path / "x").mkdir()
     (tmp_path / "x" / "lettre.pdf").write_bytes(b"%PDF")
@@ -166,6 +174,7 @@ def test_export_donne_la_date_de_la_lettre(tmp_path: Path) -> None:
     assert ligne["lettre_generee_le"].endswith("Z")
 
 
+@pytest.mark.spec("BASE-10")
 def test_ancienne_base_sans_colonne_consigne_lettre(tmp_path: Path) -> None:
     import sqlite3
 

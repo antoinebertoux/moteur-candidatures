@@ -73,6 +73,12 @@ donc **seulement** `../Candidatures/`, en lecture seule, sur `http://127.0.0.1:8
 Chaque étape existe aussi seule : `collecter`, `noter`, `exporter`. Ajoute `-v` pour le
 détail par source.
 
+## Specs
+
+Le comportement attendu est décrit dans [`specs/`](specs/README.md), règle par règle.
+Chaque règle du moteur est vérifiée par un test qui la cite
+(`@pytest.mark.spec("FILT-03")`) ; `tests/test_specs.py` échoue s'il en manque un.
+
 ## Qualité
 
 ```bash

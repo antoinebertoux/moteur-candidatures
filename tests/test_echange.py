@@ -8,6 +8,7 @@ from moteur.echange import Decision, ErreurEchange, lire_decisions, pour_la_page
 from moteur.modeles import Candidature, Offre
 
 
+@pytest.mark.spec("ECH-01")
 def test_format_lu_par_la_page() -> None:
     notee = Candidature(Offre("Acme", "Data Scientist", url="https://a"), "notee", score=80)
     generee = Candidature(
@@ -36,6 +37,7 @@ def test_format_lu_par_la_page() -> None:
     assert json.loads(serialiser([notee])) == [premiere]
 
 
+@pytest.mark.spec("ECH-10")
 def test_lire_decisions() -> None:
     export = {
         "exporte_le": "2026-11-16",
@@ -53,12 +55,14 @@ def test_lire_decisions() -> None:
     assert lire_decisions("[]") == []
 
 
+@pytest.mark.spec("ECH-10")
 @pytest.mark.parametrize("texte", ["pas du json", '{"autre": 1}', '"chaine"'])
 def test_export_illisible(texte: str) -> None:
     with pytest.raises(ErreurEchange):
         lire_decisions(texte)
 
 
+@pytest.mark.spec("ECH-11")
 def test_lire_decisions_avec_l_offre() -> None:
     export = [
         {
@@ -86,6 +90,7 @@ def test_lire_decisions_avec_l_offre() -> None:
     assert decision.lettre_demandee
 
 
+@pytest.mark.spec("ECH-02")
 def test_date_de_generation_du_cv(tmp_path: Path) -> None:
     cv = tmp_path / "Candidatures" / "Libre" / "cv.pdf"
     cv.parent.mkdir(parents=True)

@@ -17,27 +17,33 @@ from tests.conftest import criteres
         ("", None),
     ],
 )
+@pytest.mark.spec("FILT-04")
 def test_salaire_annuel_max(libelle: str, attendu: int | None) -> None:
     assert salaire_annuel_max(libelle) == attendu
 
 
+@pytest.mark.spec("FILT-01")
 def test_garde_une_offre_qui_correspond() -> None:
     assert correspond(Offre("Acme", "Data Scientist senior", lieu="75 - PARIS 14"), criteres())
 
 
+@pytest.mark.spec("FILT-01")
 def test_rejette_sans_mot_cle() -> None:
     assert not correspond(Offre("Acme", "Commercial", lieu="Paris"), criteres())
 
 
+@pytest.mark.spec("FILT-02")
 def test_rejette_une_exclusion() -> None:
     assert not correspond(Offre("Acme", "Stage Data Scientist", lieu="Paris"), criteres())
 
 
+@pytest.mark.spec("FILT-03")
 def test_rejette_un_autre_lieu_mais_garde_un_lieu_inconnu() -> None:
     assert not correspond(Offre("Acme", "Data Scientist", lieu="Marseille"), criteres())
     assert correspond(Offre("Acme", "Data Scientist"), criteres())
 
 
+@pytest.mark.spec("FILT-04")
 def test_salaire_rejette_seulement_si_le_maximum_affiche_est_trop_bas() -> None:
     regles = criteres(salaire_plancher=55000)
     bas = Offre("Acme", "Data Scientist", salaire="Annuel de 40000 Euros à 50000 Euros")
@@ -46,6 +52,7 @@ def test_salaire_rejette_seulement_si_le_maximum_affiche_est_trop_bas() -> None:
     assert [correspond(o, regles) for o in (bas, haut, inconnu)] == [False, True, True]
 
 
+@pytest.mark.spec("FILT-05")
 def test_filtrer_retire_les_doublons() -> None:
     offres = [
         Offre("Acme", "Data Scientist", url="a"),

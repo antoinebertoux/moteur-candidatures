@@ -22,16 +22,19 @@ def reponse(*entrees: dict[str, object]) -> str:
     return json.dumps(list(entrees))
 
 
+@pytest.mark.spec("NOT-03")
 def test_prompt_tronque_la_description_et_porte_la_cle() -> None:
     (entree,) = json.loads(construire_prompt([A]))
     assert entree["cle"] == A.cle
     assert len(entree["description"]) == LONGUEUR_DESCRIPTION
 
 
+@pytest.mark.spec("NOT-04")
 def test_systeme_contient_le_profil() -> None:
     assert systeme("Vise un poste de Lead AI").endswith("Vise un poste de Lead AI")
 
 
+@pytest.mark.spec("NOT-06")
 def test_analyser_reponse_borne_et_filtre() -> None:
     texte = reponse(
         {"cle": A.cle, "score": 140, "resume": "Bien.", "lettre_demandee": True, "langue": "en"},
@@ -46,11 +49,13 @@ def test_analyser_reponse_borne_et_filtre() -> None:
     }
 
 
+@pytest.mark.spec("NOT-06")
 def test_analyser_reponse_refuse_autre_chose_qu_un_tableau() -> None:
     with pytest.raises(ErreurClaude):
         analyser_reponse('{"cle": "a"}', {"a"})
 
 
+@pytest.mark.spec("NOT-01", "NOT-02")
 def test_noter_par_lots_et_garde_les_echecs_en_attente() -> None:
     assistant = FauxAssistant(reponse({"cle": A.cle, "score": 70}), "illisible")
     with BaseLocale(":memory:") as base:

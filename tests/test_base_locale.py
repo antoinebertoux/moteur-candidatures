@@ -16,12 +16,14 @@ def base() -> Iterator[BaseLocale]:
         yield base_locale
 
 
+@pytest.mark.spec("BASE-01")
 def test_ajouter_ignore_les_doublons(base: BaseLocale) -> None:
     assert base.ajouter([OFFRE, SPONTANEE]) == 2
     assert base.ajouter([OFFRE, Offre("ACME", "data scientist")]) == 0
     assert base.a_noter() == [OFFRE]
 
 
+@pytest.mark.spec("BASE-02")
 def test_une_spontanee_est_proposee_sans_notation(base: BaseLocale) -> None:
     base.ajouter([SPONTANEE])
     (candidature,) = base.pour_la_page()
@@ -32,6 +34,7 @@ def test_une_spontanee_est_proposee_sans_notation(base: BaseLocale) -> None:
     )
 
 
+@pytest.mark.spec("BASE-03", "BASE-04")
 def test_notation_puis_export(base: BaseLocale) -> None:
     base.ajouter([OFFRE])
     base.enregistrer_note(OFFRE.cle, NOTE)
@@ -40,6 +43,7 @@ def test_notation_puis_export(base: BaseLocale) -> None:
     assert (candidature.score, candidature.langue, candidature.lettre_demandee) == (82, "en", True)
 
 
+@pytest.mark.spec("BASE-04", "BASE-05")
 def test_decisions_de_la_page(base: BaseLocale) -> None:
     base.ajouter([OFFRE, SPONTANEE])
     base.enregistrer_note(OFFRE.cle, NOTE)
@@ -52,6 +56,7 @@ def test_decisions_de_la_page(base: BaseLocale) -> None:
     assert base.pour_la_page() == []
 
 
+@pytest.mark.spec("BASE-06", "BASE-09")
 def test_generation_puis_retouche(base: BaseLocale) -> None:
     base.ajouter([OFFRE])
     base.enregistrer_note(OFFRE.cle, NOTE)
@@ -68,11 +73,13 @@ def test_generation_puis_retouche(base: BaseLocale) -> None:
     assert base.a_generer() == []
 
 
+@pytest.mark.spec("COL-05")
 def test_entreprises_connues(base: BaseLocale) -> None:
     base.ajouter([OFFRE, SPONTANEE])
     assert base.entreprises_connues() == {"acme", "libre"}
 
 
+@pytest.mark.spec("BASE-07")
 def test_offre_acceptee_inconnue_ajoutee_depuis_la_page(base: BaseLocale) -> None:
     manuelle = Offre("Banque de France", "AI/ML Engineer", url="https://x", source="linkedin")
     assert base.completer_depuis_la_page(manuelle.cle, manuelle, lettre_demandee=False)
@@ -81,6 +88,7 @@ def test_offre_acceptee_inconnue_ajoutee_depuis_la_page(base: BaseLocale) -> Non
     assert candidature.offre == manuelle
 
 
+@pytest.mark.spec("BASE-07")
 def test_texte_de_l_offre_complete_sans_ecraser(base: BaseLocale) -> None:
     sans_texte = Offre("Orano", "Data Scientist")
     base.completer_depuis_la_page(sans_texte.cle, sans_texte, lettre_demandee=False)
