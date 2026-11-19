@@ -10,6 +10,10 @@ from moteur.sources.base import ClientHttp, ErreurSource
 
 # (tool, pattern): the identifier is the first group; Workday keeps the whole address.
 _PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
+    (
+        "greenhouse-eu",
+        re.compile(r"(?:job-)?boards(?:-api)?\.eu\.greenhouse\.io/(?:v1/boards/)?([\w-]+)"),
+    ),
     ("greenhouse", re.compile(r"(?:job-)?boards(?:-api)?\.greenhouse\.io/(?:v1/boards/)?([\w-]+)")),
     ("lever", re.compile(r"jobs\.(?:eu\.)?lever\.co/([\w.-]+)")),
     ("ashby", re.compile(r"jobs\.ashbyhq\.com/([\w.%-]+)")),
@@ -35,7 +39,8 @@ class Detection:
 
     def block(self, name: str = "") -> str:
         """The `[[entreprises]]` block to paste into config.toml (CLI-06)."""
-        nom = name or _name_from(self.identifier if self.ats != "workday" else self.address)
+        source = self.address if self.ats == "workday" else self.identifier.removeprefix("eu:")
+        nom = name or _name_from(source)
         return (
             "[[entreprises]]\n"
             f'nom = "{nom}"\n'
@@ -63,6 +68,8 @@ def find_tool(text: str) -> tuple[str, str] | None:
     if not found:
         return None
     _, ats, identifier = min(found)
+    if ats == "greenhouse-eu":
+        return "greenhouse", f"eu:{identifier}"
     return ats, identifier
 
 

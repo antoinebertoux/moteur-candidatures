@@ -14,6 +14,10 @@ from tests.conftest import FauxClient
         ("https://job-boards.greenhouse.io/helsing", ("greenhouse", "helsing")),
         ("https://boards.greenhouse.io/acme/jobs/123", ("greenhouse", "acme")),
         ("https://jobs.lever.co/safran-ai/abc-123", ("lever", "safran-ai")),
+        (
+            "https://job-boards.eu.greenhouse.io/sifflet/jobs/4327975101",
+            ("greenhouse", "eu:sifflet"),
+        ),
         ("https://jobs.ashbyhq.com/mistral", ("ashby", "mistral")),
         ("https://jobs.smartrecruiters.com/Acme1/744", ("smartrecruiters", "Acme1")),
         ("https://kayrros.recruitee.com/o/data", ("recruitee", "kayrros")),

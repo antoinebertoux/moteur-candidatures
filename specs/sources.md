@@ -67,6 +67,11 @@ stays empty.
   | workable | `apply.workable.com/api/v1/widget/accounts/<id>?details=true` |
 
   A company without a supported ATS cannot become a source.
+- **SRC-33** · Greenhouse boards hosted in Europe: an identifier written `eu:<id>` is
+  queried at `boards-api.eu.greenhouse.io/v1/boards/<id>/jobs?content=true`.
+- **SRC-34** · Teamtailor career sites on the company's own domain: an identifier that
+  contains a dot is the site's host (`careers.example.com`), and its feed is read at
+  `<host>/jobs.rss`.
 - **SRC-31** · Each ATS provides title, location, link and, when available, the text and
   publication date (YYYY-MM-DD). SmartRecruiters gives no text; its link is rebuilt as
   `jobs.smartrecruiters.com/<id>/<ad>` and its location as "City, COUNTRY".

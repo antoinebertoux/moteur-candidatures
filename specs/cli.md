@@ -23,6 +23,7 @@
 - **CLI-04** · `moteur detecter` first reads the address itself: `job-boards.greenhouse.io/<id>`
   or `boards.greenhouse.io/<id>`, `jobs.lever.co/<id>`, `jobs.ashbyhq.com/<id>`,
   `jobs.smartrecruiters.com/<id>`, `<id>.recruitee.com`, `<id>.teamtailor.com`,
+  `job-boards.eu.greenhouse.io/<id>` (identifier `eu:<id>`, SRC-33),
   `apply.workable.com/<id>` give the tool and identifier; a `myworkdayjobs.com` address
   gives `workday` with the address as identifier (SRC-40).
 - **CLI-05** · Any other address (the company's own career page) is downloaded once and

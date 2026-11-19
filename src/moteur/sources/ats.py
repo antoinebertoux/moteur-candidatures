@@ -28,6 +28,18 @@ PARAMETRES: dict[str, dict[str, str]] = {
     "workable": {"details": "true"},
 }
 URL_SMARTRECRUITERS = "https://jobs.smartrecruiters.com/{id}/{offre}"
+GREENHOUSE_EU = "https://boards-api.eu.greenhouse.io/v1/boards/{id}/jobs"
+TEAMTAILOR_OWN_DOMAIN = "https://{id}/jobs.rss"
+EU_PREFIX = "eu:"
+
+
+def ats_url(ats: str, identifier: str) -> str:
+    """Address of a company's ads (SRC-30), with the EU and own-domain variants."""
+    if ats == "greenhouse" and identifier.startswith(EU_PREFIX):
+        return GREENHOUSE_EU.format(id=identifier.removeprefix(EU_PREFIX))
+    if ats == "teamtailor" and "." in identifier:
+        return TEAMTAILOR_OWN_DOMAIN.format(id=identifier)
+    return URLS[ats].format(id=identifier)
 
 
 def offres_greenhouse(entreprise: str, reponse: object) -> list[Offre]:
@@ -208,7 +220,7 @@ class SourceAts:
     def collecter(self) -> list[Offre]:
         ats = self._entreprise.ats
         identifiant = self._entreprise.identifiant
-        url = URLS[ats].format(id=identifiant)
+        url = ats_url(ats, identifiant)
         if ats == "teamtailor":
             return offres_teamtailor(self._entreprise.nom, self._client.get_texte(url))
         reponse = self._client.get_json(url, params=PARAMETRES.get(ats, {}))

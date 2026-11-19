@@ -61,6 +61,8 @@ pages_max = 3
 #   greenhouse, lever, ashby : job-boards.greenhouse.io/<id>, jobs.lever.co/<id>, jobs.ashbyhq.com/<id>
 #   smartrecruiters : jobs.smartrecruiters.com/<id>
 #   recruitee, teamtailor : <id>.recruitee.com, <id>.teamtailor.com
+#   greenhouse hébergé en Europe (job-boards.eu.greenhouse.io/<id>) : identifiant « eu:<id> »
+#   teamtailor sur le domaine de l'entreprise : identifiant = l'hôte (ex. careers.exemple.com)
 #   workday : l'adresse complète (https://<tenant>.wd3.myworkdayjobs.com/<site>),
 #             avec « recherches » = mots-clés (sinon IA, machine learning, data scientist)
 #   radancy : l'adresse du site carrières (ex. careers.moodys.com), lu via son plan du site

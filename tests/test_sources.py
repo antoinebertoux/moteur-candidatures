@@ -181,3 +181,25 @@ def test_deux_erreurs_du_serveur_font_une_erreur_de_source() -> None:
     with pytest.raises(ErreurSource, match="HTTP 503"):
         client.get_texte("https://exemple.test/page")
     assert pauses == [2.0]
+
+
+@pytest.mark.spec("SRC-33")
+def test_greenhouse_board_hosted_in_europe() -> None:
+    url = "https://boards-api.eu.greenhouse.io/v1/boards/sifflet/jobs"
+    client = FauxClient({url: {"jobs": [{"title": "ML Engineer", "absolute_url": "https://x"}]}})
+    cible = EntrepriseCible(nom="Sifflet", ats="greenhouse", identifiant="eu:sifflet")
+    assert [o.poste for o in SourceAts(client, cible).collecter()] == ["ML Engineer"]
+    assert client.appels == [(url, {"content": "true"})]
+
+
+@pytest.mark.spec("SRC-34")
+def test_teamtailor_site_on_the_company_domain() -> None:
+    url = "https://careers.pruna.ai/jobs.rss"
+    flux = "<rss><channel><item><title>ML Engineer</title><link>https://y</link></item></channel></rss>"
+    client = FauxClient({url: flux})
+    cible = EntrepriseCible(nom="Pruna AI", ats="teamtailor", identifiant="careers.pruna.ai")
+    assert [o.poste for o in SourceAts(client, cible).collecter()] == ["ML Engineer"]
+    assert client.appels[0][0] == url
+    plain = EntrepriseCible(nom="Qevlar", ats="teamtailor", identifiant="qevlar")
+    SourceAts(client, plain).collecter()
+    assert client.appels[1][0] == "https://qevlar.teamtailor.com/jobs.rss"
