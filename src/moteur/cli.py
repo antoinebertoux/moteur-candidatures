@@ -24,6 +24,7 @@ from moteur.sources.base import ClientHttp, ClientHttpx, Source
 from moteur.sources.france_travail import SourceFranceTravail
 from moteur.sources.radancy import SourceRadancy
 from moteur.sources.service_public import SourceServicePublic
+from moteur.sources.welcomekit import SourceWelcomeKit
 from moteur.sources.workday import SourceWorkday
 
 journal = logging.getLogger("moteur")
@@ -68,6 +69,8 @@ def construire_sources(config: Config, client: ClientHttp) -> list[Source]:
             sources.append(SourceWorkday(client, cible))
         elif cible.ats == "radancy":
             sources.append(SourceRadancy(client, cible))
+        elif cible.ats == "welcomekit":
+            sources.append(SourceWelcomeKit(client, cible))
         elif cible.ats:
             sources.append(SourceAts(client, cible))
     return sources

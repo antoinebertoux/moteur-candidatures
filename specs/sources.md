@@ -64,11 +64,15 @@ stays empty.
   | smartrecruiters | `api.smartrecruiters.com/v1/companies/<id>/postings?limit=100` |
   | recruitee | `<id>.recruitee.com/api/offers/` |
   | teamtailor | `<id>.teamtailor.com/jobs.rss` (RSS feed) |
+  | workable | `apply.workable.com/api/v1/widget/accounts/<id>?details=true` |
 
   A company without a supported ATS cannot become a source.
 - **SRC-31** · Each ATS provides title, location, link and, when available, the text and
   publication date (YYYY-MM-DD). SmartRecruiters gives no text; its link is rebuilt as
   `jobs.smartrecruiters.com/<id>/<ad>` and its location as "City, COUNTRY".
+- **SRC-32** · Workable: the location is "City, Country" (the first non-empty of the
+  ad's fields and of its first listed location), followed by "Remote" when the ad allows
+  remote work; the date is `published_on`.
 
 ## Workday
 
@@ -94,3 +98,19 @@ robots by `robots.txt`; the sitemap and the ad pages are allowed.
   `JobPosting` data gives the exact title, the text (plain, SRC-02) and the publication
   date. A page without that data leaves the ad unchanged.
 
+
+## Welcome Kit
+
+Career sites that Welcome to the Jungle hosts for a company (for instance
+`jobs.zama.org`). `robots.txt` allows everything. The Welcome to the Jungle site itself
+refuses automated requests (HTTP 403) and is not used.
+
+- **SRC-60** · The identifier is the career site host. The source reads its home page
+  and keeps each job link (`/jobs/<slug>` with its listed title); the spontaneous
+  application link is ignored, and an ad listed twice is kept once. The provisional
+  location is the part of the slug after the last `_` (hyphens become spaces, each word
+  capitalised). An unreadable page gives no ad.
+- **SRC-61** · The page of each **retained** ad is opened (as in SRC-24): its main
+  title, its location and the text of its "about", "description", "profile" and "more"
+  blocks (plain, SRC-02) replace the provisional values. A page without those blocks
+  leaves the ad unchanged.

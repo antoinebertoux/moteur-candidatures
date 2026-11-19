@@ -64,6 +64,9 @@ pages_max = 3
 #   workday : l'adresse complète (https://<tenant>.wd3.myworkdayjobs.com/<site>),
 #             avec « recherches » = mots-clés (sinon IA, machine learning, data scientist)
 #   radancy : l'adresse du site carrières (ex. careers.moodys.com), lu via son plan du site
+#   workable : apply.workable.com/<id>
+#   welcomekit : l'adresse de la page carrières hébergée par Welcome to the Jungle
+#                (ex. jobs.zama.org) ; le site welcometothejungle.com lui-même bloque les robots
 # « spontanee = true » propose une candidature spontanée quand aucune offre ne correspond.
 #
 # [[entreprises]]

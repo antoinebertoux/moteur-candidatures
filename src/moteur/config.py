@@ -19,6 +19,8 @@ TypeAts = Literal[
     "recruitee",
     "teamtailor",
     "radancy",
+    "workable",
+    "welcomekit",
     "",
 ]
 

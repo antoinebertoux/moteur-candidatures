@@ -11,7 +11,8 @@ profile sent to Claude, the sorting criteria, the sources and the tracked compan
 - **CONF-03** · A value of the wrong type is rejected with a message naming the key;
   `taille_lot` and `pages_max` must be at least 1.
 - **CONF-04** · Every tracked company has a name. Its recruiting tool (`ats`) is empty
-  or one of: greenhouse, lever, ashby, workday, smartrecruiters, recruitee, teamtailor;
+  or one of: greenhouse, lever, ashby, workday, smartrecruiters, recruitee, teamtailor,
+  workable, radancy, welcomekit;
   when set, `identifiant` is required. A Workday company may have its own search
   keywords.
 - **CONF-05** · Choisir le service public domains and employers are given by name

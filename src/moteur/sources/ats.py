@@ -1,4 +1,5 @@
-"""Pages carrières publiques : Greenhouse, Lever, Ashby, SmartRecruiters, Recruitee, Teamtailor."""
+"""Public career pages: Greenhouse, Lever, Ashby, SmartRecruiters, Recruitee, Teamtailor,
+Workable."""
 
 from __future__ import annotations
 
@@ -18,11 +19,13 @@ URLS = {
     "smartrecruiters": "https://api.smartrecruiters.com/v1/companies/{id}/postings",
     "recruitee": "https://{id}.recruitee.com/api/offers/",
     "teamtailor": "https://{id}.teamtailor.com/jobs.rss",
+    "workable": "https://apply.workable.com/api/v1/widget/accounts/{id}",
 }
 PARAMETRES: dict[str, dict[str, str]] = {
     "greenhouse": {"content": "true"},
     "lever": {"mode": "json"},
     "smartrecruiters": {"limit": "100"},
+    "workable": {"details": "true"},
 }
 URL_SMARTRECRUITERS = "https://jobs.smartrecruiters.com/{id}/{offre}"
 
@@ -113,6 +116,32 @@ def offres_recruitee(entreprise: str, reponse: object) -> list[Offre]:
     ]
 
 
+def offres_workable(entreprise: str, reponse: object) -> list[Offre]:
+    offres: list[Offre] = []
+    for poste in map(table, liste(table(reponse).get("jobs"))):
+        titre = chaine(poste.get("title"))
+        if not titre:
+            continue
+        premier = table(next(iter(liste(poste.get("locations"))), None))
+        ville = chaine(poste.get("city")) or chaine(premier.get("city"))
+        pays = chaine(poste.get("country")) or chaine(premier.get("country"))
+        morceaux = [x for x in (ville, pays) if x]
+        if poste.get("telecommuting") is True:
+            morceaux.append("Remote")
+        offres.append(
+            Offre(
+                entreprise=entreprise,
+                poste=titre,
+                lieu=", ".join(morceaux),
+                url=chaine(poste.get("url")),
+                source="workable",
+                description=texte_brut(chaine(poste.get("description"))),
+                date_publication=chaine(poste.get("published_on"))[:10],
+            )
+        )
+    return offres
+
+
 def _texte(element: ET.Element, suffixe: str) -> str:
     """Texte du premier descendant de balise `suffixe`, espaces de noms ignorés."""
     for enfant in element.iter():
@@ -158,6 +187,7 @@ _ANALYSEURS: dict[str, Callable[[str, Any], list[Offre]]] = {
     "lever": offres_lever,
     "ashby": offres_ashby,
     "recruitee": offres_recruitee,
+    "workable": offres_workable,
 }
 _PRIS_EN_CHARGE = {*_ANALYSEURS, "smartrecruiters", "teamtailor"}
 

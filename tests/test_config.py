@@ -40,6 +40,17 @@ def test_entreprises() -> None:
 
 
 @pytest.mark.spec("CONF-04")
+def test_entreprises_workable_et_welcomekit() -> None:
+    donnees = {
+        "entreprises": [
+            {"nom": "A", "ats": "workable", "identifiant": "a"},
+            {"nom": "B", "ats": "welcomekit", "identifiant": "jobs.b.org"},
+        ]
+    }
+    assert [e.ats for e in analyser(donnees, Path()).entreprises] == ["workable", "welcomekit"]
+
+
+@pytest.mark.spec("CONF-04")
 def test_entreprise_workday_avec_recherches() -> None:
     donnees = {
         "entreprises": [
