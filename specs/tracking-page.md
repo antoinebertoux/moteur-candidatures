@@ -52,9 +52,9 @@ missing = `manuel`), `statut`, `score`, `resume`, `lettre_demandee`, `lettre`
 - **PAGE-10** · Refusal reason: **Non** (À traiter) and **Abandonner** open a short choice
   of reasons before moving the application to Refusée: Compétences inadaptées, Trop
   senior, Trop junior, Salaire, Lieu / télétravail, Secteur ou mission, Conseil / ESN,
-  Trop recherche / ML pur, Entreprise, Doublon, Autre — stored as `motif_refus`
+  Trop ML pur, Entreprise, Doublon, Autre — stored as `motif_refus`
   (`competences`, `trop_senior`, `trop_junior`, `salaire`, `lieu`, `secteur`, `conseil`,
-  `recherche`, `entreprise`, `doublon`, `autre`), with an optional free-text detail
+  `ml_pur`, `entreprise`, `doublon`, `autre`), with an optional free-text detail
   (`motif_detail`, at most 200 characters). "Refuser sans motif" stays possible. In
   Refusée the reason shows as a chip and can be changed; **Remettre à traiter** clears it.
 - **PAGE-09** · Every change sets `date_maj` to today; a failed save shows a message

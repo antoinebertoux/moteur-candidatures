@@ -12,7 +12,7 @@ REASONS = {
     "lieu": "Lieu / télétravail",
     "secteur": "Secteur ou mission",
     "conseil": "Conseil / ESN",
-    "recherche": "Trop recherche / ML pur",
+    "ml_pur": "Trop ML pur",
     "entreprise": "Entreprise",
     "doublon": "Doublon",
     "autre": "Autre",

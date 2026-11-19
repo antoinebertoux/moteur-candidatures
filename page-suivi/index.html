@@ -185,7 +185,7 @@ var STATUTS=[
 var SUITES=[["","En attente"],["relance","Relancée"],["entretien","Entretien"],["refus","Refus de l'entreprise"],["offre","Proposition reçue"]];
 var MOTEURS={A:"Moteur A (Claude)",B:"Moteur B (PC)",manuel:"Ajout manuel"};
 // Motifs de refus (PAGE-10) : mêmes codes que REASONS dans moteur/refusal.py.
-var MOTIFS=[["competences","Compétences inadaptées"],["trop_senior","Trop senior"],["trop_junior","Trop junior"],["salaire","Salaire"],["lieu","Lieu / télétravail"],["secteur","Secteur ou mission"],["conseil","Conseil / ESN"],["recherche","Trop recherche / ML pur"],["entreprise","Entreprise"],["doublon","Doublon"],["autre","Autre"]];
+var MOTIFS=[["competences","Compétences inadaptées"],["trop_senior","Trop senior"],["trop_junior","Trop junior"],["salaire","Salaire"],["lieu","Lieu / télétravail"],["secteur","Secteur ou mission"],["conseil","Conseil / ESN"],["ml_pur","Trop ML pur"],["entreprise","Entreprise"],["doublon","Doublon"],["autre","Autre"]];
 function motifLabel(c){for(var i=0;i<MOTIFS.length;i++)if(MOTIFS[i][0]===c)return MOTIFS[i][1];return c?"Autre":"";}
 var state={docs:[],loaded:false,tab:"a_traiter",open:null,drafts:{},confirmDel:null,refusing:null};
 var db=null,downloads=null,col=null;
