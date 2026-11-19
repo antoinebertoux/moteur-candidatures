@@ -82,7 +82,10 @@ stays empty.
 - **SRC-41** · Workday does not list everything: each of the company's keywords (by
   default "machine learning", "intelligence artificielle", "data scientist") is searched,
   20 ads per page, at most 5 pages. An ad found by several keywords is kept only once.
-  Workday gives no ad text.
+  Search results give no ad text (see SRC-42).
+- **SRC-42** · The page of each **retained** ad is opened (as in SRC-24) through the site's
+  public detail address (`/wday/cxs/<tenant>/<site>/job/<path>`): its description
+  (plain, SRC-02) becomes the ad text. An unreadable detail leaves the ad without text.
 
 ## Radancy (TalentBrew)
 

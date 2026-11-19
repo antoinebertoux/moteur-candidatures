@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from urllib.parse import urlsplit
 
 from moteur.config import EntrepriseCible
@@ -22,6 +22,7 @@ from moteur.sources.base import (
     en_parallele,
     liste,
     table,
+    texte_brut,
 )
 
 RECHERCHES_PAR_DEFAUT = ("machine learning", "intelligence artificielle", "data scientist")
@@ -43,6 +44,13 @@ class SiteWorkday:
     def url_offre(self, chemin: str) -> str:
         return f"https://{self.hote}/{self.site}{chemin}" if chemin else ""
 
+    def detail_url(self, ad_url: str) -> str:
+        """Public detail address of an ad, from its link (empty if the link is foreign)."""
+        prefix = f"https://{self.hote}/{self.site}/"
+        if not ad_url.startswith(prefix):
+            return ""
+        return f"https://{self.hote}/wday/cxs/{self.tenant}/{self.site}/{ad_url[len(prefix) :]}"
+
 
 def decouper(adresse: str) -> SiteWorkday:
     """Extrait hôte, tenant et site d'une adresse de page carrières Workday."""
@@ -52,6 +60,11 @@ def decouper(adresse: str) -> SiteWorkday:
     if not hote.endswith("myworkdayjobs.com") or not segments:
         raise ValueError(f"adresse Workday inattendue : {adresse}")
     return SiteWorkday(hote=hote, tenant=hote.split(".")[0], site=segments[0])
+
+
+def workday_description(response: object) -> str:
+    """Plain text of an ad from its detail response (empty if unreadable)."""
+    return texte_brut(chaine(table(table(response).get("jobPostingInfo")).get("jobDescription")))
 
 
 def offres_workday(entreprise: str, site: SiteWorkday, reponse: object) -> list[Offre]:
@@ -103,6 +116,14 @@ class SourceWorkday:
             if len(offres) < TAILLE_PAGE or (total and (page + 1) * TAILLE_PAGE >= total):
                 break
         return trouvees
+
+    def detailler(self, offre: Offre) -> Offre:
+        """The ad with the text of its detail page; search results give none (SRC-42)."""
+        url = self._site.detail_url(offre.url)
+        if not url:
+            return offre
+        response = self._client.get_json(url, entetes={"Accept": "application/json"})
+        return replace(offre, description=workday_description(response))
 
     def collecter(self) -> list[Offre]:
         vues: dict[str, Offre] = {}

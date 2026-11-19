@@ -12,7 +12,7 @@ from moteur.sources.ats import (
     offres_smartrecruiters,
     offres_teamtailor,
 )
-from moteur.sources.workday import SourceWorkday, decouper, offres_workday
+from moteur.sources.workday import SourceWorkday, decouper, offres_workday, workday_description
 from tests.conftest import FauxClient
 
 EXEMPLE = "https://exemple.wd3.myworkdayjobs.com/fr-FR/Careers"
@@ -116,6 +116,41 @@ def test_workday_lance_les_mots_cles_en_parallele_et_garde_leur_ordre() -> None:
     )
     offres = SourceWorkday(client, cible).collecter()
     assert [o.poste for o in offres] == ["Poste 0", "Poste 1", "Poste 2"]
+
+
+@pytest.mark.spec("SRC-42")
+def test_workday_opens_the_detail_page_of_a_retained_ad() -> None:
+    detail = "https://exemple.wd3.myworkdayjobs.com/wday/cxs/exemple/Careers/job/Paris/IA_R001"
+    client = FauxClient(
+        {detail: {"jobPostingInfo": {"jobDescription": "<p>Missions &amp; profil</p>"}}}
+    )
+    cible = EntrepriseCible(nom="Exemple", ats="workday", identifiant=EXEMPLE)
+    (offre,) = offres_workday(
+        "Exemple",
+        decouper(EXEMPLE),
+        {"jobPostings": [{"title": "IA", "externalPath": "/job/Paris/IA_R001"}]},
+    )
+    detaillee = SourceWorkday(client, cible).detailler(offre)
+    assert detaillee.description == "Missions & profil"
+    assert client.appels[0][0] == detail
+
+
+@pytest.mark.spec("SRC-42")
+def test_workday_unreadable_or_foreign_detail_leaves_no_text() -> None:
+    assert workday_description(None) == ""
+    assert workday_description({"jobPostingInfo": "?"}) == ""
+    client = FauxClient({})
+    cible = EntrepriseCible(nom="Exemple", ats="workday", identifiant=EXEMPLE)
+    source = SourceWorkday(client, cible)
+    (offre,) = offres_workday(
+        "Exemple", decouper(EXEMPLE), {"jobPostings": [{"title": "IA", "externalPath": "/job/1"}]}
+    )
+    assert source.detailler(offre).description == ""
+    from dataclasses import replace
+
+    etrangere = replace(offre, url="https://ailleurs.fr/offre/1")
+    assert source.detailler(etrangere) is etrangere
+    assert len(client.appels) == 1
 
 
 @pytest.mark.spec("SRC-31")
