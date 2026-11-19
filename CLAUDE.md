@@ -1,6 +1,10 @@
 # Repository rules
 
-- Specs are written in English.
+- **Everything is written in English**: code (identifiers), comments, docstrings, log and
+  error messages, tests, specs, README, configuration comments and commit messages. Only
+  text meant for the user or a recruiter stays in French (tracking page labels, CV,
+  cover letters, generated prompts' output). Existing French code is translated when it
+  is touched.
 - `specs/` is the reference for the tool's behaviour (engine B, tracking page, scheduled
   tasks). The user reviews the specs, not the code.
 - For any change in behaviour: **change the spec first** (new or modified rule, stable
