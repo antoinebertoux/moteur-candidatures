@@ -15,6 +15,7 @@ from moteur.claude_cli import ClaudeCli
 from moteur.collecte import collecter, entreprises_deja_vues
 from moteur.config import Config, ErreurConfig, charger
 from moteur.decisions import appliquer as appliquer_decisions
+from moteur.detection import report as detection_report
 from moteur.env import charger_env
 from moteur.generation import compilateur_latex, generer
 from moteur.lettre import generer_lettres
@@ -179,6 +180,9 @@ def analyseur() -> argparse.ArgumentParser:
         "lettre", "ajoute la lettre aux dossiers déjà générés (toutes celles qui manquent)"
     ).add_argument("cles", nargs="*", help="identifiants précis (même format que la page)")
     commande("mcp", "liaison directe avec la page, lancée par l'app Claude desktop")
+    detecter = commande("detecter", "reconnaît l'outil de recrutement de pages carrières")
+    detecter.add_argument("adresses", nargs="+", help="pages carrières ou adresses d'offres")
+    detecter.add_argument("--nom", default="", help="nom de l'entreprise (une seule adresse)")
     commande("servir", "sert les CV et lettres pour les liens de la page").add_argument(
         "--port", type=int, default=PORT_PAR_DEFAUT
     )
@@ -200,6 +204,14 @@ def main(arguments: Sequence[str] | None = None) -> int:
     logging.basicConfig(
         level=logging.INFO if options.verbeux else logging.WARNING, format="%(message)s"
     )
+    if options.commande == "detecter":
+        # CLI-06: needs no configuration, writes nothing, never calls Claude.
+        client = ClientHttpx()
+        try:
+            print(detection_report(options.adresses, client, options.nom))
+        finally:
+            client.fermer()
+        return 0
     try:
         charger_env(options.config.resolve().parent / ".env")
         config = charger(options.config)
