@@ -10,15 +10,12 @@ from moteur.base_locale import BaseLocale
 from moteur.claude_cli import Assistant, ErreurClaude
 from moteur.config import Chemins
 from moteur.generation import (
-    SYSTEME_LETTRE,
     Compilateur,
     ErreurGeneration,
     _compiler,
     _ecrire_fiche,
-    _prompt,
-    extraire_tex,
     nom_dossier,
-    preparer_modele,
+    write_letter,
 )
 from moteur.modeles import Candidature
 
@@ -30,27 +27,12 @@ def generer_lettre(
     modele: str,
     compilateur: Compilateur,
 ) -> str:
-    """Écrit et compile `lettre.tex` du dossier ; renvoie la référence du PDF.
-
-    Une lettre existante sert de point de départ seulement si une consigne de lettre
-    l'accompagne ; sinon elle est réécrite depuis le squelette.
-    """
+    """Writes and compiles the folder's `lettre.tex`; returns the PDF reference."""
     dossier = chemins.candidatures / nom_dossier(candidature.offre)
     dossier.mkdir(parents=True, exist_ok=True)
     _ecrire_fiche(dossier, candidature.offre)
     lettre = dossier / "lettre.tex"
-    consigne = candidature.consigne_lettre
-    if consigne and lettre.exists():
-        depart = lettre.read_text(encoding="utf-8")
-    else:
-        squelette = (chemins.latex / "lettres" / "modele-lettre.tex").read_text(encoding="utf-8")
-        depart = preparer_modele(squelette, candidature.langue)
-    paragraphes = (chemins.latex / "lettres" / "banque-paragraphes.md").read_text(encoding="utf-8")
-    prompt = _prompt(candidature, depart, paragraphes, consigne)
-    lettre.write_text(
-        extraire_tex(assistant.demander(prompt, systeme=SYSTEME_LETTRE, modele=modele)),
-        encoding="utf-8",
-    )
+    write_letter(candidature, lettre, candidature.consigne_lettre, assistant, chemins, modele)
     pages = _compiler(dossier, lettre.name, compilateur).get(lettre.stem, 1)
     if pages > 1:
         raise ErreurGeneration(f"{dossier.name}/lettre.pdf fait {pages} pages : à reprendre")

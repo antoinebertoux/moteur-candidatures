@@ -240,6 +240,32 @@ def ajuster_cv(cv: Path, compilateur: Compilateur) -> int:
     return 1
 
 
+def write_letter(
+    candidature: Candidature,
+    letter: Path,
+    instruction: str,
+    assistant: Assistant,
+    chemins: Chemins,
+    modele: str,
+) -> None:
+    """Writes `lettre.tex` (not compiled), shared by the full folder and the letter alone.
+
+    An existing letter is the starting point only when an instruction comes with it;
+    otherwise the letter is rewritten from the skeleton.
+    """
+    if instruction and letter.exists():
+        start = letter.read_text(encoding="utf-8")
+    else:
+        skeleton = (chemins.latex / "lettres" / "modele-lettre.tex").read_text(encoding="utf-8")
+        start = preparer_modele(skeleton, candidature.langue)
+    paragraphs = (chemins.latex / "lettres" / "banque-paragraphes.md").read_text(encoding="utf-8")
+    prompt = _prompt(candidature, start, paragraphs, instruction)
+    letter.write_text(
+        extraire_tex(assistant.demander(prompt, systeme=SYSTEME_LETTRE, modele=modele)),
+        encoding="utf-8",
+    )
+
+
 def generer_dossier(
     candidature: Candidature,
     assistant: Assistant,
@@ -270,21 +296,7 @@ def generer_dossier(
     lettre = dossier / "lettre.tex"
     avec_lettre = candidature.lettre_demandee or offre.type == "spontanee"
     if avec_lettre:
-        if candidature.consigne and lettre.exists():
-            depart_lettre = lettre.read_text(encoding="utf-8")
-        else:
-            squelette = (chemins.latex / "lettres" / "modele-lettre.tex").read_text(
-                encoding="utf-8"
-            )
-            depart_lettre = preparer_modele(squelette, langue)
-        paragraphes = (chemins.latex / "lettres" / "banque-paragraphes.md").read_text(
-            encoding="utf-8"
-        )
-        prompt = _prompt(candidature, depart_lettre, paragraphes, candidature.consigne)
-        lettre.write_text(
-            extraire_tex(assistant.demander(prompt, systeme=SYSTEME_LETTRE, modele=modele)),
-            encoding="utf-8",
-        )
+        write_letter(candidature, lettre, candidature.consigne, assistant, chemins, modele)
 
     pages = {"cv": ajuster_cv(cv, compilateur)}
     if avec_lettre:
