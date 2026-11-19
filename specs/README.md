@@ -13,7 +13,7 @@ reference: when the code and a spec disagree, one of them is wrong and must be f
 - A rule marked *(untested)* deliberately has no automated test (instruction given to
   Claude, network behaviour…). Rules for the tracking page and the scheduled tasks live
   outside this repository: they are checked by hand.
-- **Workflow**: change the spec first, Antoine approves it, then code and test. The
+- **Workflow**: change the spec first, User approves it, then code and test. The
   commit contains all three.
 
 ## Overview
@@ -25,15 +25,15 @@ reference: when the code and a spec disagree, one of them is wrong and must be f
                                               ▼
  Engine B (this repo, on the PC)       "Suivi des candidatures" page
  collecter → noter → exporter ─JSON─▶  (claude.ai artifact + its database)
-                                        Antoine sorts: yes / no, letter, edits
+                                        User sorts: yes / no, letter, edits
  decisions ◀──────────────JSON──────── Exporter
  generer / lettre  → PDFs in ../Candidatures/
  exporter ────────────────JSON─────▶  Importer: files move to "À valider"
- servir  ◀── CV / Lettre links ───────  Antoine reviews, approves, applies himself
+ servir  ◀── CV / Lettre links ───────  User reviews, approves, applies himself
 ```
 
 Claude is only called to **score** (Haiku) and to **write** (Sonnet), through
-`claude -p` with Antoine's subscription, never an API key. Everything else is plain
+`claude -p` with User's subscription, never an API key. Everything else is plain
 code, at 0 tokens.
 
 ## Statuses
@@ -67,7 +67,7 @@ code, at 0 tokens.
 
 ## Invariants
 
-- **INV-01** · Nothing is ever sent to an employer without Antoine's approval: neither
+- **INV-01** · Nothing is ever sent to an employer without User's approval: neither
   engine B nor engine A applies or sends a message. *(untested)*
 - **INV-02** · The repository contains no personal data: `config.toml`, `.env`,
   `moteur.sqlite3` and `echange/` are ignored by Git; CVs, letters and applications stay

@@ -22,7 +22,7 @@ repository: CV template, block bank (fr or en), letter skeleton, paragraph bank 
   instruction and a `cv.tex` already exists, the existing CV is used instead.
 - **CV-11** · Claude receives: the ad (company, title, location, summary, "unsolicited
   application" note when relevant, first 6,000 characters of the text), the language,
-  the starting file, the bank, and Antoine's instruction marked as taking priority.
+  the starting file, the bank, and User's instruction marked as taking priority.
 - **CV-12** · Instructions given to Claude for the CV *(untested: instruction to the
   model)*:
   - it only chooses macros from the bank: no free text, no invented experience or macro,
@@ -31,8 +31,7 @@ repository: CV template, block bank (fr or en), letter skeleton, paragraph bank 
   - Eurofins: every bullet except those truly off-topic (at least 7), from most to least
     relevant;
   - both academic projects, the most relevant first;
-  - interests: climbing and games; geopolitics only for a defence-focused role (DGSE,
-    Armées, DGA, AID, defence industry), never elsewhere.
+  - interests: climbing and games; geopolitics only for a defence-focused role (Armées, DGA, AID, defence industry, ...), never elsewhere.
 - **CV-13** · The response must be a complete LaTeX file (`\documentclass` …
   `\end{document}`), otherwise the folder fails.
 - **CV-14** · **The CV fits on one page and fills it.** The program compiles the full

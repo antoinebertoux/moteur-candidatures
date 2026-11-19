@@ -27,7 +27,7 @@ requested, language), in one short call to Claude per batch.
 
 ## Calling Claude
 
-- **CLA-01** · Claude is called through `claude -p` with Antoine's subscription, never
+- **CLA-01** · Claude is called through `claude -p` with User's subscription, never
   with an API key. Each call runs without tools, without MCP servers, without keeping a
   session, with the requested model and system prompt; the prompt goes through standard
   input and the output is read as JSON.

@@ -1,0 +1,57 @@
+{
+  "exporte_le": "2026-01-01T00:00:00.000Z",
+  "candidatures": [
+    {
+      "id": "offre_exemple-defense_lead-ai-h-f",
+      "type": "offre",
+      "entreprise": "Exemple Défense",
+      "poste": "Lead AI (H/F)",
+      "lieu": "Paris, 2 j de télétravail",
+      "url": "https://example.com/offres/lead-ai",
+      "source": "welcometothejungle",
+      "moteur": "A",
+      "statut": "a_traiter",
+      "score": 85,
+      "resume": "Start-up de 60 personnes dans la défense. Salaire non affiché, 4 ans d'expérience demandés. Rôle de référent IA avec encadrement. Vigilance : habilitation à prévoir.",
+      "lettre_demandee": false,
+      "date_ajout": "2026-01-01",
+      "date_maj": "2026-01-01"
+    },
+    {
+      "id": "offre_ministere-fictif_chef-de-projet-ia",
+      "type": "offre",
+      "entreprise": "Ministère fictif",
+      "poste": "Chef de projet IA",
+      "lieu": "Paris (75)",
+      "url": "https://example.com/offres/chef-de-projet-ia",
+      "source": "service_public",
+      "moteur": "B",
+      "statut": "postulee",
+      "score": 72,
+      "resume": "Pilotage de projets IA dans un service numérique de l'État.",
+      "lettre_demandee": true,
+      "cv_ref": "Candidatures/Ministère fictif - Chef de projet IA/cv.pdf",
+      "lettre_ref": "Candidatures/Ministère fictif - Chef de projet IA/lettre.pdf",
+      "notes": "Envoyée via le site de l'organisme.",
+      "suite": "",
+      "date_ajout": "2026-01-01",
+      "date_maj": "2026-01-03",
+      "date_postulee": "2026-01-03"
+    },
+    {
+      "id": "spontanee_startup-exemple_lead-ai",
+      "type": "spontanee",
+      "entreprise": "Startup Exemple",
+      "poste": "Lead AI",
+      "lieu": "",
+      "url": "https://example.com",
+      "source": "cible",
+      "moteur": "manuel",
+      "statut": "a_traiter",
+      "resume": "",
+      "lettre_demandee": true,
+      "date_ajout": "2026-01-01",
+      "date_maj": "2026-01-01"
+    }
+  ]
+}

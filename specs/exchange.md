@@ -2,7 +2,7 @@
 
 The page is a claude.ai artifact: it cannot call the PC (the platform blocks every
 `fetch()` to another host, `127.0.0.1` included). Both sides therefore exchange JSON files
-that Antoine drops in by hand.
+that User drops in by hand.
 
 ## Engine B → page: `echange/pour-la-page.json`
 

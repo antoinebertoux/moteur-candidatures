@@ -1,0 +1,16 @@
+TÂCHE : relances de candidatures (hebdomadaire). Réponds en français.
+Tu travailles pour <PRÉNOM NOM>, qui cherche un poste de <POSTE VISÉ>. Le suivi de ses candidatures est dans la base de la page « Suivi des candidatures » : artifact claude.ai de slug <SLUG_DE_TA_PAGE>, collection « candidatures ». Elle remplace les fichiers CSV : n'écris plus dans suivi/*.csv. Utilise les outils de base de données d'artifact : db_list pour lire et db_write pour écrire (mcp__claude-artifacts__db_list et mcp__claude-artifacts__db_write ; s'ils sont différés, charge-les d'abord avec ToolSearch).
+
+1. Lis toute la collection « candidatures » avec db_list (limit 1000, suis nextCursor) et garde les documents au statut « postulee ». Champs utiles : entreprise, poste, type (« offre » ou « spontanee »), contact, url, date_postulee (AAAA-MM-JJ), suite, notes. Le champ suite vaut « » (en attente), « relance » (<PRÉNOM> a relancé), « entretien », « refus » ou « offre ».
+2. Pour chaque candidature dont suite vaut « » ou « relance » : cherche dans Gmail une réponse de l'entreprise depuis date_postulee (nom de l'entreprise, domaine, intitulé du poste).
+3. Si une réponse existe, mets le document à jour : suite = « entretien », « refus » ou « offre » selon le cas (pour un simple accusé de réception, ne change pas suite), et ajoute à la fin de notes une ligne « AAAA-MM-JJ : réponse reçue, <résumé en une ligne> ».
+4. Sans réponse, si suite vaut « » et que date_postulee a plus de 10 jours : prépare un brouillon de relance court (4 à 6 lignes, ton professionnel et direct, rappelle le poste et un point fort lié à l'offre), adapté au canal (e-mail si une adresse est connue, sinon message LinkedIn). Pour un e-mail, tu peux créer un brouillon Gmail ; n'envoie JAMAIS rien toi-même. Ajoute à la fin de notes une ligne « AAAA-MM-JJ : brouillon de relance prêt » suivie du texte du brouillon. Ne change pas suite : <PRÉNOM> la passera à « Relancée » dans la page une fois la relance envoyée.
+5. Sans réponse, si suite vaut « relance » et que date_maj a plus de 14 jours : ne prépare pas de nouvelle relance, signale-la dans le rapport comme candidate à l'abandon.
+6. Règles d'écriture : db_write, opération « update » sur candidatures/<id du document>, avec ifVersion égal à la version renvoyée par db_list, en n'envoyant que les champs modifiés (suite, notes, et date_maj à la date du jour). Pour notes, renvoie le texte existant suivi de ta nouvelle ligne : n'efface jamais ce que <PRÉNOM> a écrit. Ne touche à aucun autre champ, ne change jamais statut, ne crée et ne supprime aucun document. Si une écriture est refusée pour cause de version, relis le document et réessaie une seule fois.
+7. Si les outils de base sont indisponibles : dis-le en première ligne du rapport et arrête-toi là, sans rien inventer.
+
+RAPPORT (court)
+- Une ligne : nombre de candidatures vérifiées, réponses trouvées, brouillons préparés.
+- Une ligne par candidature concernée : entreprise — poste — envoyée le — ce que tu as fait ou proposes.
+- S'il n'y a rien à signaler, une seule ligne le dit.
+Envoie ce rapport à <PRÉNOM> avec SendUserMessage s'il est disponible.

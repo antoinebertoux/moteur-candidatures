@@ -1,7 +1,8 @@
 # Engine A: scheduled tasks in Claude
 
 Claude scheduled tasks search the web for job ads and write directly to the page's
-database. Their full prompt is in each task's settings; these rules state the contract.
+database. Their full prompt is in each task's settings, with an anonymised template in
+[`taches/`](../taches/README.md); these rules state the contract.
 Checked by hand.
 
 ## Tasks
@@ -45,7 +46,7 @@ Checked by hand.
   interview, rejection or offer (a mere acknowledgement changes nothing) and a dated line
   appended to the notes.
 - **TACHE-11** · No reply after 10 days: a short follow-up draft is prepared (Gmail draft
-  if an address is known) and appended to the notes. Nothing is ever sent; Antoine sets
+  if an address is known) and appended to the notes. Nothing is ever sent; User sets
   the follow-up to "Relancée" himself.
 - **TACHE-12** · Already followed up and no news for 14 days: flagged as a candidate for
   dropping, without a new follow-up.
@@ -56,5 +57,5 @@ Checked by hand.
 
 - **TACHE-20** · If the database is unavailable, the task says so on the first line and,
   for job ads, gives them as JSON importable with the "Importer" button.
-- **TACHE-21** · Each task sends Antoine a short report (number of additions or checks,
+- **TACHE-21** · Each task sends User a short report (number of additions or checks,
   one line per item); approval happens in the page.

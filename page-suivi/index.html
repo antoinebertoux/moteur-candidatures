@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Suivi des candidatures</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* Layout: en-tête compact, pipeline en onglets comptés, liste dense à gauche du regard, détail déplié dans la ligne. */
+:root{
+  --bg:#f3f5f8; --surface:#ffffff; --sunken:#e9edf2; --ink:#17212e; --muted:#5b6878; --line:#d5dbe3;
+  --accent:#1f5fa8; --accent-ink:#ffffff; --accent-soft:#e2ecf8;
+  --ok:#1f7a55; --ok-soft:#dff1e8; --warn:#946200; --warn-soft:#f8ecd0; --bad:#a63a32; --bad-soft:#f7e2df;
+  --display:"IBM Plex Sans Condensed","Arial Narrow",system-ui,sans-serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#10161d; --surface:#18212b; --sunken:#0c1117; --ink:#e4eaf1; --muted:#96a3b3; --line:#2b3745;
+    --accent:#6ea8ea; --accent-ink:#0c1117; --accent-soft:#1c3048;
+    --ok:#5fc79a; --ok-soft:#173326; --warn:#e0b04a; --warn-soft:#3a2e12; --bad:#ef8a80; --bad-soft:#3d1e1b;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#10161d; --surface:#18212b; --sunken:#0c1117; --ink:#e4eaf1; --muted:#96a3b3; --line:#2b3745;
+  --accent:#6ea8ea; --accent-ink:#0c1117; --accent-soft:#1c3048;
+  --ok:#5fc79a; --ok-soft:#173326; --warn:#e0b04a; --warn-soft:#3a2e12; --bad:#ef8a80; --bad-soft:#3d1e1b;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5}
+.wrap{max-width:1040px;margin:0 auto;padding:20px 16px 64px;display:flex;flex-direction:column;gap:16px}
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;justify-content:space-between}
+h1{font-family:var(--display);font-weight:600;font-size:26px;line-height:1.15;margin:0;text-wrap:balance}
+.sub{color:var(--muted);font-size:13px;margin:2px 0 0}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+button,select,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer;border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:6px 12px;font-weight:500}
+button:hover{border-color:var(--muted)}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+button.yes{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
+button.no{background:var(--bad-soft);border-color:var(--bad);color:var(--bad)}
+button.ghost{background:transparent}
+button:disabled{opacity:.5;cursor:default}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+input[type=text],input[type=url],select,textarea{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:6px 8px;width:100%}
+textarea{min-height:64px;resize:vertical}
+label{font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:3px}
+.note{background:var(--warn-soft);color:var(--warn);border:1px solid var(--warn);border-radius:6px;padding:8px 12px;font-size:13px}
+.note.bad{background:var(--bad-soft);color:var(--bad);border-color:var(--bad)}
+.note.ok{background:var(--ok-soft);color:var(--ok);border-color:var(--ok)}
+.pipeline{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}
+.stage{display:flex;flex-direction:column;align-items:flex-start;gap:0;padding:8px 10px;border-radius:8px;text-align:left;background:var(--surface)}
+.stage .n{font-family:var(--mono);font-size:22px;font-weight:500;font-variant-numeric:tabular-nums;line-height:1.2}
+.stage .l{font-size:12px;color:var(--muted)}
+.stage[aria-pressed=true]{background:var(--accent-soft);border-color:var(--accent)}
+.stage[aria-pressed=true] .l{color:var(--ink)}
+.filters select{width:auto}
+.filters input{width:220px;max-width:100%}
+.list{display:flex;flex-direction:column;gap:8px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:8px;border-left:4px solid var(--line)}
+.card.t-spontanee{border-left-color:var(--warn)}
+.card.t-offre{border-left-color:var(--accent)}
+.head{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 12px;padding:10px 12px;align-items:center}
+.title{background:none;border:0;padding:0;text-align:left;font-weight:600;font-size:15px;overflow-wrap:anywhere}
+.title:hover{text-decoration:underline}
+.meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:12px;color:var(--muted);margin-top:3px}
+.chip{display:inline-block;border-radius:999px;padding:1px 8px;font-size:11px;font-weight:500;background:var(--sunken);color:var(--muted);white-space:nowrap}
+.chip.spont{background:var(--warn-soft);color:var(--warn)}
+.chip.offre{background:var(--accent-soft);color:var(--accent)}
+.chip.ok{background:var(--ok-soft);color:var(--ok)}
+.chip.bad{background:var(--bad-soft);color:var(--bad)}
+.chip.warn{background:var(--warn-soft);color:var(--warn)}
+button.lettre{padding:3px 10px;font-size:12px}
+button.lettre[aria-pressed=true]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.score{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.detail{border-top:1px solid var(--line);padding:12px;display:flex;flex-direction:column;gap:10px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.resume{font-size:14px;max-width:70ch;margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+.empty{background:var(--surface);border:1px dashed var(--line);border-radius:8px;padding:28px 16px;text-align:center;color:var(--muted)}
+section.panel{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px}
+section.panel h2{font-family:var(--display);font-size:16px;font-weight:600;margin:0 0 8px}
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{text-align:right;padding:5px 8px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+th{color:var(--muted);font-weight:500}
+td.num{font-family:var(--mono)}
+.export{font-family:var(--mono);font-size:12px;min-height:140px}
+a{color:var(--accent)}
+a.doc{display:inline-block;border:1px solid var(--accent);border-radius:6px;padding:5px 10px;font-weight:500;text-decoration:none;font-size:14px}
+a.doc:hover{background:var(--accent-soft)}
+body.depot .wrap{outline:3px dashed var(--accent);outline-offset:-6px}
+@media (max-width:640px){.pipeline{grid-template-columns:repeat(3,minmax(0,1fr))}.head{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:no-preference){button{transition:border-color .15s,background .15s}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Suivi des candidatures</h1>
+      <p class="sub" id="sub">Chargement…</p>
+    </div>
+    <div class="row">
+      <button id="btn-add" class="primary">Ajouter</button>
+      <button id="btn-import" title="Ou dépose pour-la-page.json n'importe où sur la page">Importer (moteur local)</button>
+      <button id="btn-export">Exporter</button>
+      <input type="file" id="file" accept=".json,application/json" hidden>
+    </div>
+  </header>
+
+  <div id="msg" hidden></div>
+
+  <section class="panel" id="add-panel" hidden>
+    <h2>Nouvelle entrée</h2>
+    <form id="add-form">
+      <div class="grid2">
+        <label>Type
+          <select id="f-type"><option value="spontanee">Candidature spontanée</option><option value="offre">Offre</option></select>
+        </label>
+        <label>Entreprise<input type="text" id="f-entreprise" required></label>
+        <label>Poste ou rôle visé<input type="text" id="f-poste" placeholder="Lead AI, Head of AI…"></label>
+        <label>Lieu<input type="text" id="f-lieu"></label>
+        <label>Lien (offre ou site)<input type="url" id="f-url" placeholder="https://"></label>
+        <label>Contact<input type="text" id="f-contact" placeholder="Nom, e-mail, LinkedIn"></label>
+        <label>Statut de départ
+          <select id="f-statut"></select>
+        </label>
+      </div>
+      <label style="margin-top:10px">Notes<textarea id="f-notes"></textarea></label>
+      <label style="margin-top:10px">Texte de l'offre (à coller pour LinkedIn : le moteur ne peut pas le récupérer)<textarea id="f-texte" style="min-height:120px"></textarea></label>
+      <div class="row" style="margin-top:10px">
+        <button class="primary" type="submit">Enregistrer</button>
+        <button type="button" id="add-cancel" class="ghost">Annuler</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="panel" id="export-panel" hidden>
+    <h2>Export</h2>
+    <p class="sub" style="margin:0 0 8px">Copie ce contenu dans un fichier <code>candidatures-export.json</code> pour le moteur local.</p>
+    <textarea class="export" id="export-text" readonly></textarea>
+    <div class="row" style="margin-top:8px"><button id="export-copy">Copier</button><button id="export-close" class="ghost">Fermer</button></div>
+  </section>
+
+  <nav class="pipeline" id="pipeline" aria-label="Étapes"></nav>
+
+  <div class="row filters">
+    <select id="flt-type" aria-label="Type">
+      <option value="">Offres et spontanées</option><option value="offre">Offres</option><option value="spontanee">Spontanées</option>
+    </select>
+    <select id="flt-moteur" aria-label="Moteur">
+      <option value="">Tous les moteurs</option><option value="A">Moteur A (Claude)</option><option value="B">Moteur B (PC)</option><option value="manuel">Ajout manuel</option>
+    </select>
+    <input type="text" id="flt-q" placeholder="Rechercher une entreprise, un poste" aria-label="Rechercher">
+  </div>
+
+  <div class="list" id="list"></div>
+
+  <section class="panel">
+    <h2>Comparaison des moteurs</h2>
+    <div class="tablewrap"><table id="stats"></table></div>
+    <p class="sub">Taux d'acceptation : part des entrées acceptées parmi celles que tu as tranchées (oui ou non).</p>
+  </section>
+</div>
+
+<script>
+(function(){
+"use strict";
+var STATUTS=[
+  {id:"a_traiter",label:"À traiter"},
+  {id:"acceptee",label:"À préparer"},
+  {id:"prete",label:"À valider"},
+  {id:"validee",label:"À envoyer"},
+  {id:"postulee",label:"Postulée"},
+  {id:"refusee",label:"Refusée"}
+];
+var SUITES=[["","En attente"],["relance","Relancée"],["entretien","Entretien"],["refus","Refus de l'entreprise"],["offre","Proposition reçue"]];
+var MOTEURS={A:"Moteur A (Claude)",B:"Moteur B (PC)",manuel:"Ajout manuel"};
+var state={docs:[],loaded:false,tab:"a_traiter",open:null,drafts:{},confirmDel:null};
+var db=null,downloads=null,col=null;
+var $=function(id){return document.getElementById(id);};
+
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
+function norm(s){return String(s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"");}
+function keyOf(d){return (norm(d.type||"offre")+"_"+norm(d.entreprise)+"_"+norm(d.poste)).slice(0,150)||("x"+Date.now());}
+function today(){return new Date().toISOString().slice(0,10);}
+function safeUrl(u){u=String(u||"").trim();return /^https?:\/\//i.test(u)?u:"";}
+// Les PDF locaux passent par `uv run moteur servir` : un lien file:// est bloqué depuis claude.ai.
+var SERVEUR_LOCAL="http://127.0.0.1:8765/";
+function docUrl(ref){ref=String(ref||"").trim();if(!ref)return "";if(/^https?:\/\//i.test(ref))return ref;if(/^[a-z]+:/i.test(ref))return "";return SERVEUR_LOCAL+ref.replace(/^\/+/,"").split("/").map(encodeURIComponent).join("/");}
+function docLinks(d){var h="",c=docUrl(d.cv_ref),l=docUrl(d.lettre_ref);if(c)h+='<a class="doc" href="'+esc(c)+'" target="_blank" rel="noopener noreferrer">CV</a>';if(l)h+='<a class="doc" href="'+esc(l)+'" target="_blank" rel="noopener noreferrer">Lettre</a>';return h;}
+// Lettre faite d'office : spontanées, secteur public, banques. L'interrupteur (champ
+// « lettre » : « oui » ou « non ») l'emporte. Doit rester identique à
+// lettre_par_defaut dans moteur/modeles.py.
+var SOURCES_PUBLIQUES=["service_public","choisirleservicepublic.gouv.fr","place-emploi-public"];
+var MOTS_LETTRE=["ministere","direction generale","dgsi","dgse","dga","dinum","anssi","agence de l'innovation de defense","commissariat","secretariat general","autorite","tracfin","prefecture","armees","gendarmerie","police nationale","service statistique","cnes","cnrs","inria","interpol","beta.gouv",
+  "banque","bank","bnp paribas","societe generale","credit agricole","cacib","lcl","natixis","bpce","caisse d'epargne","credit mutuel","cic","bpifrance","rothschild","lazard","hsbc","la banque postale","oddo","amundi"];
+function lettreDefaut(d){
+  if(d.type==="spontanee"||SOURCES_PUBLIQUES.indexOf(d.source||"")>=0)return true;
+  var e="-"+norm(d.entreprise)+"-";
+  return MOTS_LETTRE.some(function(m){var c=norm(m);return c&&e.indexOf("-"+c+"-")>=0;});
+}
+function lettrePrevue(d){if(d.lettre==="oui")return true;if(d.lettre==="non")return false;return !!d.lettre_demandee||lettreDefaut(d);}
+function lettreBouton(d){
+  // Une fois la lettre faite, le lien « Lettre » remplace l'interrupteur.
+  if(d.lettre_ref||["a_traiter","acceptee","prete","validee"].indexOf(d.statut)<0)return "";
+  var on=lettrePrevue(d);
+  return '<button class="lettre" data-act="lettre" aria-pressed="'+on+'" title="'+(d.lettre_demandee?"L'offre demande une lettre. ":"")+'Clique pour changer">Lettre : '+(on?"oui":"non")+'</button>';
+}
+function label(id){for(var i=0;i<STATUTS.length;i++)if(STATUTS[i].id===id)return STATUTS[i].label;return id;}
+
+function say(text,kind){var m=$("msg");if(!text){m.hidden=true;return;}m.hidden=false;m.className="note"+(kind?" "+kind:"");m.textContent=text;}
+
+function write(id,fields){
+  if(!col)return Promise.reject(new Error("indisponible"));
+  fields.date_maj=today();
+  return col.doc(id).update(fields).catch(function(e){say("L'enregistrement a échoué ("+(e&&e.code||"erreur")+"). Réessaie dans un instant.","bad");throw e;});
+}
+
+function filtered(){
+  var t=$("flt-type").value,m=$("flt-moteur").value,q=norm($("flt-q").value);
+  return state.docs.filter(function(d){
+    if(t&&d.type!==t)return false;
+    if(m&&(d.moteur||"manuel")!==m)return false;
+    if(q&&norm((d.entreprise||"")+" "+(d.poste||"")+" "+(d.lieu||"")).indexOf(q)<0)return false;
+    return true;
+  });
+}
+
+function renderPipeline(list){
+  var html="";
+  STATUTS.forEach(function(s){
+    var n=list.filter(function(d){return d.statut===s.id;}).length;
+    html+='<button class="stage" data-tab="'+s.id+'" aria-pressed="'+(state.tab===s.id)+'"><span class="n">'+n+'</span><span class="l">'+esc(s.label)+'</span></button>';
+  });
+  $("pipeline").innerHTML=html;
+}
+
+function actions(d){
+  var a="";
+  if(d.statut==="a_traiter")a='<button class="yes" data-act="oui">Oui</button><button class="no" data-act="non">Non</button>';
+  else if(d.statut==="acceptee")a='<span class="chip">'+(lettrePrevue(d)?"CV et lettre à générer":"CV à générer")+'</span>';
+  else if(d.statut==="prete")a='<button class="yes" data-act="valider">Valider</button>';
+  else if(d.statut==="validee")a='<button class="primary" data-act="postulee">Marquer comme postulée</button>';
+  else if(d.statut==="refusee")a='<button data-act="rouvrir">Remettre à traiter</button>';
+  return a;
+}
+
+function field(id,key,lab,d,type){
+  var v=state.drafts[id]&&state.drafts[id][key]!=null?state.drafts[id][key]:(d[key]||"");
+  if(type==="area")return '<label>'+lab+'<textarea data-f="'+key+'" id="i-'+key+'">'+esc(v)+'</textarea></label>';
+  return '<label>'+lab+'<input type="text" data-f="'+key+'" id="i-'+key+'" value="'+esc(v)+'"></label>';
+}
+
+function detail(d){
+  var u=safeUrl(d.url),h='<div class="detail">';
+  if(d.resume)h+='<p class="resume">'+esc(d.resume)+'</p>';
+  if(u)h+='<div><a href="'+esc(u)+'" target="_blank" rel="noopener noreferrer">Ouvrir le lien</a></div>';
+  if(d.consigne&&d.statut==="acceptee")h+='<div class="note">Consigne en attente : '+esc(d.consigne)+'</div>';
+  if(docLinks(d))h+='<p class="sub" style="margin:0">Les boutons CV et Lettre ouvrent les PDF de ton PC si <code>uv run moteur servir</code> tourne dans le dossier moteur.</p>';
+  h+='<div class="grid2">'+field(d.id,"cv_ref","CV (fichier ou lien)",d)+field(d.id,"lettre_ref","Lettre (fichier ou lien)",d)+field(d.id,"contact","Contact",d)+'</div>';
+  h+=field(d.id,"notes","Notes",d,"area");
+  if(d.type!=="spontanee"){
+    if(d.statut==="acceptee"&&!String(d.texte_offre||"").trim()&&(d.moteur||"manuel")!=="B")h+='<div class="note">Texte de l\'offre manquant : colle-le ci-dessous puis enregistre, sinon le CV sera générique.</div>';
+    h+=field(d.id,"texte_offre","Texte de l'offre",d,"area");
+  }
+  if(d.statut==="prete"||d.statut==="validee")h+=field(d.id,"consigne","Consigne de retouche pour le CV ou la lettre",d,"area");
+  if(d.lettre_ref&&(d.statut==="prete"||d.statut==="validee")){
+    if(d.lettre_refaire_le)h+='<div class="note">Régénération de la lettre demandée'+(d.lettre_consigne?" (consigne : "+esc(d.lettre_consigne)+")":"")+'. Exporte, puis lance <code>uv run moteur decisions</code> et <code>uv run moteur lettre</code> : le nouveau PDF remplacera l\'ancien.</div>';
+    h+=field(d.id,"lettre_consigne","Consigne pour la lettre (facultatif : vide = réécrite de zéro)",d,"area");
+  }
+  if(d.statut==="postulee"){
+    h+='<label style="max-width:260px">Suite donnée<select data-suite="1" id="i-suite">';
+    SUITES.forEach(function(s){h+='<option value="'+s[0]+'"'+((d.suite||"")===s[0]?" selected":"")+'>'+s[1]+'</option>';});
+    h+='</select></label>';
+  }
+  h+='<div class="row"><button data-act="save">Enregistrer</button>';
+  if(d.statut==="acceptee")h+='<button data-act="pret">CV prêt, passer à valider</button>';
+  if(d.statut==="prete"||d.statut==="validee")h+='<button data-act="retouche">Redemander avec la consigne</button>';
+  if(d.lettre_ref&&(d.statut==="prete"||d.statut==="validee"))h+='<button data-act="relettre">Régénérer la lettre</button>';
+  if(d.statut!=="refusee"&&d.statut!=="a_traiter")h+='<button class="ghost" data-act="non">Abandonner</button>';
+  h+=state.confirmDel===d.id?'<button class="no" data-act="del2">Confirmer la suppression</button>':'<button class="ghost" data-act="del">Supprimer</button>';
+  h+='</div></div>';
+  return h;
+}
+
+function renderList(list){
+  var rows=list.filter(function(d){return d.statut===state.tab;});
+  rows.sort(function(a,b){
+    if(state.tab==="a_traiter")return (b.score||0)-(a.score||0);
+    return String(b.date_maj||"").localeCompare(String(a.date_maj||""));
+  });
+  if(!state.loaded){$("list").innerHTML='<div class="empty">Chargement des candidatures…</div>';return;}
+  if(!rows.length){
+    $("list").innerHTML='<div class="empty">'+(state.docs.length?"Rien à cette étape avec ces filtres.":"Aucune candidature pour l'instant. Ajoute une entrée ou importe le fichier du moteur local.")+'</div>';
+    return;
+  }
+  var html="";
+  rows.forEach(function(d){
+    var sp=d.type==="spontanee";
+    html+='<article class="card '+(sp?"t-spontanee":"t-offre")+'" data-id="'+esc(d.id)+'"><div class="head"><div>';
+    html+='<button class="title" data-act="toggle" aria-expanded="'+(state.open===d.id)+'">'+esc(d.entreprise||"Entreprise inconnue")+(d.poste?" · "+esc(d.poste):"")+'</button>';
+    html+='<div class="meta"><span class="chip '+(sp?"spont":"offre")+'">'+(sp?"Spontanée":"Offre")+'</span>';
+    html+='<span class="chip">'+esc(MOTEURS[d.moteur]||MOTEURS.manuel)+'</span>';
+    if(d.score!=null&&d.score!=="")html+='<span class="score">score '+esc(d.score)+'</span>';
+    if(d.lieu)html+='<span>'+esc(d.lieu)+'</span>';
+    if(d.lettre_demandee)html+='<span class="chip">Lettre demandée par l\'offre</span>';
+    if(d.lettre_ref&&d.lettre_refaire_le)html+='<span class="chip warn">Lettre à régénérer</span>';
+    if((d.statut==="prete"||d.statut==="validee")&&lettrePrevue(d)&&!d.lettre_ref)html+='<span class="chip warn">Lettre à générer : uv run moteur lettre</span>';
+    if(d.statut==="postulee"){
+      html+='<span>envoyée le '+esc(d.date_postulee||d.date_maj||"")+'</span>';
+      if(d.suite==="entretien"||d.suite==="offre")html+='<span class="chip ok">'+(d.suite==="offre"?"Proposition":"Entretien")+'</span>';
+      if(d.suite==="refus")html+='<span class="chip bad">Refus</span>';
+      if(d.suite==="relance")html+='<span class="chip">Relancée</span>';
+    } else if(d.date_ajout)html+='<span>ajoutée le '+esc(d.date_ajout)+'</span>';
+    html+='</div></div><div class="row">'+docLinks(d)+lettreBouton(d)+actions(d)+'</div></div>';
+    if(state.open===d.id)html+=detail(d);
+    html+='</article>';
+  });
+  $("list").innerHTML=html;
+}
+
+function renderStats(){
+  var acc=["acceptee","prete","validee","postulee"];
+  var h='<tr><th>Moteur</th><th>Proposées</th><th>À traiter</th><th>Acceptées</th><th>Refusées</th><th>Postulées</th><th>Taux d\'acceptation</th></tr>';
+  ["A","B","manuel"].forEach(function(m){
+    var ds=state.docs.filter(function(d){return (d.moteur||"manuel")===m;});
+    var a=ds.filter(function(d){return acc.indexOf(d.statut)>=0;}).length;
+    var r=ds.filter(function(d){return d.statut==="refusee";}).length;
+    var p=ds.filter(function(d){return d.statut==="postulee";}).length;
+    var w=ds.filter(function(d){return d.statut==="a_traiter";}).length;
+    h+='<tr><td>'+MOTEURS[m]+'</td><td class="num">'+ds.length+'</td><td class="num">'+w+'</td><td class="num">'+a+'</td><td class="num">'+r+'</td><td class="num">'+p+'</td><td class="num">'+((a+r)?Math.round(100*a/(a+r))+" %":"–")+'</td></tr>';
+  });
+  $("stats").innerHTML=h;
+}
+
+function render(){
+  var list=filtered();
+  renderPipeline(list);renderList(list);renderStats();
+  if(state.loaded){
+    var sp=state.docs.filter(function(d){return d.type==="spontanee";}).length;
+    $("sub").textContent=state.docs.length+" entrées, dont "+sp+" candidature"+(sp>1?"s":"")+" spontanée"+(sp>1?"s":"");
+  }
+}
+
+function collectDraft(card){
+  var o={};
+  card.querySelectorAll("[data-f]").forEach(function(el){o[el.getAttribute("data-f")]=el.value;});
+  return o;
+}
+
+$("list").addEventListener("input",function(e){
+  var card=e.target.closest(".card");if(!card||!e.target.hasAttribute("data-f"))return;
+  var id=card.getAttribute("data-id");
+  state.drafts[id]=state.drafts[id]||{};state.drafts[id][e.target.getAttribute("data-f")]=e.target.value;
+});
+$("list").addEventListener("change",function(e){
+  if(!e.target.hasAttribute("data-suite"))return;
+  var card=e.target.closest(".card");write(card.getAttribute("data-id"),{suite:e.target.value});
+});
+$("list").addEventListener("click",function(e){
+  var b=e.target.closest("[data-act]");if(!b)return;
+  var card=b.closest(".card"),id=card.getAttribute("data-id"),act=b.getAttribute("data-act");
+  var draft=state.open===id?collectDraft(card):{};
+  var done=function(){delete state.drafts[id];};
+  if(act==="toggle"){state.open=state.open===id?null:id;state.confirmDel=null;render();return;}
+  if(act==="del"){state.confirmDel=id;render();return;}
+  if(act==="del2"){col.doc(id).delete().then(function(){state.open=null;state.confirmDel=null;}).catch(function(){say("La suppression a échoué. Réessaie dans un instant.","bad");});return;}
+  b.disabled=true;
+  var f=draft;
+  if(act==="lettre"){write(id,{lettre:lettrePrevue(state.docs.filter(function(x){return x.id===id;})[0]||{})?"non":"oui"}).then(function(){say("");}).catch(function(){b.disabled=false;});return;}
+  if(act==="oui")f.statut="acceptee";
+  else if(act==="non")f.statut="refusee";
+  else if(act==="rouvrir")f.statut="a_traiter";
+  else if(act==="pret")f.statut="prete";
+  else if(act==="valider")f.statut="validee";
+  else if(act==="postulee"){f.statut="postulee";f.date_postulee=today();}
+  else if(act==="relettre"){f.lettre_refaire_le=new Date().toISOString();f.lettre_consigne=String(f.lettre_consigne||"").trim();}
+  else if(act==="retouche"){
+    if(!String(f.consigne||"").trim()){say("Écris d'abord la consigne de retouche.","bad");b.disabled=false;return;}
+    f.statut="acceptee";f.retouche_le=new Date().toISOString();
+  }
+  write(id,f).then(function(){done();say("");}).catch(function(){b.disabled=false;});
+});
+
+$("pipeline").addEventListener("click",function(e){
+  var b=e.target.closest("[data-tab]");if(!b)return;
+  state.tab=b.getAttribute("data-tab");state.open=null;render();
+});
+["flt-type","flt-moteur"].forEach(function(id){$(id).addEventListener("change",render);});
+$("flt-q").addEventListener("input",render);
+
+(function(){var h="";STATUTS.forEach(function(s){h+='<option value="'+s.id+'">'+s.label+'</option>';});$("f-statut").innerHTML=h;$("f-statut").value="postulee";})();
+$("btn-add").addEventListener("click",function(){$("add-panel").hidden=!$("add-panel").hidden;if(!$("add-panel").hidden)$("f-entreprise").focus();});
+$("add-cancel").addEventListener("click",function(){$("add-panel").hidden=true;});
+$("add-form").addEventListener("submit",function(e){
+  e.preventDefault();
+  if(!col){say("La base n'est pas disponible dans cette vue.","bad");return;}
+  var d={type:$("f-type").value,entreprise:$("f-entreprise").value.trim(),poste:$("f-poste").value.trim(),lieu:$("f-lieu").value.trim(),
+    url:safeUrl($("f-url").value),contact:$("f-contact").value.trim(),statut:$("f-statut").value,notes:$("f-notes").value.trim(),texte_offre:$("f-texte").value.trim().slice(0,20000),
+    moteur:"manuel",date_ajout:today(),date_maj:today()};
+  if(d.statut==="postulee")d.date_postulee=today();
+  var id=keyOf(d);
+  if(state.docs.some(function(x){return x.id===id;})){say("Cette entreprise et ce poste sont déjà dans le suivi.","bad");return;}
+  col.doc(id).set(d).then(function(){
+    $("add-form").reset();$("f-statut").value="postulee";$("add-panel").hidden=true;state.tab=d.statut;say("Entrée ajoutée.","ok");render();
+  }).catch(function(e){say("L'ajout a échoué ("+(e&&e.code||"erreur")+").","bad");});
+});
+
+$("btn-import").addEventListener("click",function(){$("file").click();});
+$("file").addEventListener("change",function(){
+  var f=$("file").files[0];if(!f)return;
+  lireFichier(f);$("file").value="";
+});
+function importRows(arr,auto){
+  if(!col){if(!auto)say("La base n'est pas disponible dans cette vue.","bad");return Promise.resolve();}
+  var known={};state.docs.forEach(function(d){known[d.id]=d;});
+  var added=0,updated=0,skipped=0,chain=Promise.resolve();
+  var GEN=["cv_ref","lettre_ref","resume","score","lettre_demandee"];
+  arr.forEach(function(raw){
+    if(!raw||typeof raw!=="object"||!raw.entreprise){skipped++;return;}
+    var d={type:raw.type==="spontanee"?"spontanee":"offre",entreprise:String(raw.entreprise),poste:String(raw.poste||""),lieu:String(raw.lieu||""),
+      url:safeUrl(raw.url),source:String(raw.source||""),moteur:raw.moteur==="A"?"A":"B",resume:String(raw.resume||"").slice(0,4000),
+      lettre_demandee:!!raw.lettre_demandee,date_ajout:today(),date_maj:today(),statut:"a_traiter"};
+    if(raw.score!=null&&!isNaN(Number(raw.score)))d.score=Number(raw.score);
+    if(raw.contact)d.contact=String(raw.contact);
+    var id=raw.id?norm(raw.id).slice(0,150):keyOf(d),ex=known[id];
+    if(!ex){
+      known[id]=d;
+      chain=chain.then(function(){return col.doc(id).set(d).then(function(){added++;});});
+      return;
+    }
+    var up={};
+    GEN.forEach(function(k){if(raw[k]!=null&&raw[k]!==""&&raw[k]!==ex[k])up[k]=k==="score"?Number(raw[k]):raw[k];});
+    // Un dossier en retouche ne repasse à valider que si le moteur l'a régénéré depuis.
+    var regenere=!ex.retouche_le||(raw.genere_le&&String(raw.genere_le)>String(ex.retouche_le));
+    if(raw.cv_ref&&ex.statut==="acceptee"&&regenere){up.statut="prete";up.consigne="";}
+    // Une demande de régénération de la lettre est servie dès qu'un PDF plus récent arrive.
+    if(ex.lettre_refaire_le&&raw.lettre_generee_le&&String(raw.lettre_generee_le)>String(ex.lettre_refaire_le)){up.lettre_refaire_le="";up.lettre_consigne="";}
+    if(Object.keys(up).length){up.date_maj=today();chain=chain.then(function(){return col.doc(id).update(up).then(function(){updated++;});});}
+    else skipped++;
+  });
+  return chain.then(function(){
+    if(auto&&!added&&!updated)return;
+    say((auto?"Import automatique : ":"Import terminé : ")+added+" ajoutées, "+updated+" mises à jour"+(auto?".":", "+skipped+" ignorées (déjà connues ou incomplètes)."),"ok");
+  }).catch(function(e){say("Import interrompu ("+(e&&e.code||"erreur")+") après "+added+" ajouts.","bad");});
+}
+
+// La plateforme bloque fetch() vers 127.0.0.1 : l'import passe par un fichier choisi ou déposé.
+function lireFichier(f){
+  var r=new FileReader();
+  r.onload=function(){
+    var arr;
+    try{arr=JSON.parse(r.result);if(arr&&arr.candidatures)arr=arr.candidatures;if(!Array.isArray(arr))throw 0;}
+    catch(_){say("Fichier illisible : il faut un tableau JSON d'entrées.","bad");return;}
+    importRows(arr);
+  };
+  r.readAsText(f);
+}
+document.addEventListener("dragover",function(e){if(e.dataTransfer&&Array.prototype.indexOf.call(e.dataTransfer.types||[],"Files")>=0){e.preventDefault();document.body.classList.add("depot");}});
+document.addEventListener("dragleave",function(e){if(!e.relatedTarget)document.body.classList.remove("depot");});
+document.addEventListener("drop",function(e){
+  document.body.classList.remove("depot");
+  var f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];if(!f)return;
+  e.preventDefault();lireFichier(f);
+});
+
+$("btn-export").addEventListener("click",function(){
+  var data=JSON.stringify({exporte_le:new Date().toISOString(),candidatures:state.docs},null,2);
+  var fallback=function(){$("export-text").value=data;$("export-panel").hidden=false;};
+  if(!downloads){fallback();return;}
+  downloads.save({filename:"candidatures-export.json",data:data}).then(function(){say("Export enregistré.","ok");})
+    .catch(function(e){if(e&&e.code==="declined")return;fallback();});
+});
+$("export-close").addEventListener("click",function(){$("export-panel").hidden=true;});
+$("export-copy").addEventListener("click",function(){
+  navigator.clipboard.writeText($("export-text").value).then(function(){say("Export copié.","ok");})
+    .catch(function(){$("export-text").select();say("Copie impossible ici : sélectionne le texte et copie-le à la main.","bad");});
+});
+
+render();
+
+var timer=setTimeout(function(){if(!state.loaded)say("La base ne répond pas encore. Les données s'afficheront dès qu'elle sera joignable.");},10000);
+function start(){
+  if(!window.claude||!window.claude.use){clearTimeout(timer);state.loaded=true;say("La base n'est pas disponible dans cette vue. Ouvre la page depuis Claude.","bad");render();return;}
+  window.claude.use("downloads").then(function(d){downloads=d;}).catch(function(){});
+  window.claude.use("db").then(function(d){
+    if(!d){clearTimeout(timer);state.loaded=true;say("La base n'est pas disponible dans cette vue. Ouvre la page depuis Claude en étant connecté.","bad");render();return;}
+    db=d;col=db.collection("candidatures");
+    col.onSnapshot(function(snap){
+      state.docs=snap.docs.map(function(s){var o=Object.assign({},s.data());o.id=s.id;return o;});
+      if(!snap.metadata.fromCache||snap.docs.length){state.loaded=true;}
+      if(!snap.metadata.fromCache){clearTimeout(timer);state.loaded=true;if($("msg").className==="note")say("");}
+      render();
+    },function(e){
+      clearTimeout(timer);state.loaded=true;
+      say("La connexion à la base s'est arrêtée ("+(e&&e.code||"erreur")+"). Recharge la page pour reprendre.","bad");render();
+    });
+  }).catch(function(){clearTimeout(timer);state.loaded=true;say("La base n'a pas pu être chargée.","bad");render();});
+}
+start();
+})();
+</script>
+</body>
+</html>

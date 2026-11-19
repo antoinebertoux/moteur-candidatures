@@ -15,7 +15,7 @@ profile sent to Claude, the sorting criteria, the sources and the tracked compan
   when set, `identifiant` is required. A Workday company may have its own search
   keywords.
 - **CONF-05** · Choisir le service public domains and employers are given by name
-  ("DGSE", "Numérique", accents and case ignored) or by their numeric id on the site; an
+  ("Ministère des Armées", "Numérique", accents and case ignored) or by their numeric id on the site; an
   unknown name is rejected with the list of known names.
 - **CONF-06** · `config.exemple.toml` is always a valid configuration.
 - **CONF-07** · Paths derive from the location of `config.toml`: the `moteur.sqlite3`

@@ -2,7 +2,7 @@
 
 Private claude.ai artifact (slug `34e12927-7588-4297-9860-6ed2374e9e20`), with its
 database hosted by Claude: collection `candidatures`, one document per application, whose
-identifier follows ID-02. The interface is in French; labels below are quoted as they
+identifier follows ID-02. Its code is [`page-suivi/index.html`](../page-suivi/index.html). The interface is in French; labels below are quoted as they
 appear. These rules are checked by hand.
 
 ## Document fields
@@ -35,7 +35,7 @@ missing = `manuel`), `statut`, `score`, `resume`, `lettre_demandee`, `lettre`
   most recent first.
 - **PAGE-04** · Filters: type (ads / unsolicited), engine (A, B, manual) and free search
   on company, title and location (accents ignored).
-- **PAGE-05** · Edit request: in À valider or À envoyer, Antoine writes an instruction
+- **PAGE-05** · Edit request: in À valider or À envoyer, User writes an instruction
   then clicks "Redemander avec la consigne"; the application goes back to À préparer with
   the time of the request. Without an instruction, the page refuses.
 - **PAGE-06** · Letter: as long as no letter is made (from À traiter to À envoyer), a
@@ -66,7 +66,7 @@ missing = `manuel`), `statut`, `score`, `resume`, `lettre_demandee`, `lettre`
   otherwise `B`). An entry without a company is ignored. A summary is shown (added,
   updated, ignored).
 - **PAGE-31** · A known entry only receives updates to `cv_ref`, `lettre_ref`, `resume`,
-  `score` and `lettre_demandee`. Antoine's decisions are never overwritten.
+  `score` and `lettre_demandee`. User's decisions are never overwritten.
 - **PAGE-32** · When a CV arrives for an application in À préparer, it moves to À valider
   and its instruction is cleared — unless an edit was requested after that CV was
   generated (PDF older than the request).

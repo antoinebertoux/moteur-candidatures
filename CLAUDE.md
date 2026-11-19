@@ -1,16 +1,20 @@
-# Règles du dépôt
+# Repository rules
 
-- Les specs sont rédigées en anglais.
-- `specs/` fait foi sur le comportement de l'outil (moteur B, page de suivi, tâches
-  planifiées). Antoine relit les specs, pas le code.
-- Pour tout changement de comportement : **modifier d'abord la spec** (nouvelle règle ou
-  règle modifiée, identifiant stable, jamais renuméroté), la faire valider par Antoine,
-  puis coder et tester. Le commit contient spec, code et tests.
-- Chaque règle du moteur a au moins un test qui la cite avec
-  `@pytest.mark.spec("XXX-NN")` ; `tests/test_specs.py` le vérifie. Une règle qu'on ne
-  peut pas tester porte la mention *(untested)*, avec la raison.
-- Une modification de la page de suivi ou d'une tâche planifiée met aussi à jour
-  `specs/tracking-page.md` ou `specs/scheduled-tasks.md`.
-- Les règles de `specs/identifiers.md` existent en double (Python et page) : ne jamais
-  en changer un seul côté.
-- Avant de committer : `uv run ruff format . && uv run ruff check . && uv run mypy && uv run pytest`.
+- Specs are written in English.
+- `specs/` is the reference for the tool's behaviour (engine B, tracking page, scheduled
+  tasks). The user reviews the specs, not the code.
+- For any change in behaviour: **change the spec first** (new or modified rule, stable
+  identifier, never renumbered), get the user's approval, then code and test. The commit
+  contains spec, code and tests.
+- Every engine rule has at least one test citing it with `@pytest.mark.spec("XXX-NN")`;
+  `tests/test_specs.py` checks this. A rule that cannot be tested is marked
+  *(untested)*, with the reason.
+- A change to the tracking page or to a scheduled task also updates
+  `specs/tracking-page.md` or `specs/scheduled-tasks.md`.
+- The published page and `page-suivi/index.html` stay identical: any change to one is
+  carried over to the other. Likewise, a change to a scheduled task's text is carried
+  over to its template in `taches/` (filled-in version in `prive/taches/`, ignored by
+  Git). No personal data in the templates.
+- The rules in `specs/identifiers.md` exist twice (Python and page): never change only
+  one side.
+- Before committing: `uv run ruff format . && uv run ruff check . && uv run mypy && uv run pytest`.

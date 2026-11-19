@@ -38,6 +38,7 @@ fichiers ignorés par Git ou hors du dépôt :
 | `moteur.sqlite3`, `echange/` | offres vues, notes, décisions |
 | `../latex/` | CV, banques de blocs et de paragraphes, `compiler.sh` |
 | `../Candidatures/`, `../suivi/` | dossiers générés, entreprises déjà approchées |
+| `prive/` | export de la base de la page, texte rempli des tâches planifiées |
 
 Le dossier parent (`racine` dans `[chemins]`, `..` par défaut) doit contenir :
 
@@ -72,6 +73,19 @@ donc **seulement** `../Candidatures/`, en lecture seule, sur `http://127.0.0.1:8
 
 Chaque étape existe aussi seule : `collecter`, `noter`, `exporter`. Ajoute `-v` pour le
 détail par source.
+
+## Page de suivi et tâches planifiées
+
+L'outil complet tient en trois morceaux, tous dans ce dépôt :
+
+| Dossier | Contenu |
+| --- | --- |
+| `src/moteur/` | moteur B, sur le PC (ce README) |
+| [`page-suivi/`](page-suivi/README.md) | code de la page de suivi (artefact claude.ai) et schéma de sa base |
+| [`taches/`](taches/README.md) | gabarits des tâches planifiées Claude (moteur A) |
+
+Pour tout réinstaller chez quelqu'un d'autre : publier la page, créer les tâches à
+partir des gabarits, puis configurer le moteur (Installation ci-dessus).
 
 ## Specs
 
