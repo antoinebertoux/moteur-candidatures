@@ -11,7 +11,15 @@ from typing import Any, Literal, cast, get_args
 from moteur.sources.service_public import DOMAINES, EMPLOYEURS, identifiant
 
 TypeAts = Literal[
-    "greenhouse", "lever", "ashby", "workday", "smartrecruiters", "recruitee", "teamtailor", ""
+    "greenhouse",
+    "lever",
+    "ashby",
+    "workday",
+    "smartrecruiters",
+    "recruitee",
+    "teamtailor",
+    "radancy",
+    "",
 ]
 
 

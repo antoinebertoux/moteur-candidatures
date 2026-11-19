@@ -22,6 +22,7 @@ from moteur.serveur import PORT_PAR_DEFAUT, servir
 from moteur.sources.ats import SourceAts
 from moteur.sources.base import ClientHttp, ClientHttpx, Source
 from moteur.sources.france_travail import SourceFranceTravail
+from moteur.sources.radancy import SourceRadancy
 from moteur.sources.service_public import SourceServicePublic
 from moteur.sources.workday import SourceWorkday
 
@@ -65,6 +66,8 @@ def construire_sources(config: Config, client: ClientHttp) -> list[Source]:
     for cible in config.entreprises:
         if cible.ats == "workday":
             sources.append(SourceWorkday(client, cible))
+        elif cible.ats == "radancy":
+            sources.append(SourceRadancy(client, cible))
         elif cible.ats:
             sources.append(SourceAts(client, cible))
     return sources

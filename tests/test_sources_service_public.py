@@ -95,11 +95,9 @@ def test_source_pagine_puis_cherche_chez_les_employeurs() -> None:
     source = SourceServicePublic(client, ("ia",), employeurs=(364,), pages_max=5)
     offres = source.collecter()
     assert len(offres) == 25  # les 2 offres de la DGSE sont déjà vues
-    assert [url for url, _ in client.appels] == [
-        general,
-        adresse("ia", page=2),
-        adresse("ia", employeurs=(364,)),
-    ]
+    assert sorted(url for url, _ in client.appels) == sorted(
+        [general, adresse("ia", page=2), adresse("ia", employeurs=(364,))]
+    )
     assert source.nom == "service_public"
 
 

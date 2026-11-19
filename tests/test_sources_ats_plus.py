@@ -1,3 +1,7 @@
+import threading
+from collections.abc import Mapping
+from typing import Any
+
 import pytest
 
 from moteur.config import EntrepriseCible
@@ -61,24 +65,57 @@ def _page(debut: int, nombre: int, total: int) -> dict[str, object]:
     }
 
 
+class ClientWorkday(FauxClient):
+    """Répond selon le mot-clé et la position, quel que soit l'ordre des appels."""
+
+    def __init__(
+        self,
+        pages: dict[tuple[str, int], dict[str, object]],
+        barrage: threading.Barrier | None = None,
+    ) -> None:
+        super().__init__({})
+        self.pages = pages
+        self.barrage = barrage
+
+    def post_json(
+        self, url: str, *, corps: Mapping[str, Any], entetes: Mapping[str, str] | None = None
+    ) -> Any:
+        self.appels.append((url, dict(corps)))
+        if self.barrage is not None and corps["offset"] == 0:
+            self.barrage.wait()  # échoue si les mots-clés passent l'un après l'autre
+        return self.pages.get((corps["searchText"], corps["offset"]))
+
+
 @pytest.mark.spec("SRC-41")
 def test_workday_pagine_et_dedoublonne() -> None:
-    api = decouper(EXEMPLE).api
     # Total annoncé sur la première page seulement, comme le fait Workday.
-    pages = [_page(0, 20, 25), _page(20, 5, 0), _page(0, 3, 3)]
-    client = FauxClient({api: pages})
+    client = ClientWorkday(
+        {("ia", 0): _page(0, 20, 25), ("ia", 20): _page(20, 5, 0), ("data", 0): _page(0, 3, 3)}
+    )
     cible = EntrepriseCible(
         nom="Exemple", ats="workday", identifiant=EXEMPLE, recherches=("ia", "data")
     )
     source = SourceWorkday(client, cible)
     offres = source.collecter()
     assert len(offres) == 25  # les 3 offres de « data » sont déjà vues
-    assert [(c["searchText"], c["offset"]) for _, c in client.appels] == [
+    assert sorted((c["searchText"], c["offset"]) for _, c in client.appels) == [
+        ("data", 0),
         ("ia", 0),
         ("ia", 20),
-        ("data", 0),
     ]
     assert source.nom == "workday:Exemple"
+
+
+@pytest.mark.spec("SRC-05")
+def test_workday_lance_les_mots_cles_en_parallele_et_garde_leur_ordre() -> None:
+    client = ClientWorkday(
+        {("ia", 0): _page(0, 2, 2), ("data", 0): _page(1, 2, 2)}, threading.Barrier(2, timeout=5)
+    )
+    cible = EntrepriseCible(
+        nom="Exemple", ats="workday", identifiant=EXEMPLE, recherches=("ia", "data")
+    )
+    offres = SourceWorkday(client, cible).collecter()
+    assert [o.poste for o in offres] == ["Poste 0", "Poste 1", "Poste 2"]
 
 
 @pytest.mark.spec("SRC-31")

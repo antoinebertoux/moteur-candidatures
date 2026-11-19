@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import html
 import re
-from collections.abc import Mapping
-from typing import Any, Protocol, runtime_checkable
+import time
+from collections.abc import Callable, Iterable, Mapping
+from concurrent.futures import ThreadPoolExecutor
+from typing import Any, Protocol, TypeVar, runtime_checkable
 
 import httpx
 
@@ -13,6 +15,22 @@ from moteur.modeles import Offre
 
 _BALISE = re.compile(r"<[^>]+>")
 _ESPACES = re.compile(r"\s+")
+
+# « Trop de requêtes » (429) : nouvelles tentatives, attente par défaut et maximale.
+ESSAIS_SUR_429 = 2
+ATTENTE_429 = 5.0
+ATTENTE_429_MAX = 30.0
+# Recherches d'une même source lancées en même temps (elles visent le même site).
+RECHERCHES_EN_PARALLELE = 4
+
+_E = TypeVar("_E")
+_R = TypeVar("_R")
+
+
+def en_parallele(fonction: Callable[[_E], _R], elements: Iterable[_E], maximum: int) -> list[_R]:
+    """Applique `fonction` à chaque élément, `maximum` à la fois ; garde l'ordre des éléments."""
+    with ThreadPoolExecutor(max_workers=maximum) as executeur:
+        return list(executeur.map(fonction, elements))
 
 
 class ErreurSource(Exception):
@@ -59,12 +77,30 @@ class SourceDetaillee(Protocol):
 class ClientHttpx:
     """Client HTTP réel. Une réponse vide (204) donne `None`."""
 
-    def __init__(self, delai: float = 20.0) -> None:
+    def __init__(
+        self,
+        delai: float = 20.0,
+        *,
+        transport: httpx.BaseTransport | None = None,
+        pause: Callable[[float], None] = time.sleep,
+    ) -> None:
         self._client = httpx.Client(
             timeout=delai,
             follow_redirects=True,
             headers={"User-Agent": "moteur-candidatures/0.1 (usage personnel)"},
+            transport=transport,
         )
+        self._pause = pause
+
+    def _envoyer(self, appel: Callable[[], httpx.Response]) -> httpx.Response:
+        """Envoie la requête ; sur un 429, attend le délai demandé puis réessaie."""
+        reponse = appel()
+        for _ in range(ESSAIS_SUR_429):
+            if reponse.status_code != httpx.codes.TOO_MANY_REQUESTS:
+                break
+            self._pause(_attente(reponse.headers.get("Retry-After")))
+            reponse = appel()
+        return reponse
 
     def get_json(
         self,
@@ -87,7 +123,7 @@ class ClientHttpx:
 
     def get_texte(self, url: str, *, params: Mapping[str, str] | None = None) -> str:
         try:
-            reponse = self._client.get(url, params=params)
+            reponse = self._envoyer(lambda: self._client.get(url, params=params))
             reponse.raise_for_status()
         except httpx.HTTPStatusError as erreur:
             raise ErreurSource(f"{url} : HTTP {erreur.response.status_code}") from erreur
@@ -98,10 +134,9 @@ class ClientHttpx:
     def fermer(self) -> None:
         self._client.close()
 
-    @staticmethod
-    def _json(appel: Any, url: str) -> Any:
+    def _json(self, appel: Callable[[], httpx.Response], url: str) -> Any:
         try:
-            reponse: httpx.Response = appel()
+            reponse = self._envoyer(appel)
             reponse.raise_for_status()
             if reponse.status_code == httpx.codes.NO_CONTENT or not reponse.content:
                 return None
@@ -113,6 +148,14 @@ class ClientHttpx:
             raise ErreurSource(f"{message} : {detail}" if detail else message) from erreur
         except (httpx.HTTPError, ValueError) as erreur:
             raise ErreurSource(f"{url} : {erreur}") from erreur
+
+
+def _attente(valeur: str | None) -> float:
+    """Délai d'un en-tête Retry-After en secondes, borné ; 5 s s'il est absent ou illisible."""
+    try:
+        return min(max(float(valeur or ""), 0.0), ATTENTE_429_MAX)
+    except ValueError:
+        return ATTENTE_429
 
 
 def texte_brut(contenu: str) -> str:

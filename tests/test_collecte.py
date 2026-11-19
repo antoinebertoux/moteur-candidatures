@@ -1,3 +1,4 @@
+import threading
 from dataclasses import replace
 from pathlib import Path
 
@@ -107,4 +108,39 @@ def test_detailler_ne_complete_que_les_offres_sans_texte_de_la_source() -> None:
     ]
     resultat = detailler(offres, [source, SourceFixe("ats", [])])
     assert [o.description for o in resultat] == ["Texte de a", "Déjà là", "", ""]
-    assert source.ouvertes == ["a", "c"]
+    assert sorted(source.ouvertes) == ["a", "c"]
+
+
+class SourceQuiAttend(SourceFixe):
+    """Ne répond qu'une fois toutes les sources du même barrage en cours d'interrogation."""
+
+    def __init__(self, nom: str, offres: list[Offre], barrage: threading.Barrier) -> None:
+        super().__init__(nom, offres)
+        self._barrage = barrage
+
+    def collecter(self) -> list[Offre]:
+        self._barrage.wait()  # BrokenBarrierError si les sources passent l'une après l'autre
+        return super().collecter()
+
+
+@pytest.mark.spec("COL-07")
+def test_interroger_en_parallele_garde_l_ordre_des_sources() -> None:
+    barrage = threading.Barrier(3, timeout=5)
+    sources = [
+        SourceQuiAttend(nom, [Offre(nom, "Data Scientist")], barrage) for nom in ("a", "b", "c")
+    ]
+    assert [o.entreprise for o in interroger(sources)] == ["a", "b", "c"]
+
+
+@pytest.mark.spec("COL-08")
+def test_detailler_ouvre_les_pages_en_parallele_sans_changer_l_ordre() -> None:
+    barrage = threading.Barrier(4, timeout=5)
+
+    class Lente(SourceDetailleeFixe):
+        def detailler(self, offre: Offre) -> Offre:
+            barrage.wait()
+            return super().detailler(offre)
+
+    offres = [Offre(x, "Data scientist", url=x, source="service_public") for x in "abcd"]
+    resultat = detailler(offres, [Lente("service_public")])
+    assert [o.description for o in resultat] == [f"Texte de {x}" for x in "abcd"]

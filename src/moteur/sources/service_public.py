@@ -14,7 +14,7 @@ from dataclasses import replace
 from urllib.parse import quote
 
 from moteur.modeles import Offre, normaliser
-from moteur.sources.base import ClientHttp, texte_brut
+from moteur.sources.base import RECHERCHES_EN_PARALLELE, ClientHttp, en_parallele, texte_brut
 
 URL_RECHERCHE = "https://choisirleservicepublic.gouv.fr/nos-offres/filtres/"
 OFFRES_PAR_PAGE = 20
@@ -194,17 +194,20 @@ class SourceServicePublic:
     def nom(self) -> str:
         return "service_public"
 
-    def _parcourir(self, mots: str, employeurs: Sequence[int], vues: dict[str, Offre]) -> None:
+    def _parcourir(self, recherche: tuple[str, Sequence[int]]) -> list[Offre]:
+        """Les offres d'une recherche, page après page."""
+        mots, employeurs = recherche
+        trouvees: list[Offre] = []
         for page in range(1, self._pages_max + 1):
             contenu = self._client.get_texte(adresse(mots, self._domaines, employeurs, page))
             offres = offres_service_public(contenu)
-            for offre in offres:
-                vues.setdefault(offre.url, offre)
+            trouvees.extend(offres)
             total = total_annonce(contenu)
             if len(offres) < OFFRES_PAR_PAGE or (
                 total is not None and page * OFFRES_PAR_PAGE >= total
             ):
                 break
+        return trouvees
 
     def detailler(self, offre: Offre) -> Offre:
         """L'offre avec le texte de sa page ; les résultats de recherche n'en ont pas."""
@@ -213,9 +216,12 @@ class SourceServicePublic:
         )
 
     def collecter(self) -> list[Offre]:
+        passes: list[Sequence[int]] = [(), self._employeurs] if self._employeurs else [()]
+        recherches = [
+            (mots, employeurs) for mots in self._recherches or ("",) for employeurs in passes
+        ]
         vues: dict[str, Offre] = {}
-        for mots in self._recherches or ("",):
-            self._parcourir(mots, (), vues)
-            if self._employeurs:
-                self._parcourir(mots, self._employeurs, vues)
+        for offres in en_parallele(self._parcourir, recherches, RECHERCHES_EN_PARALLELE):
+            for offre in offres:
+                vues.setdefault(offre.url, offre)
         return list(vues.values())

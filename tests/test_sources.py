@@ -1,9 +1,10 @@
+import httpx
 import pytest
 
 from moteur.config import EntrepriseCible
 from moteur.sources import france_travail
 from moteur.sources.ats import URLS, SourceAts, offres_ashby, offres_greenhouse, offres_lever
-from moteur.sources.base import ErreurSource, texte_brut
+from moteur.sources.base import ClientHttpx, ErreurSource, texte_brut
 from moteur.sources.france_travail import SourceFranceTravail, offre_depuis_resultat
 from tests.conftest import FauxClient
 
@@ -137,3 +138,31 @@ def test_source_ats_appelle_la_bonne_adresse() -> None:
 def test_source_ats_refuse_une_entreprise_sans_ats() -> None:
     with pytest.raises(ValueError, match="ATS"):
         SourceAts(FauxClient({}), EntrepriseCible(nom="Acme"))
+
+
+def _client_qui_repond(*statuts: tuple[int, dict[str, str]]) -> tuple[ClientHttpx, list[float]]:
+    """Client dont le serveur répond tour à tour les statuts donnés ; renvoie aussi les pauses."""
+    reponses = iter(statuts)
+    pauses: list[float] = []
+
+    def repondre(requete: httpx.Request) -> httpx.Response:
+        statut, entetes = next(reponses)
+        return httpx.Response(statut, headers=entetes, json={"ok": statut})
+
+    client = ClientHttpx(transport=httpx.MockTransport(repondre), pause=pauses.append)
+    return client, pauses
+
+
+@pytest.mark.spec("SRC-04")
+def test_un_429_est_reessaye_apres_le_delai_demande() -> None:
+    client, pauses = _client_qui_repond((429, {"Retry-After": "120"}), (429, {}), (200, {}))
+    assert client.post_json("https://exemple.test/jobs", corps={}) == {"ok": 200}
+    assert pauses == [30.0, 5.0]
+
+
+@pytest.mark.spec("SRC-04")
+def test_trois_429_de_suite_font_une_erreur_de_source() -> None:
+    client, pauses = _client_qui_repond((429, {}), (429, {"Retry-After": "2"}), (429, {}))
+    with pytest.raises(ErreurSource, match="HTTP 429"):
+        client.get_json("https://exemple.test/jobs")
+    assert pauses == [5.0, 2.0]

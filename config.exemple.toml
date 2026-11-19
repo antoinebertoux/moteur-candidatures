@@ -63,6 +63,7 @@ pages_max = 3
 #   recruitee, teamtailor : <id>.recruitee.com, <id>.teamtailor.com
 #   workday : l'adresse complète (https://<tenant>.wd3.myworkdayjobs.com/<site>),
 #             avec « recherches » = mots-clés (sinon IA, machine learning, data scientist)
+#   radancy : l'adresse du site carrières (ex. careers.moodys.com), lu via son plan du site
 # « spontanee = true » propose une candidature spontanée quand aucune offre ne correspond.
 #
 # [[entreprises]]

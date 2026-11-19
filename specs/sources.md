@@ -14,6 +14,13 @@ stays empty.
 - **SRC-03** · HTTP calls identify themselves as `moteur-candidatures/0.1 (usage
   personnel)`, follow redirects and give up after 20 s. An HTTP error becomes a source
   error quoting the status code and the start of the response. *(untested)*
+- **SRC-04** · "Too many requests" (HTTP 429) is retried at most twice, after waiting
+  the delay given by the site (`Retry-After`, capped at 30 s) or 5 s otherwise. Still
+  429 after that: source error (SRC-03).
+- **SRC-05** · A source running several searches (Choisir le service public: one per
+  keyword and pass; Workday: one per keyword) runs them in parallel, at most 4 at a time.
+  The pages of one search are read in order. The result does not depend on which search
+  answers first: ads are merged in the order of the searches, then deduplicated.
 
 ## France Travail
 
@@ -70,3 +77,18 @@ stays empty.
   default "machine learning", "intelligence artificielle", "data scientist") is searched,
   20 ads per page, at most 5 pages. An ad found by several keywords is kept only once.
   Workday gives no ad text.
+
+## Radancy (TalentBrew)
+
+Career sites built on Radancy (for instance Moody's). Their search is forbidden to
+robots by `robots.txt`; the sitemap and the ad pages are allowed.
+
+- **SRC-50** · The identifier is the career site host (`careers.example.com`). The source
+  reads `https://<host>/sitemap.xml` and keeps the addresses of the form
+  `…/job/<city>/<title>/<organisation>/<number>`: the title and the location come from
+  those two segments (hyphens become spaces, each word capitalised). Any other address
+  is ignored; an unreadable sitemap gives no ad.
+- **SRC-51** · The page of each **retained** ad is opened (as in SRC-24): its
+  `JobPosting` data gives the exact title, the text (plain, SRC-02) and the publication
+  date. A page without that data leaves the ad unchanged.
+
