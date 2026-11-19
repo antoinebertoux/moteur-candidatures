@@ -22,3 +22,5 @@
 - The rules in `specs/identifiers.md` exist twice (Python and page): never change only
   one side.
 - Before committing: `uv run ruff format . && uv run ruff check . && uv run mypy && uv run pytest`.
+  The same checks run on GitHub Actions (`.github/workflows/ci.yml`) on every push to
+  `main` and every pull request; keep both lists in sync.
