@@ -1,34 +1,32 @@
-# Commandes et serveur local
+# Commands and local server
 
-## Commandes
+## Commands
 
-| Commande | Effet |
+| Command | Effect |
 | --- | --- |
-| `moteur collecter` | interroge et filtre, ajoute à la base (0 token) |
-| `moteur noter` | note les offres en attente |
-| `moteur exporter` | écrit `echange/pour-la-page.json` |
-| `moteur quotidien` | collecter, noter, puis exporter |
-| `moteur decisions <fichier>` | relit l'export de la page |
-| `moteur generer` | dossiers des acceptées, lettres manquantes, puis export |
-| `moteur lettre [id…]` | lettres seules, puis export |
-| `moteur servir [--port N]` | sert les PDF à la page |
+| `moteur collecter` | queries and filters, adds to the database (0 tokens) |
+| `moteur noter` | scores the waiting ads |
+| `moteur exporter` | writes `echange/pour-la-page.json` |
+| `moteur quotidien` | collecter, noter, then exporter |
+| `moteur decisions <file>` | reads the page's export |
+| `moteur generer` | folders of accepted applications, missing letters, then export |
+| `moteur lettre [id…]` | letters only, then export |
+| `moteur servir [--port N]` | serves the PDFs to the page |
 
-- **CLI-01** · Les commandes ci-dessus existent et enchaînent les étapes indiquées.
-  *(non testé)*
-- **CLI-02** · `--config <fichier>` (défaut `config.toml` du dossier courant) et `-v`
-  (détail par source) s'écrivent avant ou après la commande.
-- **CLI-03** · Une erreur de configuration, un export illisible ou un fichier manquant
-  affiche « Erreur : … » et rend le code 1, sans trace Python. *(non testé)*
+- **CLI-01** · The commands above exist and chain the steps shown. *(untested)*
+- **CLI-02** · `--config <file>` (default `config.toml` in the current folder) and `-v`
+  (detail per source) can be written before or after the command.
+- **CLI-03** · A configuration error, an unreadable export or a missing file prints
+  "Erreur : …" and returns exit code 1, without a Python traceback. *(untested)*
 
-## Serveur des PDF (`moteur servir`)
+## PDF server (`moteur servir`)
 
-La page est sur claude.ai : le navigateur y bloque les liens `file://`. Les boutons CV et
-Lettre pointent donc vers ce petit serveur.
+The page lives on claude.ai, where the browser blocks `file://` links. The CV and Lettre
+buttons therefore point to this small server.
 
-- **SRV-01** · Il écoute sur `127.0.0.1` uniquement, port 8765 par défaut (la page
-  suppose 8765). *(non testé)*
-- **SRV-02** · Il ne sert que les fichiers sous `/Candidatures/…`, en lecture seule. Tout
-  le reste (`config.toml`, `.env`, `latex/`, `..`, liens qui sortent du dossier) répond
-  404.
-- **SRV-03** · Les réponses portent `Cache-Control: no-store`, pour qu'un PDF régénéré
-  s'affiche à jour.
+- **SRV-01** · It listens on `127.0.0.1` only, port 8765 by default (the page assumes
+  8765). *(untested)*
+- **SRV-02** · It only serves files under `/Candidatures/…`, read-only. Everything else
+  (`config.toml`, `.env`, `latex/`, `..`, links leaving the folder) returns 404.
+- **SRV-03** · Responses carry `Cache-Control: no-store`, so that a regenerated PDF shows
+  up to date.

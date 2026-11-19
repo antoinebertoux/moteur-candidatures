@@ -1,77 +1,78 @@
-# Specs de l'outil de candidatures
+# Specs of the job application tool
 
-Ces fichiers décrivent **ce que fait** l'outil, pas comment il est codé. Ils font foi :
-quand le code et une spec divergent, l'un des deux est faux et doit être corrigé.
+These files describe **what** the tool does, not how it is coded. They are the
+reference: when the code and a spec disagree, one of them is wrong and must be fixed.
 
-## Comment s'en servir
+## How to use them
 
-- **Une règle = un identifiant stable** (`FILT-03`). Il ne change jamais et n'est pas
-  réutilisé : une règle supprimée est barrée, pas renumérotée.
-- **Chaque règle du moteur est vérifiée par au moins un test**, qui la cite :
-  `@pytest.mark.spec("FILT-03")`. `tests/test_specs.py` échoue si une règle n'a pas de
-  test ou si un test cite une règle inconnue.
-- Une règle marquée *(non testé)* est assumée sans test automatique (consigne donnée à
-  Claude, comportement réseau…). Les règles de la page et des tâches planifiées ne sont
-  pas dans ce dépôt : elles sont vérifiées à la main.
-- **Ordre de travail** : on modifie d'abord la spec, Antoine la valide, puis on code et on
-  teste. Le commit contient les trois.
+- **One rule = one stable identifier** (`FILT-03`). It never changes and is never reused:
+  a removed rule is struck through, not renumbered.
+- **Every engine rule is checked by at least one test**, which cites it:
+  `@pytest.mark.spec("FILT-03")`. `tests/test_specs.py` fails if a rule has no test or if
+  a test cites an unknown rule.
+- A rule marked *(untested)* deliberately has no automated test (instruction given to
+  Claude, network behaviour…). Rules for the tracking page and the scheduled tasks live
+  outside this repository: they are checked by hand.
+- **Workflow**: change the spec first, Antoine approves it, then code and test. The
+  commit contains all three.
 
-## Vue d'ensemble
+## Overview
 
 ```text
-            ┌──────────────── Moteur A : tâches planifiées dans Claude ───────────────┐
-            │  cherchent les offres sur le web et écrivent directement dans la base   │
-            └────────────────────────────────────┬───────────────────────────────────┘
-                                                 ▼
- Moteur B (ce dépôt, sur le PC)          Page « Suivi des candidatures »
- collecter → noter → exporter ──JSON──▶  (artefact claude.ai + sa base)
-                                          Antoine trie : oui / non, lettre, retouches
- decisions ◀───────────────JSON───────── Exporter
- generer / lettre  → PDF dans ../Candidatures/
- exporter ─────────────────JSON──────▶  Importer : les dossiers passent « À valider »
- servir  ◀── liens CV / Lettre ─────────  Antoine relit, valide, postule lui-même
+            ┌───────────── Engine A: scheduled tasks in Claude ──────────────┐
+            │  search the web for job ads and write directly to the database  │
+            └─────────────────────────────────┬──────────────────────────────┘
+                                              ▼
+ Engine B (this repo, on the PC)       "Suivi des candidatures" page
+ collecter → noter → exporter ─JSON─▶  (claude.ai artifact + its database)
+                                        Antoine sorts: yes / no, letter, edits
+ decisions ◀──────────────JSON──────── Exporter
+ generer / lettre  → PDFs in ../Candidatures/
+ exporter ────────────────JSON─────▶  Importer: files move to "À valider"
+ servir  ◀── CV / Lettre links ───────  Antoine reviews, approves, applies himself
 ```
 
-Claude n'est appelé que pour **noter** (Haiku) et **rédiger** (Sonnet), par `claude -p`
-avec l'abonnement, sans clé API. Tout le reste est du code, à 0 token.
+Claude is only called to **score** (Haiku) and to **write** (Sonnet), through
+`claude -p` with Antoine's subscription, never an API key. Everything else is plain
+code, at 0 tokens.
 
-## Statuts
+## Statuses
 
-| Page (champ `statut`) | Étape affichée | Base locale du moteur B |
+| Page (`statut` field) | Step shown | Engine B local database |
 | --- | --- | --- |
-| — | — | `a_noter` : collectée, pas encore notée |
-| `a_traiter` | À traiter | `notee` : proposée à la page |
-| `acceptee` | À préparer | `acceptee` : CV (et lettre) à générer |
-| `prete` | À valider | `generee` : PDF prêts |
+| — | — | `a_noter`: collected, not scored yet |
+| `a_traiter` | À traiter | `notee`: proposed to the page |
+| `acceptee` | À préparer | `acceptee`: CV (and letter) to generate |
+| `prete` | À valider | `generee`: PDFs ready |
 | `validee` | À envoyer | `generee` |
 | `postulee` | Postulée | `close` |
 | `refusee` | Refusée | `refusee` |
 
-## Fichiers
+## Files
 
-| Fichier | Préfixe | Sujet |
+| File | Prefix | Subject |
 | --- | --- | --- |
-| [identifiants.md](identifiants.md) | `ID` | identifiant d'une candidature, règles partagées avec la page |
-| [config.md](config.md) | `CONF` | `config.toml` et `.env` |
-| [sources.md](sources.md) | `SRC` | sites interrogés |
-| [collecte.md](collecte.md) | `COL`, `FILT` | assemblage des sources, filtre, candidatures spontanées |
-| [base-locale.md](base-locale.md) | `BASE` | ce que le moteur B retient et ses transitions |
-| [notation.md](notation.md) | `NOT`, `CLA` | notation par Claude, appel à `claude -p` |
-| [generation.md](generation.md) | `CV`, `LET`, `GEN` | CV et lettre LaTeX |
-| [echange.md](echange.md) | `ECH` | fichiers échangés avec la page |
-| [cli.md](cli.md) | `CLI`, `SRV` | commandes et serveur local des PDF |
-| [page-suivi.md](page-suivi.md) | `PAGE` | page de suivi (artefact claude.ai) |
-| [taches-claude.md](taches-claude.md) | `TACHE` | moteur A : tâches planifiées |
-| ce fichier | `INV` | invariants de tout l'outil |
+| [identifiers.md](identifiers.md) | `ID` | application identifier, rules shared with the page |
+| [config.md](config.md) | `CONF` | `config.toml` and `.env` |
+| [sources.md](sources.md) | `SRC` | job sites queried |
+| [collection.md](collection.md) | `COL`, `FILT` | combining sources, filter, unsolicited applications |
+| [local-database.md](local-database.md) | `BASE` | what engine B keeps and its transitions |
+| [scoring.md](scoring.md) | `NOT`, `CLA` | scoring by Claude, `claude -p` calls |
+| [generation.md](generation.md) | `CV`, `LET`, `GEN` | LaTeX CV and cover letter |
+| [exchange.md](exchange.md) | `ECH` | files exchanged with the page |
+| [cli.md](cli.md) | `CLI`, `SRV` | commands and local PDF server |
+| [tracking-page.md](tracking-page.md) | `PAGE` | tracking page (claude.ai artifact) |
+| [scheduled-tasks.md](scheduled-tasks.md) | `TACHE` | engine A: scheduled tasks |
+| this file | `INV` | invariants of the whole tool |
 
 ## Invariants
 
-- **INV-01** · Rien n'est jamais envoyé à un employeur sans qu'Antoine ait validé : ni le
-  moteur B ni le moteur A ne postulent ni n'envoient de message. *(non testé)*
-- **INV-02** · Le dépôt ne contient aucune donnée personnelle : `config.toml`, `.env`,
-  `moteur.sqlite3` et `echange/` sont ignorés par Git ; CV, lettres et candidatures
-  restent hors du dépôt. *(non testé)*
-- **INV-03** · Le plancher salarial n'est jamais transmis à Claude ni écrit dans la base de
-  la page. *(non testé)*
-- **INV-04** · Les anciennes candidatures (avant novembre 2026) ne sont pas reprises dans
-  le suivi. *(non testé)*
+- **INV-01** · Nothing is ever sent to an employer without Antoine's approval: neither
+  engine B nor engine A applies or sends a message. *(untested)*
+- **INV-02** · The repository contains no personal data: `config.toml`, `.env`,
+  `moteur.sqlite3` and `echange/` are ignored by Git; CVs, letters and applications stay
+  outside the repository. *(untested)*
+- **INV-03** · The salary floor is never sent to Claude nor written to the page's
+  database. *(untested)*
+- **INV-04** · Applications from the previous job search (before November 2026) are not
+  brought into the tracking. *(untested)*

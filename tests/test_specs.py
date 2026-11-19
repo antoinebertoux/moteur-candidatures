@@ -2,7 +2,7 @@
 
 Une règle s'écrit `- **FILT-03** · …` ; un test la cite avec
 `@pytest.mark.spec("FILT-03")`. Sont dispensées de test : les règles marquées
-« (non testé » et celles de la page et des tâches planifiées, hors de ce dépôt.
+« (untested » et celles de la page et des tâches planifiées, hors de ce dépôt.
 """
 
 from __future__ import annotations
@@ -13,7 +13,7 @@ from pathlib import Path
 
 RACINE = Path(__file__).resolve().parent.parent
 SPECS = RACINE / "specs"
-HORS_DEPOT = {"page-suivi.md", "taches-claude.md"}
+HORS_DEPOT = {"tracking-page.md", "scheduled-tasks.md"}
 _REGLE = re.compile(r"^- \*\*([A-Z]+-\d{2})\*\*")
 
 
@@ -37,7 +37,7 @@ def regles() -> dict[str, bool]:
     for fichier in sorted(SPECS.glob("*.md")):
         for regle, texte in blocs(fichier.read_text(encoding="utf-8")):
             assert regle not in trouvees, f"{regle} défini deux fois"
-            trouvees[regle] = fichier.name not in HORS_DEPOT and "(non testé" not in texte
+            trouvees[regle] = fichier.name not in HORS_DEPOT and "(untested" not in texte
     return trouvees
 
 

@@ -1,74 +1,72 @@
 # Sources
 
-Chaque source rend une liste d'offres (entreprise, intitulé, lieu, lien, source, texte,
-salaire, date de publication), sans appel à Claude. Un champ que la source ne donne pas
-reste vide.
+Each source returns a list of job ads (company, title, location, link, source, text,
+salary, publication date), without calling Claude. A field the source does not provide
+stays empty.
 
-## Général
+## General
 
-- **SRC-01** · Une réponse inattendue d'un site (champ manquant, mauvais type, flux
-  illisible) ne fait pas planter la source : les entrées inexploitables sont ignorées, et
-  une offre sans intitulé n'est jamais gardée.
-- **SRC-02** · Le texte HTML des offres est converti en texte brut, entités HTML (même
-  échappées deux fois) décodées, espaces resserrés.
-- **SRC-03** · Les appels HTTP s'identifient comme `moteur-candidatures/0.1 (usage
-  personnel)`, suivent les redirections et abandonnent au bout de 20 s. Une erreur HTTP
-  devient une erreur de source qui cite le code et le début de la réponse.
-  *(non testé)*
+- **SRC-01** · An unexpected response from a site (missing field, wrong type, unreadable
+  feed) does not crash the source: unusable entries are skipped, and an ad without a
+  title is never kept.
+- **SRC-02** · HTML in ad texts is turned into plain text, HTML entities (even
+  double-escaped) decoded, whitespace collapsed.
+- **SRC-03** · HTTP calls identify themselves as `moteur-candidatures/0.1 (usage
+  personnel)`, follow redirects and give up after 20 s. An HTTP error becomes a source
+  error quoting the status code and the start of the response. *(untested)*
 
 ## France Travail
 
-- **SRC-10** · Active seulement si `[france_travail] actif = true` **et** si
-  `FRANCE_TRAVAIL_ID` et `FRANCE_TRAVAIL_SECRET` sont définis ; sinon elle est ignorée
-  avec un avertissement. *(non testé)*
-- **SRC-11** · Obtient un jeton OAuth, puis lance une recherche par mot-clé et par
-  département (ou une seule par mot-clé si aucun département), limitée aux offres
-  publiées depuis `publiee_depuis` jours, 150 résultats au plus par recherche. Sans jeton
-  dans la réponse, la source échoue.
-- **SRC-12** · Entreprise absente → « Entreprise non précisée ». Lien : l'offre d'origine
-  si l'API la donne, sinon la page de l'offre sur France Travail. Le libellé de salaire
-  est conservé tel quel pour le filtre.
+- **SRC-10** · Active only if `[france_travail] actif = true` **and**
+  `FRANCE_TRAVAIL_ID` and `FRANCE_TRAVAIL_SECRET` are set; otherwise it is skipped with a
+  warning. *(untested)*
+- **SRC-11** · Gets an OAuth token, then runs one search per keyword and per département
+  (or one per keyword if no département), limited to ads published in the last
+  `publiee_depuis` days, at most 150 results per search. Without a token in the
+  response, the source fails.
+- **SRC-12** · Missing company → "Entreprise non précisée". Link: the original ad if the
+  API provides it, otherwise the ad page on France Travail. The salary label is kept as
+  is for the filter.
 
 ## Choisir le service public
 
-- **SRC-20** · Pas d'identifiants. Chaque mot-clé est cherché sur tout le site, puis de
-  nouveau chez les seuls employeurs suivis (la recherche générale est triée par
-  pertinence et pourrait les manquer). Les domaines, s'il y en a, filtrent les deux.
-- **SRC-21** · L'adresse de recherche suit l'ordre imposé par le site :
+- **SRC-20** · No credentials. Each keyword is searched on the whole site, then again
+  among the tracked employers only (the general search is sorted by relevance and could
+  miss them). Domains, if any, filter both passes.
+- **SRC-21** · The search address follows the order imposed by the site:
   `mot-cles/…/domaine/…/organisme/…/page/n/`.
-- **SRC-22** · Pagination : 20 offres par page ; arrêt dès qu'une page est incomplète,
-  que le total annoncé est atteint ou que `pages_max` est lu.
-- **SRC-23** · Sur une carte de résultat : employeur (« Fonction publique » s'il manque),
-  lieu, date « En ligne depuis le 16 novembre 2026 » convertie en `2026-11-16`. Une même
-  offre (même lien) n'est gardée qu'une fois.
-- **SRC-24** · Les résultats n'ont pas le texte de l'offre : la page de chaque offre
-  **retenue** est ouverte pour récupérer les missions et le profil, un paragraphe par
-  ligne.
+- **SRC-22** · Pagination: 20 ads per page; stops as soon as a page is incomplete, the
+  announced total is reached or `pages_max` pages are read.
+- **SRC-23** · From a result card: employer ("Fonction publique" if missing), location,
+  date "En ligne depuis le 16 novembre 2026" converted to `2026-11-16`. The same ad
+  (same link) is kept only once.
+- **SRC-24** · Results do not include the ad text: the page of each **retained** ad is
+  opened to fetch the missions and profile, one paragraph per line.
 
-## Pages carrières (ATS)
+## Career pages (ATS)
 
-- **SRC-30** · Adresse interrogée selon l'outil, à partir de l'identifiant :
+- **SRC-30** · Address queried for each tool, from the identifier:
 
-  | ATS | Adresse |
+  | ATS | Address |
   | --- | --- |
   | greenhouse | `boards-api.greenhouse.io/v1/boards/<id>/jobs?content=true` |
   | lever | `api.lever.co/v0/postings/<id>?mode=json` |
   | ashby | `api.ashbyhq.com/posting-api/job-board/<id>` |
   | smartrecruiters | `api.smartrecruiters.com/v1/companies/<id>/postings?limit=100` |
   | recruitee | `<id>.recruitee.com/api/offers/` |
-  | teamtailor | `<id>.teamtailor.com/jobs.rss` (flux RSS) |
+  | teamtailor | `<id>.teamtailor.com/jobs.rss` (RSS feed) |
 
-  Une entreprise sans ATS pris en charge ne peut pas devenir une source.
-- **SRC-31** · Chaque ATS fournit intitulé, lieu, lien et, quand il l'a, le texte et la
-  date de publication (AAAA-MM-JJ). SmartRecruiters ne donne pas le texte ; son lien est
-  reconstruit en `jobs.smartrecruiters.com/<id>/<offre>` et son lieu en « Ville, PAYS ».
+  A company without a supported ATS cannot become a source.
+- **SRC-31** · Each ATS provides title, location, link and, when available, the text and
+  publication date (YYYY-MM-DD). SmartRecruiters gives no text; its link is rebuilt as
+  `jobs.smartrecruiters.com/<id>/<ad>` and its location as "City, COUNTRY".
 
 ## Workday
 
-- **SRC-40** · L'identifiant est l'adresse de la page carrières telle qu'affichée
-  (`https://<tenant>.wdN.myworkdayjobs.com/[fr-FR/]<site>`) ; le segment de langue est
-  ignoré. Une adresse hors `myworkdayjobs.com` est refusée.
-- **SRC-41** · Workday ne liste pas tout : chaque mot-clé de l'entreprise (par défaut
-  « machine learning », « intelligence artificielle », « data scientist ») est cherché,
-  20 offres par page, 5 pages au plus. Une offre trouvée par plusieurs mots-clés n'est
-  gardée qu'une fois. Workday ne donne pas le texte de l'offre.
+- **SRC-40** · The identifier is the career page address as shown in the browser
+  (`https://<tenant>.wdN.myworkdayjobs.com/[fr-FR/]<site>`); the language segment is
+  ignored. An address outside `myworkdayjobs.com` is rejected.
+- **SRC-41** · Workday does not list everything: each of the company's keywords (by
+  default "machine learning", "intelligence artificielle", "data scientist") is searched,
+  20 ads per page, at most 5 pages. An ad found by several keywords is kept only once.
+  Workday gives no ad text.
