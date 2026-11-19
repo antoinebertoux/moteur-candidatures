@@ -166,3 +166,18 @@ def test_trois_429_de_suite_font_une_erreur_de_source() -> None:
     with pytest.raises(ErreurSource, match="HTTP 429"):
         client.get_json("https://exemple.test/jobs")
     assert pauses == [5.0, 2.0]
+
+
+@pytest.mark.spec("SRC-06")
+def test_une_erreur_du_serveur_est_reessayee_une_fois() -> None:
+    client, pauses = _client_qui_repond((500, {}), (200, {}))
+    assert client.post_json("https://exemple.test/jobs", corps={}) == {"ok": 200}
+    assert pauses == [2.0]
+
+
+@pytest.mark.spec("SRC-06")
+def test_deux_erreurs_du_serveur_font_une_erreur_de_source() -> None:
+    client, pauses = _client_qui_repond((502, {}), (503, {}))
+    with pytest.raises(ErreurSource, match="HTTP 503"):
+        client.get_texte("https://exemple.test/page")
+    assert pauses == [2.0]

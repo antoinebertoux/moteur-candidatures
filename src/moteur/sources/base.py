@@ -20,6 +20,8 @@ _ESPACES = re.compile(r"\s+")
 ESSAIS_SUR_429 = 2
 ATTENTE_429 = 5.0
 ATTENTE_429_MAX = 30.0
+# Erreur du serveur (5xx) : une nouvelle tentative, après cette attente.
+ATTENTE_5XX = 2.0
 # Recherches d'une même source lancées en même temps (elles visent le même site).
 RECHERCHES_EN_PARALLELE = 4
 
@@ -93,8 +95,12 @@ class ClientHttpx:
         self._pause = pause
 
     def _envoyer(self, appel: Callable[[], httpx.Response]) -> httpx.Response:
-        """Envoie la requête ; sur un 429, attend le délai demandé puis réessaie."""
+        """Envoie la requête ; réessaie une fois sur une erreur du serveur, et sur un 429
+        après le délai demandé."""
         reponse = appel()
+        if reponse.is_server_error:
+            self._pause(ATTENTE_5XX)
+            reponse = appel()
         for _ in range(ESSAIS_SUR_429):
             if reponse.status_code != httpx.codes.TOO_MANY_REQUESTS:
                 break

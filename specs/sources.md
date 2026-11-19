@@ -17,6 +17,8 @@ stays empty.
 - **SRC-04** · "Too many requests" (HTTP 429) is retried at most twice, after waiting
   the delay given by the site (`Retry-After`, capped at 30 s) or 5 s otherwise. Still
   429 after that: source error (SRC-03).
+- **SRC-06** · A server error (HTTP 500 to 599) is retried once, after 2 s. Still an
+  error after that: source error (SRC-03).
 - **SRC-05** · A source running several searches (Choisir le service public: one per
   keyword and pass; Workday: one per keyword) runs them in parallel, at most 4 at a time.
   The pages of one search are read in order. The result does not depend on which search
