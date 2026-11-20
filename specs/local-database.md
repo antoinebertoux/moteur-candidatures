@@ -31,5 +31,9 @@
   salary announced, interview details and instruction, whatever the application's state;
   an older or identical request changes nothing. A successful sheet stores its text and
   date (PREP-32). The application's status is never changed by a preparation.
+- **BASE-13** · Company links (LNK-01): a document whose `liens_manuels` is true sets its
+  company's website and LinkedIn page as User's correction (LNK-02), an empty field
+  meaning "no correction" for that link. A document whose `liens_manuels` is false or
+  missing removes a correction previously sent from that same application.
 - **BASE-10** · A database created by an older version gets the columns added since, if
   needed, without data loss.

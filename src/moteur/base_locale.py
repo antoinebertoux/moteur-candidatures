@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import sqlite3
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from datetime import date
 from pathlib import Path
 from types import TracebackType
 from typing import Self
 
+from moteur.company_links import CompanyLinks, company_key
 from moteur.modeles import Candidature, DemandePreparation, Note, Offre, normaliser
 from moteur.refusal import DUPLICATE, Refusal
 
@@ -43,6 +44,30 @@ CREATE TABLE IF NOT EXISTS candidatures (
     date_ajout TEXT NOT NULL
 )
 """
+
+# Company links (LNK-01): what the config and the lookup gave, and User's corrections
+# from the page, kept per application so that one can be withdrawn (BASE-13).
+_COMPANY_SCHEMA = (
+    """
+CREATE TABLE IF NOT EXISTS entreprises (
+    cle TEXT PRIMARY KEY,
+    site_config TEXT NOT NULL DEFAULT '',
+    linkedin_config TEXT NOT NULL DEFAULT '',
+    site_recherche TEXT NOT NULL DEFAULT '',
+    linkedin_recherche TEXT NOT NULL DEFAULT '',
+    recherchee_le TEXT NOT NULL DEFAULT ''
+)
+""",
+    """
+CREATE TABLE IF NOT EXISTS liens_corriges (
+    candidature TEXT PRIMARY KEY,
+    entreprise TEXT NOT NULL,
+    site TEXT NOT NULL DEFAULT '',
+    linkedin TEXT NOT NULL DEFAULT '',
+    ordre INTEGER NOT NULL
+)
+""",
+)
 
 # Colonnes ajoutées après coup : créées au besoin dans les bases existantes.
 _COLONNES_AJOUTEES = {
@@ -100,6 +125,8 @@ class BaseLocale:
         self._connexion.row_factory = sqlite3.Row
         with self._connexion:
             self._connexion.execute(_SCHEMA)
+            for schema in _COMPANY_SCHEMA:
+                self._connexion.execute(schema)
             existantes = {
                 ligne["name"]
                 for ligne in self._connexion.execute("PRAGMA table_info(candidatures)")
@@ -393,3 +420,74 @@ class BaseLocale:
     def entreprises_connues(self) -> set[str]:
         lignes = self._connexion.execute("SELECT DISTINCT entreprise FROM candidatures").fetchall()
         return {normaliser(ligne["entreprise"]) for ligne in lignes}
+
+    def set_config_links(self, links: Mapping[str, CompanyLinks]) -> None:
+        """Replaces the links given by `config.toml` with the current ones (CONF-09)."""
+        with self._connexion:
+            self._connexion.execute("UPDATE entreprises SET site_config = '', linkedin_config = ''")
+            for key, found in links.items():
+                self._connexion.execute(
+                    "INSERT INTO entreprises (cle, site_config, linkedin_config) VALUES (?, ?, ?)"
+                    " ON CONFLICT (cle) DO UPDATE SET site_config = excluded.site_config,"
+                    " linkedin_config = excluded.linkedin_config",
+                    (key, found.site, found.linkedin),
+                )
+
+    def record_lookup(self, key: str, found: CompanyLinks, day: str) -> None:
+        """Stores a lookup result, found or not, with its date (LNK-14)."""
+        with self._connexion:
+            self._connexion.execute(
+                "INSERT INTO entreprises (cle, site_recherche, linkedin_recherche,"
+                " recherchee_le) VALUES (?, ?, ?, ?) ON CONFLICT (cle) DO UPDATE SET"
+                " site_recherche = excluded.site_recherche,"
+                " linkedin_recherche = excluded.linkedin_recherche,"
+                " recherchee_le = excluded.recherchee_le",
+                (key, found.site, found.linkedin, day),
+            )
+
+    def company_lookups(self) -> dict[str, str]:
+        """Date of the last lookup, by company key."""
+        lignes = self._connexion.execute(
+            "SELECT cle, recherchee_le FROM entreprises WHERE recherchee_le != ''"
+        ).fetchall()
+        return {ligne["cle"]: ligne["recherchee_le"] for ligne in lignes}
+
+    def correct_links(self, application: str, company: str, found: CompanyLinks | None) -> bool:
+        """Stores User's correction made on an application, or withdraws it when `found`
+        is None (BASE-13). Returns true if something changed."""
+        with self._connexion:
+            if found is None or not (found.site or found.linkedin):
+                curseur = self._connexion.execute(
+                    "DELETE FROM liens_corriges WHERE candidature = ?", (application,)
+                )
+                return curseur.rowcount > 0
+            curseur = self._connexion.execute(
+                "INSERT INTO liens_corriges (candidature, entreprise, site, linkedin, ordre)"
+                " VALUES (?, ?, ?, ?, (SELECT COALESCE(MAX(ordre), 0) + 1 FROM liens_corriges))"
+                " ON CONFLICT (candidature) DO UPDATE SET entreprise = excluded.entreprise,"
+                " site = excluded.site, linkedin = excluded.linkedin, ordre = excluded.ordre"
+                " WHERE entreprise != excluded.entreprise OR site != excluded.site"
+                " OR linkedin != excluded.linkedin",
+                (application, company_key(company), found.site, found.linkedin),
+            )
+        return curseur.rowcount > 0
+
+    def company_links(self) -> dict[str, CompanyLinks]:
+        """Each company's links: correction, then config, then lookup (LNK-02)."""
+        resultat: dict[str, CompanyLinks] = {}
+        for ligne in self._connexion.execute("SELECT * FROM entreprises"):
+            resultat[ligne["cle"]] = CompanyLinks(
+                ligne["site_config"], ligne["linkedin_config"]
+            ).over(CompanyLinks(ligne["site_recherche"], ligne["linkedin_recherche"]))
+        corrections: dict[str, CompanyLinks] = {}
+        # Most recent correction first: it wins, link by link.
+        for ligne in self._connexion.execute(
+            "SELECT entreprise, site, linkedin FROM liens_corriges ORDER BY ordre DESC"
+        ):
+            precedente = corrections.get(ligne["entreprise"], CompanyLinks())
+            corrections[ligne["entreprise"]] = precedente.over(
+                CompanyLinks(ligne["site"], ligne["linkedin"])
+            )
+        for key, correction in corrections.items():
+            resultat[key] = correction.over(resultat.get(key, CompanyLinks()))
+        return {key: links for key, links in resultat.items() if links.site or links.linkedin}

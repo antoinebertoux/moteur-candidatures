@@ -80,6 +80,7 @@ button.lettre[aria-pressed=true]{background:var(--accent-soft);border-color:var(
 .score{font-family:var(--mono);font-variant-numeric:tabular-nums}
 .detail{border-top:1px solid var(--line);padding:12px;display:flex;flex-direction:column;gap:10px}
 .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.liens{font-size:14px;display:flex;flex-wrap:wrap;gap:4px 8px;overflow-wrap:anywhere}
 .resume{font-size:14px;max-width:70ch;margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
 .empty{background:var(--surface);border:1px dashed var(--line);border-radius:8px;padding:28px 16px;text-align:center;color:var(--muted)}
 section.panel{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px}
@@ -137,6 +138,8 @@ body.depot .wrap{outline:3px dashed var(--accent);outline-offset:-6px}
         <label>Poste ou rôle visé<input type="text" id="f-poste" placeholder="Lead AI, Head of AI…"></label>
         <label>Lieu<input type="text" id="f-lieu"></label>
         <label>Lien (offre ou site)<input type="url" id="f-url" placeholder="https://"></label>
+        <label>Site de l'entreprise (facultatif)<input type="url" id="f-site" placeholder="https://"></label>
+        <label>LinkedIn de l'entreprise (facultatif)<input type="url" id="f-linkedin" placeholder="https://www.linkedin.com/company/…"></label>
         <label>Contact<input type="text" id="f-contact" placeholder="Nom, e-mail, LinkedIn"></label>
         <label>Statut de départ
           <select id="f-statut"></select>
@@ -207,6 +210,27 @@ function norm(s){return String(s||"").toLowerCase().normalize("NFD").replace(/[�
 function keyOf(d){return (norm(d.type||"offre")+"_"+norm(d.entreprise)+"_"+norm(d.poste)).slice(0,150)||("x"+Date.now());}
 function today(){return new Date().toISOString().slice(0,10);}
 function safeUrl(u){u=String(u||"").trim();return /^https?:\/\//i.test(u)?u:"";}
+// Company links (PAGE-41): the stored address, otherwise a search on the company name.
+function lienExterne(href,label){return '<a href="'+esc(href)+'" target="_blank" rel="noopener noreferrer">'+label+'</a>';}
+function liensEntreprise(d){
+  var u=safeUrl(d.url),spont=d.type==="spontanee",h=[];
+  if(u)h.push(lienExterne(u,spont?"Site de l'entreprise":"Ouvrir le lien"));
+  if(!d.entreprise)return h.join(" · ");
+  var nom=encodeURIComponent(d.entreprise);
+  if(!(spont&&u))h.push(lienExterne(safeUrl(d.site_entreprise)||"https://duckduckgo.com/?q=!ducky+"+nom,"Site de l'entreprise"));
+  h.push(lienExterne(safeUrl(d.linkedin_entreprise)||"https://www.linkedin.com/search/results/companies/?keywords="+nom,"LinkedIn de l'entreprise"));
+  return h.join(" · ");
+}
+// Typed company links (PAGE-20, PAGE-42): trimmed, http(s) only; null after a refusal message.
+function liensSaisis(o){
+  var r={};
+  for(var k in o){
+    var v=String(o[k]||"").trim();
+    if(v&&!safeUrl(v)){say("Le lien « "+v+" » doit commencer par http:// ou https://.","bad");return null;}
+    r[k]=v;
+  }
+  return r;
+}
 // Les PDF locaux passent par `uv run moteur servir` : un lien file:// est bloqué depuis claude.ai.
 var SERVEUR_LOCAL="http://127.0.0.1:8765/";
 function docUrl(ref){ref=String(ref||"").trim();if(!ref)return "";if(/^https?:\/\//i.test(ref))return ref;if(/^[a-z]+:/i.test(ref))return "";return SERVEUR_LOCAL+ref.replace(/^\/+/,"").split("/").map(encodeURIComponent).join("/");}
@@ -318,12 +342,13 @@ function field(id,key,lab,d,type){
 }
 
 function detail(d){
-  var u=safeUrl(d.url),h='<div class="detail">';
+  var h='<div class="detail">';
   if(d.resume)h+='<p class="resume">'+esc(d.resume)+'</p>';
-  if(u)h+='<div><a href="'+esc(u)+'" target="_blank" rel="noopener noreferrer">Ouvrir le lien</a></div>';
+  var liens=liensEntreprise(d);
+  if(liens)h+='<div class="liens">'+liens+'</div>';
   if(d.consigne&&d.statut==="acceptee")h+='<div class="note">Consigne en attente : '+esc(d.consigne)+'</div>';
   if(docLinks(d))h+='<p class="sub" style="margin:0">Les boutons CV et Lettre ouvrent les PDF de ton PC si <code>uv run moteur servir</code> tourne dans le dossier moteur.</p>';
-  h+='<div class="grid2">'+field(d.id,"cv_ref","CV (fichier ou lien)",d)+field(d.id,"lettre_ref","Lettre (fichier ou lien)",d)+field(d.id,"contact","Contact",d)+'</div>';
+  h+='<div class="grid2">'+field(d.id,"cv_ref","CV (fichier ou lien)",d)+field(d.id,"lettre_ref","Lettre (fichier ou lien)",d)+field(d.id,"contact","Contact",d)+field(d.id,"site_entreprise","Site de l'entreprise",d)+field(d.id,"linkedin_entreprise","LinkedIn de l'entreprise",d)+'</div>';
   h+=field(d.id,"notes","Notes",d,"area");
   if(d.type!=="spontanee"){
     if(d.statut==="acceptee"&&!String(d.texte_offre||"").trim()&&(d.moteur||"manuel")!=="B")h+='<div class="note">Texte de l\'offre manquant : colle-le ci-dessous puis enregistre, sinon le CV sera générique.</div>';
@@ -456,6 +481,16 @@ $("list").addEventListener("click",function(e){
   if(act==="del2"){col.doc(id).delete().then(function(){state.open=null;state.confirmDel=null;}).catch(function(){say("La suppression a échoué. Réessaie dans un instant.","bad");});return;}
   b.disabled=true;
   var f=draft;
+  // PAGE-42: a changed company link becomes User's correction; both emptied = none.
+  if("site_entreprise" in f||"linkedin_entreprise" in f){
+    var doc=state.docs.filter(function(x){return x.id===id;})[0]||{};
+    var saisis=liensSaisis({site_entreprise:f.site_entreprise,linkedin_entreprise:f.linkedin_entreprise});
+    if(!saisis){b.disabled=false;return;}
+    if(saisis.site_entreprise!==(doc.site_entreprise||"")||saisis.linkedin_entreprise!==(doc.linkedin_entreprise||"")){
+      f.site_entreprise=saisis.site_entreprise;f.linkedin_entreprise=saisis.linkedin_entreprise;
+      f.liens_manuels=!!(saisis.site_entreprise||saisis.linkedin_entreprise);
+    }else{delete f.site_entreprise;delete f.linkedin_entreprise;}
+  }
   if(act==="lettre"){write(id,{lettre:lettrePrevue(state.docs.filter(function(x){return x.id===id;})[0]||{})?"non":"oui"}).then(function(){say("");}).catch(function(){b.disabled=false;});return;}
   if(act==="oui")f.statut="acceptee";
   else if(act==="motif"){
@@ -497,6 +532,9 @@ $("add-form").addEventListener("submit",function(e){
     url:safeUrl($("f-url").value),contact:$("f-contact").value.trim(),statut:$("f-statut").value,notes:$("f-notes").value.trim(),texte_offre:$("f-texte").value.trim().slice(0,20000),
     moteur:"manuel",date_ajout:today(),date_maj:today()};
   if(d.statut==="postulee")d.date_postulee=today();
+  var liens=liensSaisis({site_entreprise:$("f-site").value,linkedin_entreprise:$("f-linkedin").value});
+  if(!liens)return;
+  if(liens.site_entreprise||liens.linkedin_entreprise){d.site_entreprise=liens.site_entreprise;d.linkedin_entreprise=liens.linkedin_entreprise;d.liens_manuels=true;}
   var id=keyOf(d);
   if(state.docs.some(function(x){return x.id===id;})){say("Cette entreprise et ce poste sont déjà dans le suivi.","bad");return;}
   col.doc(id).set(d).then(function(){
@@ -513,6 +551,7 @@ function importRows(arr,auto){
   if(!col){if(!auto)say("La base n'est pas disponible dans cette vue.","bad");return Promise.resolve();}
   var known={};state.docs.forEach(function(d){known[d.id]=d;});
   var added=0,updated=0,skipped=0,chain=Promise.resolve();
+  var LIENS=["site_entreprise","linkedin_entreprise"];
   var GEN=["cv_ref","lettre_ref","resume","score","lettre_demandee","preparation","preparation_le"];
   arr.forEach(function(raw){
     if(!raw||typeof raw!=="object"||!raw.entreprise){skipped++;return;}
@@ -521,6 +560,7 @@ function importRows(arr,auto){
       lettre_demandee:!!raw.lettre_demandee,date_ajout:today(),date_maj:today(),statut:"a_traiter"};
     if(raw.score!=null&&!isNaN(Number(raw.score)))d.score=Number(raw.score);
     if(raw.contact)d.contact=String(raw.contact);
+    LIENS.forEach(function(k){var v=safeUrl(raw[k]);if(v)d[k]=v;});
     var id=raw.id?norm(raw.id).slice(0,150):keyOf(d),ex=known[id];
     if(!ex){
       known[id]=d;
@@ -529,6 +569,8 @@ function importRows(arr,auto){
     }
     var up={};
     GEN.forEach(function(k){if(raw[k]!=null&&raw[k]!==""&&raw[k]!==ex[k])up[k]=k==="score"?Number(raw[k]):raw[k];});
+    // The engine's company links never replace User's correction (PAGE-31, PAGE-42).
+    if(!ex.liens_manuels)LIENS.forEach(function(k){var v=safeUrl(raw[k]);if(v&&v!==ex[k])up[k]=v;});
     // Un dossier en retouche ne repasse à valider que si le moteur l'a régénéré depuis.
     var regenere=!ex.retouche_le||(raw.genere_le&&String(raw.genere_le)>String(ex.retouche_le));
     if(raw.cv_ref&&ex.statut==="acceptee"&&regenere){up.statut="prete";up.consigne="";}
@@ -590,7 +632,7 @@ function echecMoteur(e){
   afficherMoteur();
 }
 // Seuls les champs que le moteur lit (ECH-11) ; le texte de l'offre n'est utile qu'aux acceptées.
-var CHAMPS_MOTEUR=["id","statut","consigne","lettre_demandee","lettre","lettre_refaire_le","lettre_consigne","type","entreprise","poste","lieu","url","source","motif_refus","motif_detail"];
+var CHAMPS_MOTEUR=["id","statut","consigne","lettre_demandee","lettre","lettre_refaire_le","lettre_consigne","type","entreprise","poste","lieu","url","source","motif_refus","motif_detail","site_entreprise","linkedin_entreprise","liens_manuels"];
 // A preparation request also carries what the page knows of the follow-up (PREP-10).
 var CHAMPS_PREPARATION=["preparation_demandee_le","pretentions","entretien_infos","preparation_consigne","date_postulee","suite","contact","notes","texte_offre"];
 function pourLeMoteur(d){

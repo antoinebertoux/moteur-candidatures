@@ -64,6 +64,7 @@ code, at 0 tokens.
 | [generation.md](generation.md) | `CV`, `LET`, `GEN` | LaTeX CV and cover letter |
 | [exchange.md](exchange.md) | `ECH` | files exchanged with the page |
 | [interview-prep.md](interview-prep.md) | `PREP` | interview preparation sheet |
+| [company-links.md](company-links.md) | `LNK` | company website and LinkedIn links |
 | [cli.md](cli.md) | `CLI`, `SRV` | commands and local PDF server |
 | [tracking-page.md](tracking-page.md) | `PAGE` | tracking page (claude.ai artifact) |
 | [scheduled-tasks.md](scheduled-tasks.md) | `TACHE` | engine A: scheduled tasks |

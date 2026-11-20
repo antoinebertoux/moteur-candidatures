@@ -38,7 +38,9 @@ Checked by hand.
   for the same reason.
 - **TACHE-05** · Each ad is written as a new document `candidatures/<identifier ID-02>`
   with `moteur` = `A`, `statut` = `a_traiter`, a score from 0 to 100, a 3–5 sentence
-  summary and `lettre_demandee`. **An existing document is never changed nor deleted.**
+  summary and `lettre_demandee`, and `site_entreprise` / `linkedin_entreprise` when the
+  task found them on official pages (left out otherwise, never guessed). **An existing
+  document is never changed nor deleted.**
 - **TACHE-06** · The summary starts with "Attention : déjà N candidatures récentes."
   when the organisation has already received, within 6 months, 3 or more applications
   (large company, ministry, scale-up) or 2 or more (start-up).

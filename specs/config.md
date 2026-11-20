@@ -14,10 +14,13 @@ profile sent to Claude, the sorting criteria, the sources and the tracked compan
   or one of: greenhouse, lever, ashby, workday, smartrecruiters, recruitee, teamtailor,
   workable, radancy, welcomekit;
   when set, `identifiant` is required. A Workday company may have its own search
-  keywords.
+  keywords. It may have a website (`site`) and a LinkedIn page (`linkedin`).
 - **CONF-05** · Choisir le service public domains and employers are given by name
   ("Ministère des Armées", "Numérique", accents and case ignored) or by their numeric id on the site; an
   unknown name is rejected with the list of known names.
+- **CONF-09** · A tracked company's `site` and `linkedin` must be http(s) addresses,
+  otherwise they are rejected with a message naming the company. They are the company's
+  links of LNK-02.
 - **CONF-06** · `config.exemple.toml` is always a valid configuration.
 - **CONF-07** · Paths derive from the location of `config.toml`: the `moteur.sqlite3`
   database and the `echange/` folder next to it; `latex/`, `Candidatures/` and

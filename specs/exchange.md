@@ -22,6 +22,9 @@ capability). Engine B therefore offers two channels carrying the same content:
   (the Markdown text) and `preparation_le` (date of the sheet, same format), whatever its
   status in engine B.
 
+- **ECH-04** · Every entry adds `site_entreprise` and `linkedin_entreprise` when its
+  company has them (LNK-02), whatever the source.
+
 ## Page → engine B: `candidatures-export.json`
 
 - **ECH-10** · Accepted as `{"candidatures": [...]}` or directly as the array. A file that
@@ -30,7 +33,8 @@ capability). Engine B therefore offers two channels carrying the same content:
 - **ECH-11** · Fields read: `id`, `statut`, `consigne`, `lettre_demandee`, `lettre`
   (`oui` / `non` or boolean; missing = no choice), `lettre_refaire_le`,
   `lettre_consigne`, `motif_refus`, `motif_detail`, `preparation_demandee_le`,
-  `pretentions`, `entretien_infos`, `preparation_consigne`, and enough to rebuild the ad if `entreprise` and `poste` are
+  `pretentions`, `entretien_infos`, `preparation_consigne`, `site_entreprise`,
+  `linkedin_entreprise` and `liens_manuels` (PAGE-42), and enough to rebuild the ad if `entreprise` and `poste` are
   present (`type`, `lieu`, `url`, `source`, `texte_offre`).
 - **ECH-12** · `moteur decisions <file>` applies, in this order: adding unknown accepted
   applications (BASE-07); letter choice of accepted, ready or approved applications

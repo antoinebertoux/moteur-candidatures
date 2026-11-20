@@ -126,7 +126,7 @@ suivi/entreprises_vues.csv          # optional: columns "entreprise;…;statut"
 ## Usage
 
 ```bash
-uv run moteur quotidien          # collect + score + export
+uv run moteur quotidien          # collect + score + company links + export
 uv run moteur generer            # CV and letter in ../Candidatures/<Company - Role>/
 uv run moteur servir             # keep running: the page's CV / Letter buttons open your PDFs
 uv run moteur preparer           # pending interview preparation sheets
@@ -136,8 +136,9 @@ uv run moteur preparer           # pending interview preparation sheets
 | --- | --- | --- |
 | `collecter` | queries the sources and filters | no |
 | `noter` | scores the new ads | Haiku |
+| `liens` | looks up the missing company website and LinkedIn page (web search) | Haiku |
 | `exporter` | writes the file to import into the page | no |
-| `quotidien` | `collecter`, `noter`, then `exporter` | Haiku |
+| `quotidien` | `collecter`, `noter`, `liens`, then `exporter` | Haiku |
 | `decisions <file>` | reads the page's export | no |
 | `generer` | prepares CV and letter for accepted ads | Sonnet |
 | `lettre [ids…]` | adds the missing letter to folders whose CV already exists | Sonnet |

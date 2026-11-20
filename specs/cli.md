@@ -7,7 +7,8 @@
 | `moteur collecter` | queries and filters, adds to the database (0 tokens) |
 | `moteur noter` | scores the waiting ads |
 | `moteur exporter` | writes `echange/pour-la-page.json` |
-| `moteur quotidien` | collecter, noter, then exporter |
+| `moteur liens` | looks up the missing company links (LNK-10) |
+| `moteur quotidien` | collecter, noter, liens, then exporter |
 | `moteur decisions <file>` | reads the page's export |
 | `moteur generer` | folders of accepted applications, missing letters, then export |
 | `moteur lettre [id…]` | letters only, then export |

@@ -1,8 +1,8 @@
 """Calls to Claude through `claude -p`, so with the subscription and no API key.
 
 Every call runs without MCP servers and with a short system prompt, which keeps quota
-use to a minimum. Only the interview preparation is given tools: web search and page
-fetching (CLA-04).
+use to a minimum. Only two calls are given tools (CLA-04): the interview preparation
+(web search and page fetching) and the company link lookup (web search).
 """
 
 from __future__ import annotations
@@ -83,7 +83,7 @@ class ClaudeCli:
         self._binaire = binaire
 
     def commande(self, *, systeme: str, modele: str, outils: tuple[str, ...] = ()) -> list[str]:
-        # CLA-01: no tools at all, except the web tools of the interview preparation.
+        # CLA-01: no tools at all, except the web tools allowed by CLA-04.
         autorises = ["--allowedTools", ",".join(outils)] if outils else []
         return [
             self._binaire,

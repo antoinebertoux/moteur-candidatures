@@ -68,7 +68,7 @@ def preparations_demandees(base: BaseLocale, decisions: list[echange.Decision]) 
 
 def appliquer(base: BaseLocale, decisions: list[echange.Decision], racine: Path) -> Bilan:
     """ECH-12 order: unknown accepted ones, letter choices, statuses, letter
-    regenerations, then interview preparation requests."""
+    regenerations, then interview preparation requests and company link corrections."""
     completees = sum(
         base.completer_depuis_la_page(d.cle, d.offre, d.avec_lettre)
         for d in decisions
@@ -87,6 +87,10 @@ def appliquer(base: BaseLocale, decisions: list[echange.Decision], racine: Path)
     )
     lettres += lettres_a_refaire(decisions, base, racine)
     preparations = preparations_demandees(base, decisions)
+    # BASE-13: corrections of company links; changes nothing else, so not counted.
+    for decision in decisions:
+        if decision.offre is not None:
+            base.correct_links(decision.cle, decision.offre.entreprise, decision.liens)
     return Bilan(
         changees,
         completees,

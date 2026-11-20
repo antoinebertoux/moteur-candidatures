@@ -35,8 +35,9 @@ requested, language), in one short call to Claude per batch.
   with an API key. Each call runs without tools, without MCP servers, without keeping a
   session, with the requested model and system prompt; the prompt goes through standard
   input and the output is read as JSON.
-- **CLA-04** · The only call allowed tools is the interview preparation (PREP-20): web
-  search and page fetching, nothing else.
+- **CLA-04** · Only two calls are allowed tools: the interview preparation (PREP-20), web
+  search and page fetching; and the company link lookup (LNK-12), web search only.
+  Nothing else.
 - **CLA-02** · These are failures: `claude` not found, no answer within 10 minutes,
   non-zero exit code, non-JSON output, error reported by Claude, empty answer.
 - **CLA-03** · In a response, the content of the first ` ``` ` block is used if there is

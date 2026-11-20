@@ -26,7 +26,8 @@ def propositions(chemins: Chemins) -> dict[str, Any]:
     """ECH-21: what `pour-la-page.json` would hold, read from the database right now."""
     with BaseLocale(chemins.base) as base:
         candidatures = base.pour_la_page()
-    return {"candidatures": echange.pour_la_page(candidatures, chemins.racine)}
+        liens = base.company_links()
+    return {"candidatures": echange.pour_la_page(candidatures, chemins.racine, liens)}
 
 
 Lanceur = Callable[[], None]

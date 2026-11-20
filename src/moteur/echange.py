@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from moteur.company_links import CompanyLinks, company_key, is_web_address
 from moteur.modeles import Candidature, DemandePreparation, Offre, lettre_par_defaut
 from moteur.refusal import normalise_detail, normalise_reason
 
@@ -40,6 +41,8 @@ class Decision:
     motif_detail: str = ""
     preparation: DemandePreparation | None = None
     """Interview preparation request (PREP-01), None if the page made none."""
+    liens: CompanyLinks | None = None
+    """User's correction of the company links (PAGE-42), None if there is none."""
 
     @property
     def avec_lettre(self) -> bool:
@@ -97,6 +100,16 @@ def _preparation(entree: dict[str, Any]) -> DemandePreparation | None:
     )
 
 
+def _liens(entree: dict[str, Any]) -> CompanyLinks | None:
+    """The company links User typed in the page, kept only when `liens_manuels`."""
+    if entree.get("liens_manuels") is not True:
+        return None
+    site, linkedin = _texte(entree, "site_entreprise"), _texte(entree, "linkedin_entreprise")
+    return CompanyLinks(
+        site if is_web_address(site) else "", linkedin if is_web_address(linkedin) else ""
+    )
+
+
 def date_fichier(fichier: Path) -> str | None:
     """Date de modification au format de `Date.toISOString()` de la page, ou None."""
     try:
@@ -107,7 +120,9 @@ def date_fichier(fichier: Path) -> str | None:
 
 
 def pour_la_page(
-    candidatures: Iterable[Candidature], racine: Path | None = None
+    candidatures: Iterable[Candidature],
+    racine: Path | None = None,
+    liens: Mapping[str, CompanyLinks] | None = None,
 ) -> list[dict[str, Any]]:
     """Format lu par le bouton « Importer » de la page.
 
@@ -130,6 +145,12 @@ def pour_la_page(
         }
         if candidature.score is not None:
             ligne["score"] = candidature.score
+        # ECH-04: the company's links, whatever their source.
+        trouves = (liens or {}).get(company_key(offre.entreprise), CompanyLinks())
+        if trouves.site:
+            ligne["site_entreprise"] = trouves.site
+        if trouves.linkedin:
+            ligne["linkedin_entreprise"] = trouves.linkedin
         if candidature.cv_ref:
             ligne["cv_ref"] = candidature.cv_ref
             # La page ne repasse un dossier en « À valider » que s'il a été généré après
@@ -150,8 +171,12 @@ def pour_la_page(
     return lignes
 
 
-def serialiser(candidatures: Iterable[Candidature], racine: Path | None = None) -> str:
-    return json.dumps(pour_la_page(candidatures, racine), ensure_ascii=False, indent=2)
+def serialiser(
+    candidatures: Iterable[Candidature],
+    racine: Path | None = None,
+    liens: Mapping[str, CompanyLinks] | None = None,
+) -> str:
+    return json.dumps(pour_la_page(candidatures, racine, liens), ensure_ascii=False, indent=2)
 
 
 def _choix_lettre(valeur: object) -> bool | None:
@@ -196,6 +221,7 @@ def decisions_depuis(donnees: object) -> list[Decision]:
                     normalise_reason(entree.get("motif_refus")),
                     normalise_detail(entree.get("motif_detail")),
                     _preparation(entree),
+                    _liens(entree),
                 )
             )
     return decisions

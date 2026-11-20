@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal, cast, get_args
 
+from moteur.company_links import is_web_address
 from moteur.sources.service_public import DOMAINES, EMPLOYEURS, identifiant
 
 TypeAts = Literal[
@@ -63,6 +64,8 @@ class EntrepriseCible:
     identifiant: str = ""
     site: str = ""
     spontanee: bool = False
+    linkedin: str = ""
+    """LinkedIn page of the company (CONF-09)."""
     # Mots-clés envoyés à la recherche de l'ATS (Workday) ; vide = valeurs par défaut.
     recherches: tuple[str, ...] = ()
 
@@ -180,11 +183,16 @@ def _entreprise(table: Mapping[str, Any]) -> EntrepriseCible:
     identifiant = _chaine(table, "identifiant")
     if ats and not identifiant:
         raise ErreurConfig(f"{nom} : « identifiant » est requis quand « ats » est renseigné")
+    liens = {cle: _chaine(table, cle).strip() for cle in ("site", "linkedin")}
+    for cle, valeur in liens.items():
+        if valeur and not is_web_address(valeur):
+            raise ErreurConfig(f"{nom} : « {cle} » doit être une adresse http(s)")
     return EntrepriseCible(
         nom=nom,
         ats=cast(TypeAts, ats),
         identifiant=identifiant,
-        site=_chaine(table, "site"),
+        site=liens["site"],
+        linkedin=liens["linkedin"],
         spontanee=_booleen(table, "spontanee", False),
         recherches=_chaines(table, "recherches"),
     )

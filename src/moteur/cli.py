@@ -13,6 +13,7 @@ from moteur import echange
 from moteur.base_locale import BaseLocale
 from moteur.claude_cli import ClaudeCli, binaire_claude
 from moteur.collecte import collecter, entreprises_deja_vues
+from moteur.company_links import config_links, look_up
 from moteur.config import Config, ErreurConfig, charger
 from moteur.decisions import appliquer as appliquer_decisions
 from moteur.detection import report as detection_report
@@ -109,11 +110,22 @@ def commande_noter(config: Config, base: BaseLocale) -> None:
     print(f"{notees} offres notées, {len(base.a_noter())} encore en attente")
 
 
+def commande_liens(config: Config, base: BaseLocale) -> None:
+    """LNK-10: looks up the missing company links; never stops the daily run (LNK-15)."""
+    cherchees, trouves = look_up(
+        base, ClaudeCli(binaire=binaire_claude()), model=config.modele_notation
+    )
+    print(f"{cherchees} entreprises cherchées, {trouves} liens trouvés")
+
+
 def commande_exporter(config: Config, base: BaseLocale) -> None:
     candidatures = base.pour_la_page()
     config.chemins.echange.mkdir(parents=True, exist_ok=True)
     fichier = config.chemins.echange / FICHIER_POUR_LA_PAGE
-    fichier.write_text(echange.serialiser(candidatures, config.chemins.racine), encoding="utf-8")
+    fichier.write_text(
+        echange.serialiser(candidatures, config.chemins.racine, base.company_links()),
+        encoding="utf-8",
+    )
     print(f"{len(candidatures)} entrées dans {fichier} : à importer dans la page de suivi")
 
 
@@ -193,7 +205,8 @@ def analyseur() -> argparse.ArgumentParser:
     commande("collecter", "interroge les sources et filtre (0 token)")
     commande("noter", "note les nouvelles offres avec Claude")
     commande("exporter", "écrit le fichier à importer dans la page")
-    commande("quotidien", "collecter, noter puis exporter")
+    commande("liens", "cherche le site et le LinkedIn des entreprises qui n'en ont pas")
+    commande("quotidien", "collecter, noter, liens puis exporter")
     commande("decisions", "relit l'export de la page").add_argument("fichier", type=Path)
     commande("generer", "prépare CV et lettre des offres acceptées")
     commande(
@@ -238,6 +251,11 @@ def main(arguments: Sequence[str] | None = None) -> int:
     try:
         charger_env(options.config.resolve().parent / ".env")
         config = charger(options.config)
+        # CONF-09: the tracked companies' links, refreshed at every start.
+        with BaseLocale(config.chemins.base) as base:
+            base.set_config_links(
+                config_links([(e.nom, e.site, e.linkedin) for e in config.entreprises])
+            )
         if options.commande == "mcp":
             # ECH-24: the server opens the database for each call, never for its whole life.
             fichier_config = options.config.resolve()
@@ -250,6 +268,8 @@ def main(arguments: Sequence[str] | None = None) -> int:
                 commande_collecter(config, base)
             if options.commande in ("noter", "quotidien"):
                 commande_noter(config, base)
+            if options.commande in ("liens", "quotidien"):
+                commande_liens(config, base)
             if options.commande in ("exporter", "quotidien"):
                 commande_exporter(config, base)
             if options.commande == "decisions":

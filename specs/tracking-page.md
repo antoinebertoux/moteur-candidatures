@@ -13,7 +13,7 @@ missing = `manuel`), `statut`, `score`, `resume`, `lettre_demandee`, `lettre`
 `retouche_le`, `lettre_refaire_le`, `lettre_consigne`, `suite`, `motif_refus`,
 `motif_detail`, `date_ajout`, `date_maj`, `date_postulee`, `preparation_demandee_le`,
 `pretentions`, `entretien_infos`, `preparation_consigne`, `preparation`,
-`preparation_le`.
+`preparation_le`, `site_entreprise`, `linkedin_entreprise`, `liens_manuels`.
 
 ## Workflow
 
@@ -73,7 +73,7 @@ missing = `manuel`), `statut`, `score`, `resume`, `lettre_demandee`, `lettre`
 ## Manual entry
 
 - **PAGE-20** · Form: type, company (required), title or target role, location, link,
-  contact, starting status (Postulée by default, with today as sent date), notes, ad text
+  company website and LinkedIn page (optional; filled in = `liens_manuels`), contact, starting status (Postulée by default, with today as sent date), notes, ad text
   (at most 20,000 characters). Engine = `manuel`.
 - **PAGE-21** · An entry already present (same identifier) is rejected.
 
@@ -84,7 +84,9 @@ missing = `manuel`), `statut`, `score`, `resume`, `lettre_demandee`, `lettre`
   otherwise `B`). An entry without a company is ignored. A summary is shown (added,
   updated, ignored).
 - **PAGE-31** · A known entry only receives updates to `cv_ref`, `lettre_ref`, `resume`,
-  `score`, `lettre_demandee`, `preparation` and `preparation_le`. User's decisions are never overwritten.
+  `score`, `lettre_demandee`, `preparation` and `preparation_le`, and to `site_entreprise`
+  and `linkedin_entreprise` unless `liens_manuels` is true. User's decisions are never
+  overwritten.
 - **PAGE-32** · When a CV arrives for an application in À préparer, it moves to À valider
   and its instruction is cleared — unless an edit was requested after that CV was
   generated (PDF older than the request).
@@ -116,6 +118,25 @@ missing = `manuel`), `statut`, `score`, `resume`, `lettre_demandee`, `lettre`
 - **PAGE-40** · The CV and Lettre buttons open `cv_ref` / `lettre_ref`: an http(s) link as
   is, a relative path through `http://127.0.0.1:8765/<path>` (SRV-01), any other scheme is
   ignored. The ad link is shown only if it is http(s).
+- **PAGE-41** · Company links: next to the ad link, every application with a company
+  shows two links, opening in a new tab. Each uses the stored address
+  (`site_entreprise`, `linkedin_entreprise`, [company-links.md](company-links.md)) when
+  it is http(s); otherwise it is computed from the company name (nothing stored, so older
+  applications get them too):
+  - "LinkedIn de l'entreprise" → LinkedIn's company search,
+    `https://www.linkedin.com/search/results/companies/?keywords=<company>`;
+  - "Site de l'entreprise" → a web search that opens the first result directly,
+    `https://duckduckgo.com/?q=!ducky+<company>`.
+
+  The company name is URL-encoded. For an unsolicited application, whose link is already
+  the company website (COL-03), that link is labelled "Site de
+  l'entreprise" and no search link is added for the site.
+- **PAGE-42** · Correcting the links: the detail of an application has two fields "Site
+  de l'entreprise" and "LinkedIn de l'entreprise" (http(s) only, otherwise the page
+  refuses with a message). Saving a changed value sets `liens_manuels` to true, so that
+  the engine's links no longer replace it (PAGE-31) and the engine applies it to the
+  whole company (BASE-13). Emptying both fields and saving sets `liens_manuels` to false:
+  the engine's links come back at the next synchronisation.
 
 ## Engine comparison
 
