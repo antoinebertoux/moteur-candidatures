@@ -11,6 +11,7 @@ from moteur.generation import (
     ajuster_cv,
     avec_contenu,
     contenu_cv,
+    cv_pdf_name,
     extraire_tex,
     generer,
     generer_dossier,
@@ -242,3 +243,36 @@ def test_echec_de_compilation(chemins: Chemins) -> None:
         reussites, echecs = generer(base, FauxAssistant(TEX), chemins, "sonnet", en_echec)
     assert reussites == 0
     assert "Undefined control sequence" in echecs[0]
+
+
+def _details(chemins: Chemins, text: str) -> None:
+    (chemins.latex / "commun").mkdir(exist_ok=True)
+    (chemins.latex / "commun" / "coordonnees.tex").write_text(text, encoding="utf-8")
+
+
+@pytest.mark.spec("CV-16")
+def test_cv_pdf_name_from_contact_details(chemins: Chemins) -> None:
+    assert cv_pdf_name(chemins.latex) == "cv.pdf"
+    _details(chemins, "\\newcommand{\\coPrenom}{Jane}\n\\newcommand{\\coNom}{Doe}\n")
+    assert cv_pdf_name(chemins.latex) == "cv_Jane_Doe.pdf"
+    _details(chemins, "\\newcommand{\\coPrenom}{Jean Marc}\n\\newcommand{\\coNom}{L/X}\n")
+    assert cv_pdf_name(chemins.latex) == "cv_Jean-Marc_L-X.pdf"
+    _details(chemins, "\\newcommand{\\coPrenom}{Jane}\n")
+    assert cv_pdf_name(chemins.latex) == "cv.pdf"
+
+
+@pytest.mark.spec("CV-16", "GEN-02")
+def test_compiled_cv_is_renamed(chemins: Chemins) -> None:
+    _details(chemins, "\\newcommand{\\coPrenom}{Jane}\n\\newcommand{\\coNom}{Doe}\n")
+    dossier = chemins.candidatures / "Acme - Data Scientist"
+
+    def compiler(folder: Path, fichier: str) -> ResultatProcessus:
+        (folder / fichier).with_suffix(".pdf").write_bytes(b"%PDF")
+        return ResultatProcessus(0, "")
+
+    candidature = Candidature(OFFRE, "acceptee")
+    cv_ref, _ = generer_dossier(candidature, FauxAssistant(TEX), chemins, "sonnet", compiler)
+    assert cv_ref == "Candidatures/Acme - Data Scientist/cv_Jane_Doe.pdf"
+    assert (dossier / "cv_Jane_Doe.pdf").exists()
+    assert not (dossier / "cv.pdf").exists()
+    assert (dossier / "cv.tex").exists()

@@ -28,6 +28,7 @@ _BANQUE = re.compile(r"cv/banque-(?:fr|en)")
 _INTERDITS = re.compile(r'[/\\:*?"<>|\x00-\x1f]+')
 _ESPACES = re.compile(r"\s+")
 _TROP_DE_PAGES = re.compile(r"(\S+)\.pdf fait (\d+) pages")
+_COORDONNEE = r"\\newcommand\{{\\{}\}}\{{([^}}]*)\}}"
 _EUROFINS = re.compile(
     r"(\\datedexperience\{Eurofins\}.*?\\explanationdetail\{%?)(.*?)(\n?\s*\}\s*\n)", re.S
 )
@@ -266,6 +267,22 @@ def write_letter(
     )
 
 
+def cv_pdf_name(latex: Path) -> str:
+    """Name of the compiled CV, from the first and last name in `commun/coordonnees.tex` (CV-16)."""
+    try:
+        details = (latex / "commun" / "coordonnees.tex").read_text(encoding="utf-8")
+    except OSError:
+        return "cv.pdf"
+    parts = []
+    for macro in ("coPrenom", "coNom"):
+        found = re.search(_COORDONNEE.format(macro), details)
+        value = _ESPACES.sub("-", _INTERDITS.sub("-", found.group(1).strip())) if found else ""
+        if not value:
+            return "cv.pdf"
+        parts.append(value)
+    return f"cv_{parts[0]}_{parts[1]}.pdf"
+
+
 def generer_dossier(
     candidature: Candidature,
     assistant: Assistant,
@@ -308,7 +325,11 @@ def generer_dossier(
     def reference(fichier: Path) -> str:
         return str(fichier.with_suffix(".pdf").relative_to(chemins.racine))
 
-    return reference(cv), reference(lettre) if avec_lettre else ""
+    cv_pdf = dossier / cv_pdf_name(chemins.latex)
+    compiled = cv.with_suffix(".pdf")
+    if compiled != cv_pdf and compiled.exists():
+        compiled.replace(cv_pdf)
+    return reference(cv_pdf), reference(lettre) if avec_lettre else ""
 
 
 def generer(

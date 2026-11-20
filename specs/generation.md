@@ -40,6 +40,11 @@ repository: CV template, block bank (fr or en), letter skeleton, paragraph bank 
   items shorter than the first one, and keeps each one that fits.
 - **CV-15** · If even the shortest version exceeds one page, the folder is still
   generated and a "to be reworked" warning is printed.
+- **CV-16** · The compiled CV is named `cv_<first name>_<last name>.pdf`, both read from
+  `\coPrenom` and `\coNom` in `latex/commun/coordonnees.tex` (e.g.
+  `cv_Jane_Doe.pdf`); spaces and characters forbidden in file names become `-`. The
+  source stays `cv.tex`. If the file or either macro is missing, the PDF keeps the name
+  `cv.pdf`.
 
 ## Cover letter
 
@@ -77,7 +82,7 @@ repository: CV template, block bank (fr or en), letter skeleton, paragraph bank 
   compilation failure fails the folder, with the end of the log. `compiler.sh` reports an
   overflow as "`<name>.pdf fait N pages`".
 - **GEN-02** · A successful folder becomes `generee` with the paths of its PDFs, relative
-  to the root folder (`Candidatures/…/cv.pdf`). A failed folder is listed with the
+  to the root folder (`Candidatures/…/cv_<first name>_<last name>.pdf`, CV-16). A failed folder is listed with the
   reason, stays `acceptee`, and does not block the following ones.
 - **GEN-03** · After the folders, `generer` adds the missing letters then exports the
   file for the page automatically. *(untested)*
