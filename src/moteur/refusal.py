@@ -37,11 +37,11 @@ def normalise_detail(value: object) -> str:
 class Refusal:
     """A past refusal given to the scoring model as a counter-example (NOT-08)."""
 
-    entreprise: str
-    poste: str
+    company: str
+    title: str
     reason: str
     detail: str = ""
 
     def line(self) -> str:
-        text = f"- {self.entreprise} — {self.poste} : {REASONS.get(self.reason, self.reason)}"
+        text = f"- {self.company} — {self.title} : {REASONS.get(self.reason, self.reason)}"
         return f"{text} ({self.detail})" if self.detail else text

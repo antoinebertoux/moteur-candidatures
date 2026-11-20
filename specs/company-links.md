@@ -27,7 +27,7 @@ by every application of that company.
 
 ## Lookup by Claude
 
-- **LNK-10** · `moteur liens` looks up the companies of the applications sent to the page
+- **LNK-10** · `moteur links` looks up the companies of the applications sent to the page
   (BASE-04) and of accepted ones, when at least one of their two links is missing from
   every source and they have not been looked up in the last 30 days. Companies are sent
   in batches of 10, one call per batch. *(untested: network; selection checked by LNK-11)*
@@ -44,5 +44,5 @@ by every application of that company.
   ignored; each link goes through LNK-03; the lookup date is recorded for every company
   of the batch, found or not. A response that is not an array fails the batch: nothing is
   recorded, it is retried on the next run, and the other batches carry on.
-- **LNK-15** · `moteur quotidien` runs `liens` after `noter` and before `exporter`. A
+- **LNK-15** · `moteur daily` runs `links` after `score` and before `export`. A
   failed lookup never stops the daily run.

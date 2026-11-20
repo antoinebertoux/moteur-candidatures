@@ -1,6 +1,6 @@
 # Collection and filter
 
-`moteur collecter` queries the sources, keeps the ads that pass the filter, then
+`moteur collect` queries the sources, keeps the ads that pass the filter, then
 proposes unsolicited applications. No call to Claude.
 
 ## Collection

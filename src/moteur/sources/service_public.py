@@ -1,9 +1,9 @@
-"""Choisir le service public : offres de la fonction publique (État, hospitalière, territoriale).
+"""Choisir le service public: French civil service ads (State, hospitals, local government).
 
-Le site n'a pas d'API de lecture ; on lit ses pages de résultats, dont l'adresse encode
-les filtres : `/nos-offres/filtres/mot-cles/<mots>/domaine/<ids>/organisme/<ids>/page/<n>/`.
-Les ministères (Armées, Intérieur…), DGSE, DGSI, DINUM, AMIAD, ANSSI (via le SGDSN)
-et la plupart des établissements publics y publient leurs postes.
+The site has no read API; its result pages are read, whose address encodes the
+filters: `/nos-offres/filtres/mot-cles/<words>/domaine/<ids>/organisme/<ids>/page/<n>/`.
+The ministries (Armed Forces, Interior…), DGSE, DGSI, DINUM, AMIAD, ANSSI (through the
+SGDSN) and most public bodies publish their positions there.
 """
 
 from __future__ import annotations
@@ -13,14 +13,14 @@ from collections.abc import Sequence
 from dataclasses import replace
 from urllib.parse import quote
 
-from moteur.modeles import Offre, normaliser
-from moteur.sources.base import RECHERCHES_EN_PARALLELE, ClientHttp, en_parallele, texte_brut
+from moteur.models import JobAd, normalise
+from moteur.sources.base import SEARCHES_IN_PARALLEL, HttpClient, in_parallel, plain_text
 
-URL_RECHERCHE = "https://choisirleservicepublic.gouv.fr/nos-offres/filtres/"
-OFFRES_PAR_PAGE = 20
+SEARCH_URL = "https://choisirleservicepublic.gouv.fr/nos-offres/filtres/"
+ADS_PER_PAGE = 20
 
-# Identifiants des filtres du site (valeurs des cases à cocher « Domaine » et « Employeur »).
-DOMAINES = {
+# Identifiers of the site's filters (values of the "Domaine" and "Employeur" checkboxes).
+DOMAINS = {
     "Défense": 3511,
     "Numérique": 3522,
     "Recherche": 3525,
@@ -30,8 +30,8 @@ DOMAINES = {
     "Organisation, contrôle et évaluation": 3523,
     "Environnement": 3514,
 }
-EMPLOYEURS = {
-    # Défense
+EMPLOYERS = {
+    # Defence
     "Ministère des armées": 5,
     "État-major des armées": 13346,
     "DGA": 13262,
@@ -40,12 +40,12 @@ EMPLOYEURS = {
     "DIRISI": 11480,
     "SSA": 2040,
     "ONERA": 382,
-    # Intérieur
+    # Interior
     "Ministère de l'Intérieur": 11,
     "DGSI": 13502,
     "Agence du numérique des forces de sécurité intérieure": 14499,
     "Commandement de la gendarmerie dans le cyberespace": 14542,
-    # Premier ministre et interministériel
+    # Prime Minister and inter-ministerial
     "Premier ministre": 3,
     "DINUM": 10668,
     "SGDSN": 300,
@@ -56,19 +56,19 @@ EMPLOYEURS = {
     "GIP ACYMA": 2554,
 }
 
-_CARTE = re.compile(r'class="fr-card fr-card--horizontal[^"]*fr-card--offer"')
-_LIEN = re.compile(r'<h3 class="fr-card__title">\s*<a\s+href="([^"]+)"[^>]*>(.*?)</a>', re.S)
+_CARD = re.compile(r'class="fr-card fr-card--horizontal[^"]*fr-card--offer"')
+_LINK = re.compile(r'<h3 class="fr-card__title">\s*<a\s+href="([^"]+)"[^>]*>(.*?)</a>', re.S)
 _ELEMENT = re.compile(r'<li class="fr-icon-([a-z0-9-]+)[^"]*"[^>]*>(.*?)</li>', re.S)
-_ETIQUETTE = re.compile(r'<span class="sr-only">.*?</span>', re.S)
-# Page d'une offre : missions et profil sont dans la colonne « col-left rte », avant les
-# blocs « niveau d'études » et « éléments de candidature ».
-_DEBUT_DETAIL = re.compile(r'class="[^"]*\bcol-left rte"[^>]*>')
-_FIN_DETAIL = re.compile(r'<div class="(?:block-table|block-cards|strate)')
-_BOUTON = re.compile(r"<button\b.*?</button>", re.S)
-_SAUT = re.compile(r"<br\s*/?>|</p>|</h[1-6]>|</li>", re.I)
+_LABEL = re.compile(r'<span class="sr-only">.*?</span>', re.S)
+# Ad page: duties and profile are in the "col-left rte" column, before the
+# "niveau d'études" and "éléments de candidature" blocks.
+_DETAIL_START = re.compile(r'class="[^"]*\bcol-left rte"[^>]*>')
+_DETAIL_END = re.compile(r'<div class="(?:block-table|block-cards|strate)')
+_BUTTON = re.compile(r"<button\b.*?</button>", re.S)
+_BREAK = re.compile(r"<br\s*/?>|</p>|</h[1-6]>|</li>", re.I)
 _TOTAL = re.compile(r'<span class="number">\s*([\d\s]+)')
 _DATE = re.compile(r"(\d{1,2})(?:er)?\s+([a-zéû]+)\s+(\d{4})")
-_MOIS = {
+_MONTHS = {
     m: i
     for i, m in enumerate(
         (
@@ -90,138 +90,131 @@ _MOIS = {
 }
 
 
-def identifiant(nom: str, table: dict[str, int]) -> int | None:
-    """Identifiant d'un domaine ou employeur, donné par son nom (accents ignorés) ou en chiffres."""
-    if nom.strip().isdigit():
-        return int(nom)
-    cible = normaliser(nom)
-    return next((valeur for cle, valeur in table.items() if normaliser(cle) == cible), None)
+def identifier(name: str, table: dict[str, int]) -> int | None:
+    """Identifier of a domain or employer, given by name (accents ignored) or as digits."""
+    if name.strip().isdigit():
+        return int(name)
+    target = normalise(name)
+    return next((value for key, value in table.items() if normalise(key) == target), None)
 
 
-def adresse(
-    mots: str = "", domaines: Sequence[int] = (), employeurs: Sequence[int] = (), page: int = 1
+def address(
+    words: str = "", domains: Sequence[int] = (), employers: Sequence[int] = (), page: int = 1
 ) -> str:
-    """Adresse d'une page de résultats ; l'ordre des filtres est imposé par le site."""
-    morceaux = []
-    if mots:
-        morceaux.append(f"mot-cles/{quote(mots, safe='')}")
-    if domaines:
-        morceaux.append("domaine/" + "-".join(map(str, domaines)))
-    if employeurs:
-        morceaux.append("organisme/" + "-".join(map(str, employeurs)))
+    """Address of a result page; the order of the filters is imposed by the site."""
+    pieces = []
+    if words:
+        pieces.append(f"mot-cles/{quote(words, safe='')}")
+    if domains:
+        pieces.append("domaine/" + "-".join(map(str, domains)))
+    if employers:
+        pieces.append("organisme/" + "-".join(map(str, employers)))
     if page > 1:
-        morceaux.append(f"page/{page}")
-    return URL_RECHERCHE + "".join(f"{m}/" for m in morceaux)
+        pieces.append(f"page/{page}")
+    return SEARCH_URL + "".join(f"{m}/" for m in pieces)
 
 
-def date_francaise(texte: str) -> str:
-    """« En ligne depuis le 16 novembre 2026 » -> « 2026-11-16 » (vide si illisible)."""
-    trouve = _DATE.search(normaliser(texte).replace("-", " "))
-    if not trouve:
+def french_date(text: str) -> str:
+    """'En ligne depuis le 16 novembre 2026' -> '2026-11-16' (empty if unreadable)."""
+    found_one = _DATE.search(normalise(text).replace("-", " "))
+    if not found_one:
         return ""
-    jour, mois, annee = trouve.groups()
-    numero = _MOIS.get(mois)
-    return f"{annee}-{numero:02d}-{int(jour):02d}" if numero else ""
+    day, month, year = found_one.groups()
+    number = _MONTHS.get(month)
+    return f"{year}-{number:02d}-{int(day):02d}" if number else ""
 
 
-def total_annonce(page: str) -> int | None:
-    trouve = _TOTAL.search(page)
-    return int(re.sub(r"\s", "", trouve.group(1))) if trouve else None
+def announced_total(page: str) -> int | None:
+    found_one = _TOTAL.search(page)
+    return int(re.sub(r"\s", "", found_one.group(1))) if found_one else None
 
 
-def description_service_public(page: str) -> str:
-    """Texte (missions et profil) de la page d'une offre, une ligne par paragraphe."""
-    debut = _DEBUT_DETAIL.search(page)
-    if not debut:
+def public_service_description(page: str) -> str:
+    """Text (duties and profile) of an ad page, one line per paragraph."""
+    start = _DETAIL_START.search(page)
+    if not start:
         return ""
-    fin = _FIN_DETAIL.search(page, debut.end())
-    bloc = _BOUTON.sub(" ", page[debut.end() : fin.start() if fin else len(page)])
-    lignes = (texte_brut(ligne) for ligne in _SAUT.split(bloc))
-    return "\n".join(ligne for ligne in lignes if ligne)
+    end = _DETAIL_END.search(page, start.end())
+    block = _BUTTON.sub(" ", page[start.end() : end.start() if end else len(page)])
+    rows = (plain_text(row) for row in _BREAK.split(block))
+    return "\n".join(row for row in rows if row)
 
 
-def offres_service_public(page: str) -> list[Offre]:
-    """Extrait les cartes d'offres d'une page de résultats."""
-    offres: list[Offre] = []
-    debuts = [m.start() for m in _CARTE.finditer(page)]
-    for debut, fin in zip(debuts, [*debuts[1:], len(page)], strict=False):
-        carte = page[debut:fin]
-        lien = _LIEN.search(carte)
-        if not lien:
+def ads_public_service(page: str) -> list[JobAd]:
+    """Extracts the ad cards of a result page."""
+    ads: list[JobAd] = []
+    starts = [m.start() for m in _CARD.finditer(page)]
+    for start, end in zip(starts, [*starts[1:], len(page)], strict=False):
+        card = page[start:end]
+        link = _LINK.search(card)
+        if not link:
             continue
-        poste = texte_brut(lien.group(2))
-        if not poste:
+        title = plain_text(link.group(2))
+        if not title:
             continue
-        champs = {
-            icone: texte_brut(_ETIQUETTE.sub(" ", contenu))
-            for icone, contenu in _ELEMENT.findall(carte)
+        fields = {
+            icon: plain_text(_LABEL.sub(" ", contents)) for icon, contents in _ELEMENT.findall(card)
         }
-        offres.append(
-            Offre(
-                entreprise=champs.get("user-line") or "Fonction publique",
-                poste=poste,
-                lieu=champs.get("map-pin-2-line", ""),
-                url=lien.group(1),
+        ads.append(
+            JobAd(
+                company=fields.get("user-line") or "Fonction publique",
+                title=title,
+                location=fields.get("map-pin-2-line", ""),
+                url=link.group(1),
                 source="service_public",
-                date_publication=date_francaise(champs.get("calendar-line", "")),
+                published_on=french_date(fields.get("calendar-line", "")),
             )
         )
-    return offres
+    return ads
 
 
 class SourceServicePublic:
-    """Une recherche par mot-clé sur tout le site, puis la même chez les employeurs suivis.
+    """One keyword search over the whole site, then the same at the tracked employers.
 
-    Les résultats sont triés par pertinence : la seconde passe rattrape les offres des
-    employeurs suivis qui seraient au-delà des premières pages de la recherche générale.
+    Results are sorted by relevance: the second pass catches the tracked employers' ads
+    that would lie beyond the first pages of the general search.
     """
 
     def __init__(
         self,
-        client: ClientHttp,
-        recherches: Sequence[str],
-        domaines: Sequence[int] = (),
-        employeurs: Sequence[int] = (),
+        client: HttpClient,
+        searches: Sequence[str],
+        domains: Sequence[int] = (),
+        employers: Sequence[int] = (),
         pages_max: int = 3,
     ) -> None:
         self._client = client
-        self._recherches = recherches
-        self._domaines = domaines
-        self._employeurs = employeurs
+        self._searches = searches
+        self._domains = domains
+        self._employers = employers
         self._pages_max = pages_max
 
     @property
-    def nom(self) -> str:
+    def name(self) -> str:
         return "service_public"
 
-    def _parcourir(self, recherche: tuple[str, Sequence[int]]) -> list[Offre]:
-        """Les offres d'une recherche, page après page."""
-        mots, employeurs = recherche
-        trouvees: list[Offre] = []
+    def _walk(self, search: tuple[str, Sequence[int]]) -> list[JobAd]:
+        """The ads of one search, page after page."""
+        words, employers = search
+        found_ones: list[JobAd] = []
         for page in range(1, self._pages_max + 1):
-            contenu = self._client.get_texte(adresse(mots, self._domaines, employeurs, page))
-            offres = offres_service_public(contenu)
-            trouvees.extend(offres)
-            total = total_annonce(contenu)
-            if len(offres) < OFFRES_PAR_PAGE or (
-                total is not None and page * OFFRES_PAR_PAGE >= total
-            ):
+            contents = self._client.get_text(address(words, self._domains, employers, page))
+            ads = ads_public_service(contents)
+            found_ones.extend(ads)
+            total = announced_total(contents)
+            if len(ads) < ADS_PER_PAGE or (total is not None and page * ADS_PER_PAGE >= total):
                 break
-        return trouvees
+        return found_ones
 
-    def detailler(self, offre: Offre) -> Offre:
-        """L'offre avec le texte de sa page ; les résultats de recherche n'en ont pas."""
-        return replace(
-            offre, description=description_service_public(self._client.get_texte(offre.url))
-        )
+    def add_details(self, ad: JobAd) -> JobAd:
+        """The ad with the text of its page; search results have none."""
+        return replace(ad, description=public_service_description(self._client.get_text(ad.url)))
 
-    def collecter(self) -> list[Offre]:
-        passes: list[Sequence[int]] = [(), self._employeurs] if self._employeurs else [()]
-        recherches = [
-            (mots, employeurs) for mots in self._recherches or ("",) for employeurs in passes
-        ]
-        vues: dict[str, Offre] = {}
-        for offres in en_parallele(self._parcourir, recherches, RECHERCHES_EN_PARALLELE):
-            for offre in offres:
-                vues.setdefault(offre.url, offre)
-        return list(vues.values())
+    def collect(self) -> list[JobAd]:
+        passes: list[Sequence[int]] = [(), self._employers] if self._employers else [()]
+        searches = [(words, employers) for words in self._searches or ("",) for employers in passes]
+        seen: dict[str, JobAd] = {}
+        for ads in in_parallel(self._walk, searches, SEARCHES_IN_PARALLEL):
+            for ad in ads:
+                seen.setdefault(ad.url, ad)
+        return list(seen.values())

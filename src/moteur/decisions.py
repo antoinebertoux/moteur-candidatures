@@ -5,97 +5,97 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
-from moteur import echange
-from moteur.base_locale import ACCEPTEE, CLOSE, BaseLocale
+from moteur import exchange
+from moteur.local_db import ACCEPTED, CLOSE, LocalDb
 
 
 @dataclass(frozen=True, slots=True)
-class Bilan:
+class Outcome:
     """What a batch of decisions changed, and what is left to do."""
 
     decisions: int
-    completees: int
-    lettres: int
-    a_generer: int
-    lettres_a_ajouter: int
+    completed: int
+    letters: int
+    to_generate: int
+    letters_to_add: int
     preparations: int = 0
     """New interview preparation requests recorded (PREP-01)."""
 
-    def en_dict(self) -> dict[str, int]:
+    def as_dict(self) -> dict[str, int]:
         return asdict(self)
 
-    def phrase(self) -> str:
+    def sentence(self) -> str:
         return (
-            f"{self.decisions} décisions reportées, {self.completees} offres ajoutées ou"
-            f" complétées depuis la page, {self.lettres} choix ou régénérations de lettre,"
-            f" {self.a_generer} dossiers à générer, {self.lettres_a_ajouter} lettres à ajouter,"
-            f" {self.preparations} préparations d'entretien demandées"
+            f"{self.decisions} decisions recorded, {self.completed} ads added or completed"
+            f" from the page, {self.letters} letter choices or regenerations,"
+            f" {self.to_generate} folders to generate, {self.letters_to_add} letters to add,"
+            f" {self.preparations} interview preparations requested"
         )
 
 
-def lettres_a_refaire(decisions: list[echange.Decision], base: BaseLocale, racine: Path) -> int:
+def letters_to_redo(decisions: list[exchange.Decision], base: LocalDb, root: Path) -> int:
     """Letters the page asked to regenerate since they were last generated."""
-    redemandees = 0
+    requested_again = 0
     for decision in decisions:
-        if not decision.lettre_refaire_le:
+        if not decision.letter_redo_at:
             continue
-        candidature = base.trouver(decision.cle)
-        if candidature is None or not candidature.lettre_ref:
+        application = base.find(decision.key)
+        if application is None or not application.letter_ref:
             continue
-        faite_le = echange.date_fichier(racine / candidature.lettre_ref)
-        if faite_le is None or faite_le < decision.lettre_refaire_le:
-            redemandees += base.redemander_lettre(decision.cle, decision.lettre_consigne)
-    return redemandees
+        made_at = exchange.file_date(root / application.letter_ref)
+        if made_at is None or made_at < decision.letter_redo_at:
+            requested_again += base.request_letter_again(
+                decision.key, decision.letter_instruction_page
+            )
+    return requested_again
 
 
-def preparations_demandees(base: BaseLocale, decisions: list[echange.Decision]) -> int:
+def requested_preparations(base: LocalDb, decisions: list[exchange.Decision]) -> int:
     """Stores the page's preparation requests (BASE-12); returns how many are new.
 
     An application unknown to engine B is first added from the page's document (PREP-03).
     """
-    nouvelles = 0
+    new_ones = 0
     for decision in decisions:
         if decision.preparation is None:
             continue
-        if decision.offre is not None and base.trouver(decision.cle) is None:
-            statut = ACCEPTEE if decision.statut == "acceptee" else CLOSE
-            base.completer_depuis_la_page(
-                decision.cle, decision.offre, decision.avec_lettre, statut
-            )
-        nouvelles += base.demander_preparation(decision.cle, decision.preparation)
-    return nouvelles
+        if decision.ad is not None and base.find(decision.key) is None:
+            status = ACCEPTED if decision.status == "acceptee" else CLOSE
+            base.complete_from_the_page(decision.key, decision.ad, decision.with_letter, status)
+        new_ones += base.request_preparation(decision.key, decision.preparation)
+    return new_ones
 
 
-def appliquer(base: BaseLocale, decisions: list[echange.Decision], racine: Path) -> Bilan:
+def apply(base: LocalDb, decisions: list[exchange.Decision], root: Path) -> Outcome:
     """ECH-12 order: unknown accepted ones, letter choices, statuses, letter
     regenerations, then interview preparation requests and company link corrections."""
-    completees = sum(
-        base.completer_depuis_la_page(d.cle, d.offre, d.avec_lettre)
+    completed = sum(
+        base.complete_from_the_page(d.key, d.ad, d.with_letter)
         for d in decisions
-        if d.statut == "acceptee" and d.offre is not None
+        if d.status == "acceptee" and d.ad is not None
     )
-    lettres = sum(
-        base.fixer_lettre(d.cle, d.avec_lettre)
+    letters = sum(
+        base.set_letter(d.key, d.with_letter)
         for d in decisions
-        if d.statut in ("acceptee", "prete", "validee") and d.offre is not None
+        if d.status in ("acceptee", "prete", "validee") and d.ad is not None
     )
-    changees = sum(base.appliquer_decision(d.cle, d.statut, d.consigne) for d in decisions)
-    changees += sum(
-        base.set_refusal_reason(d.cle, d.motif_refus, d.motif_detail)
+    changed = sum(base.apply_decision(d.key, d.status, d.instruction) for d in decisions)
+    changed += sum(
+        base.set_refusal_reason(d.key, d.refusal_reason, d.reason_detail)
         for d in decisions
-        if d.statut == "refusee"
+        if d.status == "refusee"
     )
-    lettres += lettres_a_refaire(decisions, base, racine)
-    preparations = preparations_demandees(base, decisions)
+    letters += letters_to_redo(decisions, base, root)
+    preparations = requested_preparations(base, decisions)
     # BASE-13: corrections of company links; changes nothing else, so not counted.
     for decision in decisions:
-        if decision.offre is not None:
-            base.correct_links(decision.cle, decision.offre.entreprise, decision.liens)
-    return Bilan(
-        changees,
-        completees,
-        lettres,
-        len(base.a_generer()),
-        len(base.lettres_manquantes()),
+        if decision.ad is not None:
+            base.correct_links(decision.key, decision.ad.company, decision.links)
+    return Outcome(
+        changed,
+        completed,
+        letters,
+        len(base.to_generate()),
+        len(base.missing_letters()),
         preparations,
     )

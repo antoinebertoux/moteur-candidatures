@@ -2,7 +2,7 @@
 
 ## Scoring
 
-`moteur noter` gives each `a_noter` ad a score, a summary and two hints (letter
+`moteur score` gives each `a_noter` ad a score, a summary and two hints (letter
 requested, language), in one short call to Claude per batch.
 
 - **NOT-01** · `a_noter` ads are sent in batches of `taille_lot`, one call per batch,

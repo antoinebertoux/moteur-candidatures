@@ -1,4 +1,4 @@
-"""Ligne de commande : `moteur <commande>`."""
+"""Command line: `moteur <command>`."""
 
 from __future__ import annotations
 
@@ -9,284 +9,278 @@ import sys
 from collections.abc import Sequence
 from pathlib import Path
 
-from moteur import echange
-from moteur.base_locale import BaseLocale
-from moteur.claude_cli import ClaudeCli, binaire_claude
-from moteur.collecte import collecter, entreprises_deja_vues
+from moteur import exchange
+from moteur.claude_cli import ClaudeCli, claude_binary
+from moteur.collection import collect, companies_already_seen
 from moteur.company_links import config_links, look_up
-from moteur.config import Config, ErreurConfig, charger
-from moteur.decisions import appliquer as appliquer_decisions
+from moteur.config import Config, ConfigError, load_config
+from moteur.cover_letter import generate_letters
+from moteur.decisions import apply as apply_decisions
 from moteur.detection import report as detection_report
-from moteur.env import charger_env
-from moteur.generation import compilateur_latex, generer
-from moteur.lettre import generer_lettres
-from moteur.liaison import lancer as lancer_liaison
-from moteur.notation import noter
-from moteur.preparation import lancer_en_arriere_plan, preparer_seul
-from moteur.serveur import PORT_PAR_DEFAUT, servir
+from moteur.env import load_env
+from moteur.generation import generate, latex_compiler
+from moteur.interview_prep import launch_in_background, prepare_alone
+from moteur.local_db import LocalDb
+from moteur.mcp_link import launch as run_mcp_link
+from moteur.pdf_server import DEFAULT_PORT, serve
+from moteur.scoring import score_ads
 from moteur.sources.ats import SourceAts
-from moteur.sources.base import ClientHttp, ClientHttpx, Source
+from moteur.sources.base import HttpClient, HttpxClient, Source
 from moteur.sources.france_travail import SourceFranceTravail
 from moteur.sources.radancy import SourceRadancy
 from moteur.sources.service_public import SourceServicePublic
 from moteur.sources.welcomekit import SourceWelcomeKit
 from moteur.sources.workday import SourceWorkday
 
-journal = logging.getLogger("moteur")
+log = logging.getLogger("moteur")
 
-FICHIER_POUR_LA_PAGE = "pour-la-page.json"
+FILE_FOR_THE_PAGE = "pour-la-page.json"
 
 
-def construire_sources(config: Config, client: ClientHttp) -> list[Source]:
+def build_sources(config: Config, client: HttpClient) -> list[Source]:
     sources: list[Source] = []
     france_travail = config.france_travail
-    if france_travail.actif:
-        identifiant = os.environ.get("FRANCE_TRAVAIL_ID", "")
+    if france_travail.enabled:
+        identifier = os.environ.get("FRANCE_TRAVAIL_ID", "")
         secret = os.environ.get("FRANCE_TRAVAIL_SECRET", "")
-        if identifiant and secret:
+        if identifier and secret:
             sources.append(
                 SourceFranceTravail(
                     client,
-                    identifiant,
+                    identifier,
                     secret,
-                    france_travail.recherches,
-                    france_travail.departements,
-                    france_travail.publiee_depuis,
+                    france_travail.searches,
+                    france_travail.departments,
+                    france_travail.published_since,
                 )
             )
         else:
-            journal.warning(
-                "France Travail ignoré : définis FRANCE_TRAVAIL_ID et FRANCE_TRAVAIL_SECRET"
-            )
+            log.warning("France Travail skipped: set FRANCE_TRAVAIL_ID and FRANCE_TRAVAIL_SECRET")
     service_public = config.service_public
-    if service_public.actif:
+    if service_public.enabled:
         sources.append(
             SourceServicePublic(
                 client,
-                service_public.recherches,
-                service_public.domaines,
-                service_public.employeurs,
+                service_public.searches,
+                service_public.domains,
+                service_public.employers,
                 service_public.pages_max,
             )
         )
-    for cible in config.entreprises:
-        if cible.ats == "workday":
-            sources.append(SourceWorkday(client, cible))
-        elif cible.ats == "radancy":
-            sources.append(SourceRadancy(client, cible))
-        elif cible.ats == "welcomekit":
-            sources.append(SourceWelcomeKit(client, cible))
-        elif cible.ats:
-            sources.append(SourceAts(client, cible))
+    for target in config.companies:
+        if target.ats == "workday":
+            sources.append(SourceWorkday(client, target))
+        elif target.ats == "radancy":
+            sources.append(SourceRadancy(client, target))
+        elif target.ats == "welcomekit":
+            sources.append(SourceWelcomeKit(client, target))
+        elif target.ats:
+            sources.append(SourceAts(client, target))
     return sources
 
 
-def commande_collecter(config: Config, base: BaseLocale) -> None:
-    client = ClientHttpx()
+def command_collect(config: Config, base: LocalDb) -> None:
+    client = HttpxClient()
     try:
-        deja_vues = (
-            entreprises_deja_vues(config.chemins.entreprises_vues) | base.entreprises_connues()
-        )
-        offres = collecter(
-            construire_sources(config, client),
-            config.criteres,
-            config.entreprises,
-            deja_vues,
-            config.role_spontane,
+        already_seen = companies_already_seen(config.paths.seen_companies) | base.known_companies()
+        ads = collect(
+            build_sources(config, client),
+            config.criteria,
+            config.companies,
+            already_seen,
+            config.unsolicited_role,
         )
     finally:
-        client.fermer()
-    print(f"{len(offres)} retenues après filtrage, dont {base.ajouter(offres)} nouvelles")
+        client.close()
+    print(f"{len(ads)} kept after filtering, {base.add(ads)} of them new")
 
 
-def commande_noter(config: Config, base: BaseLocale) -> None:
-    notees = noter(
+def command_score(config: Config, base: LocalDb) -> None:
+    scored_count = score_ads(
         base,
-        ClaudeCli(binaire=binaire_claude()),
-        profil=config.profil,
-        modele=config.modele_notation,
-        taille_lot=config.taille_lot,
+        ClaudeCli(binary=claude_binary()),
+        profile=config.profile,
+        model=config.scoring_model,
+        batch_size=config.batch_size,
     )
-    print(f"{notees} offres notées, {len(base.a_noter())} encore en attente")
+    print(f"{scored_count} ads scored, {len(base.to_score())} still waiting")
 
 
-def commande_liens(config: Config, base: BaseLocale) -> None:
+def command_links(config: Config, base: LocalDb) -> None:
     """LNK-10: looks up the missing company links; never stops the daily run (LNK-15)."""
-    cherchees, trouves = look_up(
-        base, ClaudeCli(binaire=binaire_claude()), model=config.modele_notation
+    looked_up_count, found_links = look_up(
+        base, ClaudeCli(binary=claude_binary()), model=config.scoring_model
     )
-    print(f"{cherchees} entreprises cherchées, {trouves} liens trouvés")
+    print(f"{looked_up_count} companies looked up, {found_links} links found")
 
 
-def commande_exporter(config: Config, base: BaseLocale) -> None:
-    candidatures = base.pour_la_page()
-    config.chemins.echange.mkdir(parents=True, exist_ok=True)
-    fichier = config.chemins.echange / FICHIER_POUR_LA_PAGE
-    fichier.write_text(
-        echange.serialiser(candidatures, config.chemins.racine, base.company_links()),
+def command_export(config: Config, base: LocalDb) -> None:
+    applications = base.for_the_page()
+    config.paths.exchange.mkdir(parents=True, exist_ok=True)
+    file = config.paths.exchange / FILE_FOR_THE_PAGE
+    file.write_text(
+        exchange.serialise(applications, config.paths.root, base.company_links()),
         encoding="utf-8",
     )
-    print(f"{len(candidatures)} entrées dans {fichier} : à importer dans la page de suivi")
+    print(f"{len(applications)} entries in {file}: to import into the tracking page")
 
 
-def commande_decisions(base: BaseLocale, fichier: Path, racine: Path) -> None:
-    decisions = echange.lire_decisions(fichier.read_text(encoding="utf-8"))
-    print(appliquer_decisions(base, decisions, racine).phrase())
+def command_decisions(base: LocalDb, file: Path, root: Path) -> None:
+    decisions = exchange.read_decisions(file.read_text(encoding="utf-8"))
+    print(apply_decisions(base, decisions, root).sentence())
 
 
-def commande_generer(config: Config, base: BaseLocale) -> None:
-    reussites, echecs = generer(
+def command_generate(config: Config, base: LocalDb) -> None:
+    successes, failures = generate(
         base,
-        ClaudeCli(binaire=binaire_claude()),
-        config.chemins,
-        config.modele_generation,
-        compilateur_latex(config.chemins.latex),
+        ClaudeCli(binary=claude_binary()),
+        config.paths,
+        config.generation_model,
+        latex_compiler(config.paths.latex),
     )
-    print(f"{reussites} dossiers générés, {len(echecs)} en échec")
-    for echec in echecs:
-        print(f"  - {echec}")
-    commande_lettre(config, base, [])
+    print(f"{successes} folders generated, {len(failures)} failed")
+    for failure in failures:
+        print(f"  - {failure}")
+    command_letter(config, base, [])
 
 
-def commande_lettre(config: Config, base: BaseLocale, cles: list[str]) -> None:
-    """Lettres seules : celles des clés données, sinon toutes celles qui manquent."""
-    if not cles and not base.lettres_manquantes():
+def command_letter(config: Config, base: LocalDb, keys: list[str]) -> None:
+    """Letters only: those of the given keys, otherwise all the missing ones."""
+    if not keys and not base.missing_letters():
         return
-    reussites, echecs = generer_lettres(
+    successes, failures = generate_letters(
         base,
-        ClaudeCli(binaire=binaire_claude()),
-        config.chemins,
-        config.modele_generation,
-        compilateur_latex(config.chemins.latex),
-        cles,
+        ClaudeCli(binary=claude_binary()),
+        config.paths,
+        config.generation_model,
+        latex_compiler(config.paths.latex),
+        keys,
     )
-    print(f"{reussites} lettres ajoutées, {len(echecs)} en échec")
-    for echec in echecs:
-        print(f"  - {echec}")
+    print(f"{successes} letters added, {len(failures)} failed")
+    for failure in failures:
+        print(f"  - {failure}")
 
 
-def commande_preparer(config: Config, base: BaseLocale, cles: list[str]) -> None:
+def command_prepare(config: Config, base: LocalDb, keys: list[str]) -> None:
     """Interview preparation sheets: the given identifiers, or every pending request."""
-    resultat = preparer_seul(
+    result = prepare_alone(
         base,
-        ClaudeCli(binaire=binaire_claude()),
-        config.chemins,
-        config.modele_preparation,
-        config.profil,
-        cles,
+        ClaudeCli(binary=claude_binary()),
+        config.paths,
+        config.preparation_model,
+        config.profile,
+        keys,
     )
-    if resultat is None:
-        print("Une préparation est déjà en cours : elle traitera les demandes en attente")
+    if result is None:
+        print("A preparation is already running: it will handle the pending requests")
         return
-    reussites, echecs = resultat
-    print(f"{reussites} fiches de préparation écrites, {len(echecs)} en échec")
-    for echec in echecs:
-        print(f"  - {echec}")
+    successes, failures = result
+    print(f"{successes} preparation sheets written, {len(failures)} failed")
+    for failure in failures:
+        print(f"  - {failure}")
 
 
-def analyseur() -> argparse.ArgumentParser:
-    # Options communes, acceptées avant ou après la commande (`moteur -v quotidien`
-    # comme `moteur quotidien -v`). SUPPRESS évite que le sous-parseur écrase la valeur.
-    communes = argparse.ArgumentParser(add_help=False)
-    communes.add_argument("--config", type=Path, default=argparse.SUPPRESS)
-    communes.add_argument(
+def build_parser() -> argparse.ArgumentParser:
+    # Common options, accepted before or after the command (`moteur -v daily` as well as
+    # `moteur daily -v`). SUPPRESS keeps the subparser from overwriting the value.
+    common = argparse.ArgumentParser(add_help=False)
+    common.add_argument("--config", type=Path, default=argparse.SUPPRESS)
+    common.add_argument(
         "-v",
-        "--verbeux",
+        "--verbose",
         action="store_true",
         default=argparse.SUPPRESS,
-        help="détaille chaque source",
+        help="show details for each source",
     )
-    parseur = argparse.ArgumentParser(prog="moteur", description=__doc__, parents=[communes])
-    commandes = parseur.add_subparsers(dest="commande", required=True)
+    parser = argparse.ArgumentParser(prog="moteur", description=__doc__, parents=[common])
+    commands = parser.add_subparsers(dest="command", required=True)
 
-    def commande(nom: str, aide: str) -> argparse.ArgumentParser:
-        return commandes.add_parser(nom, help=aide, parents=[communes])
+    def command(name: str, help_text: str) -> argparse.ArgumentParser:
+        return commands.add_parser(name, help=help_text, parents=[common])
 
-    commande("collecter", "interroge les sources et filtre (0 token)")
-    commande("noter", "note les nouvelles offres avec Claude")
-    commande("exporter", "écrit le fichier à importer dans la page")
-    commande("liens", "cherche le site et le LinkedIn des entreprises qui n'en ont pas")
-    commande("quotidien", "collecter, noter, liens puis exporter")
-    commande("decisions", "relit l'export de la page").add_argument("fichier", type=Path)
-    commande("generer", "prépare CV et lettre des offres acceptées")
-    commande(
-        "lettre", "ajoute la lettre aux dossiers déjà générés (toutes celles qui manquent)"
-    ).add_argument("cles", nargs="*", help="identifiants précis (même format que la page)")
-    commande(
-        "preparer", "fiches de préparation d'entretien (toutes les demandes en attente)"
-    ).add_argument("cles", nargs="*", help="identifiants précis (même format que la page)")
-    commande("mcp", "liaison directe avec la page, lancée par l'app Claude desktop")
-    detecter = commande("detecter", "reconnaît l'outil de recrutement de pages carrières")
-    detecter.add_argument("adresses", nargs="+", help="pages carrières ou adresses d'offres")
-    detecter.add_argument("--nom", default="", help="nom de l'entreprise (une seule adresse)")
-    commande("servir", "sert les CV et lettres pour les liens de la page").add_argument(
-        "--port", type=int, default=PORT_PAR_DEFAUT
+    command("collect", "query the sources and filter (0 tokens)")
+    command("score", "score the new ads with Claude")
+    command("export", "write the file to import into the page")
+    command("links", "look up the website and LinkedIn page of companies that lack them")
+    command("daily", "collect, score, links, then export")
+    command("decisions", "read the page's export").add_argument("file", type=Path)
+    command("generate", "prepare the CV and letter of accepted ads")
+    command(
+        "letter", "add the letter to folders already generated (all the missing ones)"
+    ).add_argument("keys", nargs="*", help="specific identifiers (same format as the page)")
+    command("prepare", "interview preparation sheets (all pending requests)").add_argument(
+        "keys", nargs="*", help="specific identifiers (same format as the page)"
     )
-    return parseur
+    command("mcp", "direct link with the page, started by the Claude desktop app")
+    detect = command("detect", "recognise the recruiting tool of career pages")
+    detect.add_argument("addresses", nargs="+", help="career pages or ad addresses")
+    detect.add_argument("--name", default="", help="company name (single address only)")
+    command("serve", "serve the CVs and letters for the page's links").add_argument(
+        "--port", type=int, default=DEFAULT_PORT
+    )
+    return parser
 
 
-def lire_options(arguments: Sequence[str] | None = None) -> argparse.Namespace:
-    """Analyse la ligne de commande et complète les options communes absentes."""
-    options = analyseur().parse_args(arguments)
+def read_options(arguments: Sequence[str] | None = None) -> argparse.Namespace:
+    """Parses the command line and fills in the missing common options."""
+    options = build_parser().parse_args(arguments)
     if not hasattr(options, "config"):
         options.config = Path("config.toml")
-    if not hasattr(options, "verbeux"):
-        options.verbeux = False
+    if not hasattr(options, "verbose"):
+        options.verbose = False
     return options
 
 
 def main(arguments: Sequence[str] | None = None) -> int:
-    options = lire_options(arguments)
+    options = read_options(arguments)
     logging.basicConfig(
-        level=logging.INFO if options.verbeux else logging.WARNING, format="%(message)s"
+        level=logging.INFO if options.verbose else logging.WARNING, format="%(message)s"
     )
-    if options.commande == "detecter":
+    if options.command == "detect":
         # CLI-06: needs no configuration, writes nothing, never calls Claude.
-        client = ClientHttpx()
+        client = HttpxClient()
         try:
-            print(detection_report(options.adresses, client, options.nom))
+            print(detection_report(options.addresses, client, options.name))
         finally:
-            client.fermer()
+            client.close()
         return 0
     try:
-        charger_env(options.config.resolve().parent / ".env")
-        config = charger(options.config)
+        load_env(options.config.resolve().parent / ".env")
+        config = load_config(options.config)
         # CONF-09: the tracked companies' links, refreshed at every start.
-        with BaseLocale(config.chemins.base) as base:
+        with LocalDb(config.paths.base) as base:
             base.set_config_links(
-                config_links([(e.nom, e.site, e.linkedin) for e in config.entreprises])
+                config_links([(e.name, e.site, e.linkedin) for e in config.companies])
             )
-        if options.commande == "mcp":
+        if options.command == "mcp":
             # ECH-24: the server opens the database for each call, never for its whole life.
-            fichier_config = options.config.resolve()
-            lancer_liaison(
-                config.chemins, lambda: lancer_en_arriere_plan(fichier_config, config.chemins)
-            )
+            config_file = options.config.resolve()
+            run_mcp_link(config.paths, lambda: launch_in_background(config_file, config.paths))
             return 0
-        with BaseLocale(config.chemins.base) as base:
-            if options.commande in ("collecter", "quotidien"):
-                commande_collecter(config, base)
-            if options.commande in ("noter", "quotidien"):
-                commande_noter(config, base)
-            if options.commande in ("liens", "quotidien"):
-                commande_liens(config, base)
-            if options.commande in ("exporter", "quotidien"):
-                commande_exporter(config, base)
-            if options.commande == "decisions":
-                commande_decisions(base, options.fichier, config.chemins.racine)
-            if options.commande == "generer":
-                commande_generer(config, base)
-                commande_exporter(config, base)
-            if options.commande == "lettre":
-                commande_lettre(config, base, options.cles)
-                commande_exporter(config, base)
-            if options.commande == "preparer":
-                commande_preparer(config, base, options.cles)
-                commande_exporter(config, base)
-            if options.commande == "servir":
-                servir(config.chemins.candidatures, options.port)
-    except (ErreurConfig, echange.ErreurEchange, OSError) as erreur:
-        print(f"Erreur : {erreur}", file=sys.stderr)
+        with LocalDb(config.paths.base) as base:
+            if options.command in ("collect", "daily"):
+                command_collect(config, base)
+            if options.command in ("score", "daily"):
+                command_score(config, base)
+            if options.command in ("links", "daily"):
+                command_links(config, base)
+            if options.command in ("export", "daily"):
+                command_export(config, base)
+            if options.command == "decisions":
+                command_decisions(base, options.file, config.paths.root)
+            if options.command == "generate":
+                command_generate(config, base)
+                command_export(config, base)
+            if options.command == "letter":
+                command_letter(config, base, options.keys)
+                command_export(config, base)
+            if options.command == "prepare":
+                command_prepare(config, base, options.keys)
+                command_export(config, base)
+            if options.command == "serve":
+                serve(config.paths.applications, options.port)
+    except (ConfigError, exchange.ExchangeError, OSError) as error:
+        print(f"Error: {error}", file=sys.stderr)
         return 1
     return 0
 

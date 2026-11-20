@@ -1,7 +1,7 @@
-"""Préparation d'un dossier de candidature : CV et lettre LaTeX adaptés, puis compilés.
+"""Preparing an application folder: tailored LaTeX CV and letter, then compiled.
 
-S'appuie sur le dépôt `latex/` existant : modèle de CV, banque de blocs, squelette de
-lettre, banque de paragraphes et `compiler.sh`.
+Relies on the existing `latex/` repository: CV template, block bank, letter skeleton,
+paragraph bank and `compiler.sh`.
 """
 
 from __future__ import annotations
@@ -12,32 +12,32 @@ import subprocess
 from collections.abc import Callable, Iterator
 from pathlib import Path
 
-from moteur.base_locale import BaseLocale
-from moteur.claude_cli import Assistant, ErreurClaude, ResultatProcessus, extraire_bloc
-from moteur.config import Chemins
-from moteur.modeles import Candidature, Langue, Offre
+from moteur.claude_cli import Assistant, ClaudeError, ProcessResult, extract_block
+from moteur.config import Paths
+from moteur.local_db import LocalDb
+from moteur.models import Application, JobAd, Language
 
-journal = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
-Compilateur = Callable[[Path, str], ResultatProcessus]
+Compiler = Callable[[Path, str], ProcessResult]
 """Compile un fichier `.tex` d'un dossier de candidature."""
 
-RACINE_LATEX = r"\def\latexroot{../../latex/}"
-_LIGNE_RACINE = re.compile(r"\\def\\latexroot\{[^}]*\}")
-_BANQUE = re.compile(r"cv/banque-(?:fr|en)")
-_INTERDITS = re.compile(r'[/\\:*?"<>|\x00-\x1f]+')
-_ESPACES = re.compile(r"\s+")
-_TROP_DE_PAGES = re.compile(r"(\S+)\.pdf fait (\d+) pages")
-_COORDONNEE = r"\\newcommand\{{\\{}\}}\{{([^}}]*)\}}"
+LATEX_ROOT = r"\def\latexroot{../../latex/}"
+_ROOT_LINE = re.compile(r"\\def\\latexroot\{[^}]*\}")
+_BANK = re.compile(r"cv/banque-(?:fr|en)")
+_FORBIDDEN = re.compile(r'[/\\:*?"<>|\x00-\x1f]+')
+_SPACES = re.compile(r"\s+")
+_TOO_MANY_PAGES = re.compile(r"(\S+)\.pdf fait (\d+) pages")
+_CONTACT_LINE = r"\\newcommand\{{\\{}\}}\{{([^}}]*)\}}"
 _EUROFINS = re.compile(
     r"(\\datedexperience\{Eurofins\}.*?\\explanationdetail\{%?)(.*?)(\n?\s*\}\s*\n)", re.S
 )
-_PUCE = re.compile(r"\\p[A-Z]\w*")
-_PROJETS = re.compile(r"(\\section\{\\secProjets\}[^\n]*\n)(.*?)(\n\s*\\section)", re.S)
-_PROJET = re.compile(r"\\proj[A-Z]\w*")
-MIN_PUCES = 5
+_BULLET = re.compile(r"\\p[A-Z]\w*")
+_PROJECTS = re.compile(r"(\\section\{\\secProjets\}[^\n]*\n)(.*?)(\n\s*\\section)", re.S)
+_PROJECT = re.compile(r"\\proj[A-Z]\w*")
+MIN_BULLETS = 5
 
-SYSTEME_CV = """Tu adaptes un CV LaTeX à une offre d'emploi.
+CV_SYSTEM = """Tu adaptes un CV LaTeX à une offre d'emploi.
 Règles strictes :
 1. Tu ne changes que le choix des macros : titre (\\setjob), accroche (\\setjobsearch), \
 compétences, puces d'expérience, projets, centres d'intérêt.
@@ -58,7 +58,7 @@ régulateurs, etc.).
 7. Tu conserves le préambule et la structure du fichier de départ.
 Réponds uniquement par le fichier cv.tex complet, dans un bloc ```latex."""
 
-SYSTEME_LETTRE = """Tu rédiges une lettre de motivation LaTeX à partir d'un squelette.
+LETTER_SYSTEM = """Tu rédiges une lettre de motivation LaTeX à partir d'un squelette.
 Règles strictes :
 1. Tu conserves le préambule, les macros et la structure du squelette ; tu remplaces le \
 contenu des \\lettercontent{...} et ENTREPRISE dans \\companyname.
@@ -80,174 +80,180 @@ page. Échappe les caractères spéciaux LaTeX (& % $ # _).
 Réponds uniquement par le fichier lettre.tex complet, dans un bloc ```latex."""
 
 
-class ErreurGeneration(Exception):
-    """Le dossier n'a pas pu être généré ou compilé."""
+class GenerationError(Exception):
+    """The folder could not be generated or compiled."""
 
 
-def nom_dossier(offre: Offre) -> str:
-    """Nom de dossier stable pour une candidature, sans caractère interdit."""
-    suffixe = "spontanée" if offre.type == "spontanee" else offre.poste
-    brut = _INTERDITS.sub(" ", f"{offre.entreprise} - {suffixe}")
-    return _ESPACES.sub(" ", brut).strip(" .")[:100].strip(" .")
+def folder_name(ad: JobAd) -> str:
+    """Stable folder name for an application, without forbidden characters."""
+    suffix = "spontanée" if ad.type == "spontanee" else ad.title
+    raw = _FORBIDDEN.sub(" ", f"{ad.company} - {suffix}")
+    return _SPACES.sub(" ", raw).strip(" .")[:100].strip(" .")
 
 
-def preparer_modele(tex: str, langue: Langue) -> str:
-    """Adapte un modèle du dépôt pour qu'il compile depuis Candidatures/<dossier>/."""
-    avec_racine = _LIGNE_RACINE.sub(lambda _: RACINE_LATEX, tex)
-    return _BANQUE.sub(f"cv/banque-{langue}", avec_racine)
+def prepare_template(tex: str, language: Language) -> str:
+    """Adapts a repository template so that it compiles from Candidatures/<folder>/."""
+    with_root = _ROOT_LINE.sub(lambda _: LATEX_ROOT, tex)
+    return _BANK.sub(f"cv/banque-{language}", with_root)
 
 
-def extraire_tex(reponse: str) -> str:
-    """Fichier LaTeX complet contenu dans la réponse de Claude."""
-    tex = extraire_bloc(reponse)
+def extract_tex(answer: str) -> str:
+    """Complete LaTeX file contained in Claude's answer."""
+    tex = extract_block(answer)
     if "\\documentclass" not in tex or "\\end{document}" not in tex:
-        raise ErreurClaude("La réponse ne contient pas un fichier LaTeX complet")
-    return _LIGNE_RACINE.sub(lambda _: RACINE_LATEX, tex) + "\n"
+        raise ClaudeError("The answer does not contain a complete LaTeX file")
+    return _ROOT_LINE.sub(lambda _: LATEX_ROOT, tex) + "\n"
 
 
-def pages_en_trop(sortie: str) -> dict[str, int]:
-    """Fichiers signalés par compiler.sh comme dépassant une page."""
-    return {nom: int(pages) for nom, pages in _TROP_DE_PAGES.findall(sortie)}
+def extra_pages(output: str) -> dict[str, int]:
+    """Files reported by compiler.sh as longer than one page."""
+    return {name: int(pages) for name, pages in _TOO_MANY_PAGES.findall(output)}
 
 
-def compilateur_latex(latex: Path) -> Compilateur:
-    """Compilateur réel : lance `latex/compiler.sh <dossier> <fichier>`."""
+def latex_compiler(latex: Path) -> Compiler:
+    """Real compiler: runs `latex/compiler.sh <folder> <file>`."""
 
-    def compiler(dossier: Path, fichier: str) -> ResultatProcessus:
+    def compiler(folder: Path, file: str) -> ProcessResult:
         try:
-            resultat = subprocess.run(
-                [str(latex / "compiler.sh"), str(dossier), fichier],
+            result = subprocess.run(
+                [str(latex / "compiler.sh"), str(folder), file],
                 capture_output=True,
                 text=True,
                 timeout=600,
                 check=False,
             )
-        except (OSError, subprocess.TimeoutExpired) as erreur:
-            raise ErreurGeneration(f"compiler.sh n'a pas pu s'exécuter : {erreur}") from erreur
-        return ResultatProcessus(resultat.returncode, resultat.stdout, resultat.stderr)
+        except (OSError, subprocess.TimeoutExpired) as error:
+            raise GenerationError(f"compiler.sh could not run: {error}") from error
+        return ProcessResult(result.returncode, result.stdout, result.stderr)
 
     return compiler
 
 
-def _description_offre(candidature: Candidature) -> str:
-    offre = candidature.offre
-    lignes = [f"Entreprise : {offre.entreprise}", f"Poste : {offre.poste}"]
-    if offre.lieu:
-        lignes.append(f"Lieu : {offre.lieu}")
-    if offre.type == "spontanee":
-        lignes.append("Candidature spontanée : aucune offre publiée, vise le rôle indiqué.")
-    if candidature.resume:
-        lignes.append(f"Résumé : {candidature.resume}")
-    if offre.description:
-        lignes.append(f"Texte de l'offre :\n{offre.description[:6000]}")
-    return "\n".join(lignes)
+def _ad_description(application: Application) -> str:
+    ad = application.ad
+    rows = [f"Entreprise : {ad.company}", f"Poste : {ad.title}"]
+    if ad.location:
+        rows.append(f"Lieu : {ad.location}")
+    if ad.type == "spontanee":
+        rows.append("Candidature spontanée : aucune offre publiée, vise le rôle indiqué.")
+    if application.summary:
+        rows.append(f"Résumé : {application.summary}")
+    if ad.description:
+        rows.append(f"Texte de l'offre :\n{ad.description[:6000]}")
+    return "\n".join(rows)
 
 
-def _prompt(candidature: Candidature, depart: str, banque: str, consigne: str) -> str:
-    langue = "anglais" if candidature.langue == "en" else "français"
-    parties = [
-        f"## Offre\n{_description_offre(candidature)}",
-        f"## Langue du document\n{langue}",
-        f"## Fichier de départ\n```latex\n{depart}\n```",
-        f"## Banque\n```\n{banque}\n```",
+def _prompt(application: Application, start_point: str, bank: str, instruction: str) -> str:
+    language = "anglais" if application.language == "en" else "français"
+    parts = [
+        f"## Offre\n{_ad_description(application)}",
+        f"## Langue du document\n{language}",
+        f"## Fichier de départ\n```latex\n{start_point}\n```",
+        f"## Banque\n```\n{bank}\n```",
     ]
-    if consigne:
-        parties.append(f"## Consigne du candidat (prioritaire)\n{consigne}")
-    return "\n\n".join(parties)
+    if instruction:
+        parts.append(f"## Consigne du candidat (prioritaire)\n{instruction}")
+    return "\n\n".join(parts)
 
 
-def _ecrire_fiche(dossier: Path, offre: Offre) -> None:
-    fiche = dossier / "offre.md"
-    if fiche.exists():
+def _write_sheet(folder: Path, ad: JobAd) -> None:
+    sheet = folder / "offre.md"
+    if sheet.exists():
         return
-    fiche.write_text(
-        f"# {offre.entreprise} — {offre.poste}\n- Lien : {offre.url}\n- Source : {offre.source}\n"
-        f"\n## Texte de l'offre\n{offre.description}\n",
+    sheet.write_text(
+        f"# {ad.company} — {ad.title}\n- Lien : {ad.url}\n- Source : {ad.source}\n"
+        f"\n## Texte de l'offre\n{ad.description}\n",
         encoding="utf-8",
     )
 
 
-def _compiler(dossier: Path, fichier: str, compilateur: Compilateur) -> dict[str, int]:
-    resultat = compilateur(dossier, fichier)
-    if resultat.code != 0:
-        fin = (resultat.sortie + resultat.erreur).strip()[-800:]
-        raise ErreurGeneration(f"La compilation a échoué dans {dossier.name} :\n{fin}")
-    return pages_en_trop(resultat.sortie)
+def _compile(folder: Path, file: str, compile_fn: Compiler) -> dict[str, int]:
+    result = compile_fn(folder, file)
+    if result.code != 0:
+        end = (result.output + result.error).strip()[-800:]
+        raise GenerationError(f"Compilation failed in {folder.name}:\n{end}")
+    return extra_pages(result.output)
 
 
-def contenu_cv(tex: str) -> tuple[list[str], list[str]]:
-    """Puces Eurofins et projets du CV, dans l'ordre de pertinence choisi par Claude."""
+def cv_contents(tex: str) -> tuple[list[str], list[str]]:
+    """Eurofins bullets and projects of the CV, in the order of relevance chosen by Claude."""
     eurofins = _EUROFINS.search(tex)
-    projets = _PROJETS.search(tex)
+    projects = _PROJECTS.search(tex)
     return (
-        _PUCE.findall(eurofins.group(2)) if eurofins else [],
-        _PROJET.findall(projets.group(2)) if projets else [],
+        _BULLET.findall(eurofins.group(2)) if eurofins else [],
+        _PROJECT.findall(projects.group(2)) if projects else [],
     )
 
 
-def avec_contenu(tex: str, puces: list[str], projets: list[str]) -> str:
-    """Le CV avec seulement ces puces Eurofins et ces projets."""
+def with_content(tex: str, bullets: list[str], projects: list[str]) -> str:
+    """The CV with only these Eurofins bullets and these projects."""
     tex = _EUROFINS.sub(
-        lambda m: m.group(1) + "\n" + " \\\\\n".join(puces) + m.group(3), tex, count=1
+        lambda m: m.group(1) + "\n" + " \\\\\n".join(bullets) + m.group(3), tex, count=1
     )
-    return _PROJETS.sub(lambda m: m.group(1) + "\n".join(projets) + m.group(3), tex, count=1)
+    return _PROJECTS.sub(lambda m: m.group(1) + "\n".join(projects) + m.group(3), tex, count=1)
 
 
-def versions_reduites(
-    puces: list[str], projets: list[str]
+def reduced_versions(
+    bullets: list[str], projects: list[str]
 ) -> Iterator[tuple[list[str], list[str]]]:
-    """Du CV complet au plus court : d'abord le second projet, puis les dernières puces."""
-    yield puces, projets
-    while len(projets) > 1:
-        projets = projets[:-1]
-        yield puces, projets
-    while len(puces) > MIN_PUCES:
-        puces = puces[:-1]
-        yield puces, projets
+    """From the full CV to the shortest: first the second project, then the last bullets."""
+    yield bullets, projects
+    while len(projects) > 1:
+        projects = projects[:-1]
+        yield bullets, projects
+    while len(bullets) > MIN_BULLETS:
+        bullets = bullets[:-1]
+        yield bullets, projects
 
 
-def ajuster_cv(cv: Path, compilateur: Compilateur) -> int:
-    """Garde le plus de contenu possible sur une page ; renvoie le nombre de pages final.
+def fit_cv(cv: Path, compile_fn: Compiler) -> int:
+    """Keeps as much content as possible on one page; returns the final page count.
 
-    Retire d'abord le second projet puis les dernières puces jusqu'à tenir sur une page,
-    puis comble l'espace restant avec les éléments retirés plus courts, dans l'ordre.
+    First removes the second project then the last bullets until it fits on one page,
+    then fills the remaining space with the shorter removed items, in order.
     """
     tex = cv.read_text(encoding="utf-8")
-    puces, projets = contenu_cv(tex)
+    bullets, projects = cv_contents(tex)
 
-    def essayer(p: list[str], pr: list[str]) -> int:
-        cv.write_text(avec_contenu(tex, p, pr), encoding="utf-8")
-        return _compiler(cv.parent, cv.name, compilateur).get(cv.stem, 1)
+    def attempt(p: list[str], pr: list[str]) -> int:
+        cv.write_text(with_content(tex, p, pr), encoding="utf-8")
+        return _compile(cv.parent, cv.name, compile_fn).get(cv.stem, 1)
 
-    pages, gardees, gardes = 1, puces, projets
-    for gardees, gardes in versions_reduites(puces, projets):
-        pages = essayer(gardees, gardes)
+    pages, kept_bullets, kept_projects = 1, bullets, projects
+    for kept_bullets, kept_projects in reduced_versions(bullets, projects):
+        pages = attempt(kept_bullets, kept_projects)
         if pages == 1:
             break
     if pages > 1:
         return pages
-    # Le premier élément retiré ne tient pas ; les suivants, plus courts, peut-être.
-    candidats = [(x, True) for x in puces if x not in gardees][1:]
-    candidats += [(x, False) for x in projets if x not in gardes]
-    dernier_essai_reussi = True
-    for element, est_puce in candidats:
-        essai_puces = [x for x in puces if x in gardees or x == element] if est_puce else gardees
-        essai_projets = gardes if est_puce else [x for x in projets if x in gardes or x == element]
-        dernier_essai_reussi = essayer(essai_puces, essai_projets) == 1
-        if dernier_essai_reussi:
-            gardees, gardes = essai_puces, essai_projets
-    if not dernier_essai_reussi:
-        essayer(gardees, gardes)
+    # The first removed item does not fit; the next, shorter ones may.
+    candidates = [(x, True) for x in bullets if x not in kept_bullets][1:]
+    candidates += [(x, False) for x in projects if x not in kept_projects]
+    last_try_fitted = True
+    for element, is_bullet in candidates:
+        bullets_try = (
+            [x for x in bullets if x in kept_bullets or x == element] if is_bullet else kept_bullets
+        )
+        projects_try = (
+            kept_projects
+            if is_bullet
+            else [x for x in projects if x in kept_projects or x == element]
+        )
+        last_try_fitted = attempt(bullets_try, projects_try) == 1
+        if last_try_fitted:
+            kept_bullets, kept_projects = bullets_try, projects_try
+    if not last_try_fitted:
+        attempt(kept_bullets, kept_projects)
     return 1
 
 
 def write_letter(
-    candidature: Candidature,
+    application: Application,
     letter: Path,
     instruction: str,
     assistant: Assistant,
-    chemins: Chemins,
-    modele: str,
+    paths: Paths,
+    model: str,
 ) -> None:
     """Writes `lettre.tex` (not compiled), shared by the full folder and the letter alone.
 
@@ -257,12 +263,12 @@ def write_letter(
     if instruction and letter.exists():
         start = letter.read_text(encoding="utf-8")
     else:
-        skeleton = (chemins.latex / "lettres" / "modele-lettre.tex").read_text(encoding="utf-8")
-        start = preparer_modele(skeleton, candidature.langue)
-    paragraphs = (chemins.latex / "lettres" / "banque-paragraphes.md").read_text(encoding="utf-8")
-    prompt = _prompt(candidature, start, paragraphs, instruction)
+        skeleton = (paths.latex / "lettres" / "modele-lettre.tex").read_text(encoding="utf-8")
+        start = prepare_template(skeleton, application.language)
+    paragraphs = (paths.latex / "lettres" / "banque-paragraphes.md").read_text(encoding="utf-8")
+    prompt = _prompt(application, start, paragraphs, instruction)
     letter.write_text(
-        extraire_tex(assistant.demander(prompt, systeme=SYSTEME_LETTRE, modele=modele)),
+        extract_tex(assistant.ask(prompt, system=LETTER_SYSTEM, model=model)),
         encoding="utf-8",
     )
 
@@ -275,81 +281,79 @@ def cv_pdf_name(latex: Path) -> str:
         return "cv.pdf"
     parts = []
     for macro in ("coPrenom", "coNom"):
-        found = re.search(_COORDONNEE.format(macro), details)
-        value = _ESPACES.sub("-", _INTERDITS.sub("-", found.group(1).strip())) if found else ""
+        found = re.search(_CONTACT_LINE.format(macro), details)
+        value = _SPACES.sub("-", _FORBIDDEN.sub("-", found.group(1).strip())) if found else ""
         if not value:
             return "cv.pdf"
         parts.append(value)
     return f"cv_{parts[0]}_{parts[1]}.pdf"
 
 
-def generer_dossier(
-    candidature: Candidature,
+def generate_folder(
+    application: Application,
     assistant: Assistant,
-    chemins: Chemins,
-    modele: str,
-    compilateur: Compilateur,
+    paths: Paths,
+    model: str,
+    compile_fn: Compiler,
 ) -> tuple[str, str]:
-    """Génère et compile le dossier ; renvoie les chemins du CV et de la lettre ('' si aucune)."""
-    offre, langue = candidature.offre, candidature.langue
-    dossier = chemins.candidatures / nom_dossier(offre)
-    dossier.mkdir(parents=True, exist_ok=True)
-    _ecrire_fiche(dossier, offre)
+    """Generates and compiles the folder; returns the CV and letter paths ('' if none)."""
+    ad, language = application.ad, application.language
+    folder = paths.applications / folder_name(ad)
+    folder.mkdir(parents=True, exist_ok=True)
+    _write_sheet(folder, ad)
 
-    cv = dossier / "cv.tex"
-    banque_cv = (chemins.latex / "cv" / f"banque-{langue}.tex").read_text(encoding="utf-8")
-    if candidature.consigne and cv.exists():
-        depart_cv = cv.read_text(encoding="utf-8")
+    cv = folder / "cv.tex"
+    cv_bank = (paths.latex / "cv" / f"banque-{language}.tex").read_text(encoding="utf-8")
+    if application.instruction and cv.exists():
+        starting_cv = cv.read_text(encoding="utf-8")
     else:
-        modele_cv = (chemins.latex / "cv" / "modele-cv.tex").read_text(encoding="utf-8")
-        depart_cv = preparer_modele(modele_cv, langue)
+        cv_template = (paths.latex / "cv" / "modele-cv.tex").read_text(encoding="utf-8")
+        starting_cv = prepare_template(cv_template, language)
 
-    prompt_cv = _prompt(candidature, depart_cv, banque_cv, candidature.consigne)
+    cv_prompt_text = _prompt(application, starting_cv, cv_bank, application.instruction)
     cv.write_text(
-        extraire_tex(assistant.demander(prompt_cv, systeme=SYSTEME_CV, modele=modele)),
+        extract_tex(assistant.ask(cv_prompt_text, system=CV_SYSTEM, model=model)),
         encoding="utf-8",
     )
 
-    lettre = dossier / "lettre.tex"
-    avec_lettre = candidature.lettre_demandee or offre.type == "spontanee"
-    if avec_lettre:
-        write_letter(candidature, lettre, candidature.consigne, assistant, chemins, modele)
+    letter = folder / "lettre.tex"
+    with_letter = application.letter_requested or ad.type == "spontanee"
+    if with_letter:
+        write_letter(application, letter, application.instruction, assistant, paths, model)
 
-    pages = {"cv": ajuster_cv(cv, compilateur)}
-    if avec_lettre:
-        pages.update(_compiler(dossier, lettre.name, compilateur))
-    for nom, nb in pages.items():
-        if nb > 1:
-            journal.warning("%s/%s.pdf fait %d pages : à reprendre", dossier.name, nom, nb)
+    pages = {"cv": fit_cv(cv, compile_fn)}
+    if with_letter:
+        pages.update(_compile(folder, letter.name, compile_fn))
+    for name, count in pages.items():
+        if count > 1:
+            log.warning("%s/%s.pdf has %d pages: to rework", folder.name, name, count)
 
-    def reference(fichier: Path) -> str:
-        return str(fichier.with_suffix(".pdf").relative_to(chemins.racine))
+    def reference(file: Path) -> str:
+        return str(file.with_suffix(".pdf").relative_to(paths.root))
 
-    cv_pdf = dossier / cv_pdf_name(chemins.latex)
+    cv_pdf = folder / cv_pdf_name(paths.latex)
     compiled = cv.with_suffix(".pdf")
     if compiled != cv_pdf and compiled.exists():
         compiled.replace(cv_pdf)
-    return reference(cv_pdf), reference(lettre) if avec_lettre else ""
+    return reference(cv_pdf), reference(letter) if with_letter else ""
 
 
-def generer(
-    base: BaseLocale,
+def generate(
+    base: LocalDb,
     assistant: Assistant,
-    chemins: Chemins,
-    modele: str,
-    compilateur: Compilateur,
+    paths: Paths,
+    model: str,
+    compile_fn: Compiler,
 ) -> tuple[int, list[str]]:
-    """Génère tous les dossiers acceptés. Renvoie le nombre de réussites et les échecs."""
-    reussites, echecs = 0, []
-    for candidature in base.a_generer():
-        offre = candidature.offre
+    """Generates every accepted folder. Returns the number of successes and the failures."""
+    successes, failures = 0, []
+    for application in base.to_generate():
+        ad = application.ad
         try:
-            cv_ref, lettre_ref = generer_dossier(
-                candidature, assistant, chemins, modele, compilateur
-            )
-        except (ErreurClaude, ErreurGeneration, OSError) as erreur:
-            echecs.append(f"{offre.entreprise} — {offre.poste} : {erreur}")
+            cv_ref, letter_ref = generate_folder(application, assistant, paths, model, compile_fn)
+        except (ClaudeError, GenerationError, OSError) as error:
+            failures.append(f"{ad.company} — {ad.title}: {error}")
             continue
-        base.marquer_generee(offre.cle, cv_ref, lettre_ref)
-        reussites += 1
-    return reussites, echecs
+        base.mark_generated(ad.key, cv_ref, letter_ref)
+        successes += 1
+    return successes, failures

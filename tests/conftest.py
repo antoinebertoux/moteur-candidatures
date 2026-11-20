@@ -1,84 +1,84 @@
-"""Doublures partagées par les tests."""
+"""Test doubles shared by the tests."""
 
 from __future__ import annotations
 
 from collections.abc import Mapping
 from typing import Any
 
-from moteur.config import Criteres
+from moteur.config import Criteria
 
 
-class FauxClient:
-    """Client HTTP qui renvoie des réponses préparées et retient les appels."""
+class FakeClient:
+    """HTTP client that returns prepared answers and records the calls."""
 
-    def __init__(self, reponses: Mapping[str, Any]) -> None:
-        self.reponses = reponses
-        self.appels: list[tuple[str, dict[str, Any]]] = []
+    def __init__(self, answers: Mapping[str, Any]) -> None:
+        self.answers = answers
+        self.calls: list[tuple[str, dict[str, Any]]] = []
 
     def get_json(
         self,
         url: str,
         *,
         params: Mapping[str, str] | None = None,
-        entetes: Mapping[str, str] | None = None,
+        headers: Mapping[str, str] | None = None,
     ) -> Any:
-        self.appels.append((url, dict(params or {})))
-        return self.reponses.get(url)
+        self.calls.append((url, dict(params or {})))
+        return self.answers.get(url)
 
-    def post_formulaire(
-        self, url: str, *, donnees: Mapping[str, str], params: Mapping[str, str] | None = None
+    def post_form(
+        self, url: str, *, data: Mapping[str, str], params: Mapping[str, str] | None = None
     ) -> Any:
-        self.appels.append((url, dict(donnees)))
-        return self.reponses.get(url)
+        self.calls.append((url, dict(data)))
+        return self.answers.get(url)
 
     def post_json(
-        self, url: str, *, corps: Mapping[str, Any], entetes: Mapping[str, str] | None = None
+        self, url: str, *, body: Mapping[str, Any], headers: Mapping[str, str] | None = None
     ) -> Any:
-        self.appels.append((url, dict(corps)))
-        reponse = self.reponses.get(url)
-        # Une liste de réponses est servie page par page.
-        if isinstance(reponse, list):
-            return reponse.pop(0) if reponse else None
-        return reponse
+        self.calls.append((url, dict(body)))
+        answer = self.answers.get(url)
+        # A list of answers is served page by page.
+        if isinstance(answer, list):
+            return answer.pop(0) if answer else None
+        return answer
 
-    def get_texte(self, url: str, *, params: Mapping[str, str] | None = None) -> str:
-        self.appels.append((url, dict(params or {})))
-        reponse = self.reponses.get(url)
-        return reponse if isinstance(reponse, str) else ""
+    def get_text(self, url: str, *, params: Mapping[str, str] | None = None) -> str:
+        self.calls.append((url, dict(params or {})))
+        answer = self.answers.get(url)
+        return answer if isinstance(answer, str) else ""
 
 
-class FauxAssistant:
-    """Assistant qui renvoie des réponses dans l'ordre et retient les prompts."""
+class FakeAssistant:
+    """Assistant that returns answers in order and records the prompts."""
 
-    def __init__(self, *reponses: str) -> None:
-        self.reponses = list(reponses)
+    def __init__(self, *answers: str) -> None:
+        self.answers = list(answers)
         self.prompts: list[str] = []
-        self.modeles: list[str] = []
-        self.systemes: list[str] = []
-        self.outils: list[tuple[str, ...]] = []
-        self.delais: list[int] = []
+        self.models: list[str] = []
+        self.systems: list[str] = []
+        self.tools: list[tuple[str, ...]] = []
+        self.delays: list[int] = []
 
-    def demander(
+    def ask(
         self,
         prompt: str,
         *,
-        systeme: str,
-        modele: str,
-        outils: tuple[str, ...] = (),
-        delai: int = 600,
+        system: str,
+        model: str,
+        tools: tuple[str, ...] = (),
+        delay: int = 600,
     ) -> str:
         self.prompts.append(prompt)
-        self.modeles.append(modele)
-        self.systemes.append(systeme)
-        self.outils.append(outils)
-        self.delais.append(delai)
-        return self.reponses.pop(0) if len(self.reponses) > 1 else self.reponses[0]
+        self.models.append(model)
+        self.systems.append(system)
+        self.tools.append(tools)
+        self.delays.append(delay)
+        return self.answers.pop(0) if len(self.answers) > 1 else self.answers[0]
 
 
-def criteres(
-    mots_cles: tuple[str, ...] = ("data scientist", "ia"),
+def criteria(
+    keywords: tuple[str, ...] = ("data scientist", "ia"),
     exclusions: tuple[str, ...] = ("stage",),
-    lieux: tuple[str, ...] = ("paris",),
-    salaire_plancher: int = 0,
-) -> Criteres:
-    return Criteres(mots_cles, exclusions, lieux, salaire_plancher)
+    locations: tuple[str, ...] = ("paris",),
+    salary_floor: int = 0,
+) -> Criteria:
+    return Criteria(keywords, exclusions, locations, salary_floor)

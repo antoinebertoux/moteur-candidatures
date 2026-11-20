@@ -1,4 +1,4 @@
-"""Lecture d'un fichier `.env` (KEY=VALUE) sans dépendance externe."""
+"""Reads a `.env` file (KEY=VALUE) without any external dependency."""
 
 from __future__ import annotations
 
@@ -7,19 +7,19 @@ from collections.abc import MutableMapping
 from pathlib import Path
 
 
-def charger_env(chemin: Path, environ: MutableMapping[str, str] | None = None) -> None:
-    """Ajoute les variables de `chemin` à l'environnement, sans écraser l'existant."""
-    cible = os.environ if environ is None else environ
+def load_env(path: Path, environ: MutableMapping[str, str] | None = None) -> None:
+    """Adds the variables of `path` to the environment, without overwriting existing ones."""
+    target = os.environ if environ is None else environ
     try:
-        lignes = chemin.read_text(encoding="utf-8").splitlines()
+        rows = path.read_text(encoding="utf-8").splitlines()
     except FileNotFoundError:
         return
-    for ligne in lignes:
-        ligne = ligne.strip()
-        if not ligne or ligne.startswith("#") or "=" not in ligne:
+    for row in rows:
+        row = row.strip()
+        if not row or row.startswith("#") or "=" not in row:
             continue
-        cle, valeur = ligne.split("=", 1)
-        cle = cle.removeprefix("export ").strip()
-        valeur = valeur.strip().strip("'\"")
-        if cle:
-            cible.setdefault(cle, valeur)
+        key, value = row.split("=", 1)
+        key = key.removeprefix("export ").strip()
+        value = value.strip().strip("'\"")
+        if key:
+            target.setdefault(key, value)

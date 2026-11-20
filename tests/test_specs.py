@@ -1,8 +1,8 @@
-"""Chaque règle de `specs/` est vérifiée par un test, et chaque test cite des règles réelles.
+"""Every rule of `specs/` is checked by a test, and every test cites real rules.
 
-Une règle s'écrit `- **FILT-03** · …` ; un test la cite avec
-`@pytest.mark.spec("FILT-03")`. Sont dispensées de test : les règles marquées
-« (untested » et celles de la page et des tâches planifiées, hors de ce dépôt.
+A rule is written `- **FILT-03** · …`; a test cites it with
+`@pytest.mark.spec("FILT-03")`. Exempt from tests: rules marked "(untested" and those of
+the page and the scheduled tasks, outside this repository.
 """
 
 from __future__ import annotations
@@ -11,67 +11,67 @@ import ast
 import re
 from pathlib import Path
 
-RACINE = Path(__file__).resolve().parent.parent
-SPECS = RACINE / "specs"
-HORS_DEPOT = {"tracking-page.md", "scheduled-tasks.md"}
-_REGLE = re.compile(r"^- \*\*([A-Z]+-\d{2})\*\*")
+ROOT = Path(__file__).resolve().parent.parent
+SPECS = ROOT / "specs"
+OUTSIDE_REPO = {"tracking-page.md", "scheduled-tasks.md"}
+_RULE = re.compile(r"^- \*\*([A-Z]+-\d{2})\*\*")
 
 
-def blocs(texte: str) -> list[tuple[str, str]]:
-    """(identifiant, texte complet) de chaque règle, lignes de continuation comprises."""
-    trouves: list[tuple[str, list[str]]] = []
-    for ligne in texte.splitlines():
-        debut = _REGLE.match(ligne)
-        if debut:
-            trouves.append((debut.group(1), [ligne]))
-        elif not ligne.strip() or ligne.startswith(("#", "|", "- ")):
-            trouves.append(("", []))
-        elif trouves and trouves[-1][0]:
-            trouves[-1][1].append(ligne)
-    return [(regle, " ".join(lignes)) for regle, lignes in trouves if regle]
+def blocks(text: str) -> list[tuple[str, str]]:
+    """(identifier, full text) of each rule, continuation lines included."""
+    found_links: list[tuple[str, list[str]]] = []
+    for row in text.splitlines():
+        start = _RULE.match(row)
+        if start:
+            found_links.append((start.group(1), [row]))
+        elif not row.strip() or row.startswith(("#", "|", "- ")):
+            found_links.append(("", []))
+        elif found_links and found_links[-1][0]:
+            found_links[-1][1].append(row)
+    return [(rule, " ".join(rows)) for rule, rows in found_links if rule]
 
 
-def regles() -> dict[str, bool]:
-    """Identifiant de chaque règle -> vrai si elle doit avoir un test."""
-    trouvees: dict[str, bool] = {}
-    for fichier in sorted(SPECS.glob("*.md")):
-        for regle, texte in blocs(fichier.read_text(encoding="utf-8")):
-            assert regle not in trouvees, f"{regle} défini deux fois"
-            trouvees[regle] = fichier.name not in HORS_DEPOT and "(untested" not in texte
-    return trouvees
+def rules() -> dict[str, bool]:
+    """Identifier of each rule -> true if it must have a test."""
+    found_ones: dict[str, bool] = {}
+    for file in sorted(SPECS.glob("*.md")):
+        for rule, text in blocks(file.read_text(encoding="utf-8")):
+            assert rule not in found_ones, f"{rule} defined twice"
+            found_ones[rule] = file.name not in OUTSIDE_REPO and "(untested" not in text
+    return found_ones
 
 
-def citations() -> dict[str, set[str]]:
-    """Règle -> tests qui la citent par `@pytest.mark.spec(...)`."""
-    citees: dict[str, set[str]] = {}
-    for fichier in sorted((RACINE / "tests").glob("test_*.py")):
-        for noeud in ast.walk(ast.parse(fichier.read_text(encoding="utf-8"))):
-            if not isinstance(noeud, ast.FunctionDef):
+def quotes() -> dict[str, set[str]]:
+    """Rule -> tests citing it with `@pytest.mark.spec(...)`."""
+    quoted: dict[str, set[str]] = {}
+    for file in sorted((ROOT / "tests").glob("test_*.py")):
+        for node in ast.walk(ast.parse(file.read_text(encoding="utf-8"))):
+            if not isinstance(node, ast.FunctionDef):
                 continue
-            for decorateur in noeud.decorator_list:
+            for decorator in node.decorator_list:
                 if (
-                    isinstance(decorateur, ast.Call)
-                    and ast.unparse(decorateur.func) == "pytest.mark.spec"
+                    isinstance(decorator, ast.Call)
+                    and ast.unparse(decorator.func) == "pytest.mark.spec"
                 ):
-                    for argument in decorateur.args:
-                        assert isinstance(argument, ast.Constant), noeud.name
-                        citees.setdefault(str(argument.value), set()).add(noeud.name)
-    return citees
+                    for argument in decorator.args:
+                        assert isinstance(argument, ast.Constant), node.name
+                        quoted.setdefault(str(argument.value), set()).add(node.name)
+    return quoted
 
 
-def test_chaque_regle_du_moteur_a_un_test() -> None:
-    sans_test = sorted(r for r, a_tester in regles().items() if a_tester and r not in citations())
-    assert sans_test == [], f"Règles sans test : {', '.join(sans_test)}"
+def test_every_engine_rule_has_a_test() -> None:
+    without_test = sorted(r for r, to_test in rules().items() if to_test and r not in quotes())
+    assert without_test == [], f"Rules without a test: {', '.join(without_test)}"
 
 
-def test_les_tests_citent_des_regles_existantes() -> None:
-    inconnues = sorted(set(citations()) - set(regles()))
-    assert inconnues == [], f"Règles citées mais absentes de specs/ : {', '.join(inconnues)}"
+def test_tests_cite_existing_rules() -> None:
+    unknown = sorted(set(quotes()) - set(rules()))
+    assert unknown == [], f"Rules cited but missing from specs/: {', '.join(unknown)}"
 
 
-def test_les_regles_sont_trouvees() -> None:
-    toutes = regles()
-    assert {"ID-02", "FILT-04", "PAGE-30", "TACHE-05"} <= set(toutes)
-    assert not toutes["PAGE-30"]
-    assert not toutes["CV-12"]
-    assert toutes["FILT-04"]
+def test_rules_are_found() -> None:
+    all_ = rules()
+    assert {"ID-02", "FILT-04", "PAGE-30", "TACHE-05"} <= set(all_)
+    assert not all_["PAGE-30"]
+    assert not all_["CV-12"]
+    assert all_["FILT-04"]

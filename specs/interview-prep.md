@@ -1,6 +1,6 @@
 # Interview preparation
 
-When a company answers an application, User clicks "Préparer l'entretien" in the page.
+When a company answers an application, User clicks "Prepare the interview" in the page.
 Engine B then gathers everything that was sent for this application, has Claude research
 the company on the web, and writes a ready-to-read preparation sheet in French.
 
@@ -66,12 +66,12 @@ the company on the web, and writes a ready-to-read preparation sheet in French.
 
 ## Running it
 
-- **PREP-40** · `moteur preparer [id…]` prepares the given applications, or otherwise
+- **PREP-40** · `moteur prepare [id…]` prepares the given applications, or otherwise
   every pending request, then exports for the page.
 - **PREP-41** · **Automatic start**: when the `decisions` tool (ECH-22) records at least
-  one new pending request, it starts `moteur preparer` in the background, detached, and
+  one new pending request, it starts `moteur prepare` in the background, detached, and
   answers at once without waiting for it (ECH-26).
-- **PREP-42** · Only one `moteur preparer` runs at a time (lock file next to the
+- **PREP-42** · Only one `moteur prepare` runs at a time (lock file next to the
   database). A run started while another is going stops at once; the running one checks
   for new pending requests before it ends, so no request is left behind. A lock left by
   a process that no longer exists is ignored.

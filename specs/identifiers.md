@@ -2,7 +2,7 @@
 
 The page and engine B must recognise the same application without talking to each
 other, so each computes the same identifier. Every rule in this file exists twice
-(Python in `modeles.py`, JavaScript in the page) and must change on both sides.
+(Python in `models.py`, JavaScript in the page) and must change on both sides.
 
 - **ID-01** · *Normalising* a text: lowercase, accents removed, every run of characters
   other than `a-z` and `0-9` replaced by a hyphen, leading and trailing hyphens removed.

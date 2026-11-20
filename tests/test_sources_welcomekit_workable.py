@@ -1,17 +1,17 @@
 import pytest
 
-from moteur.collecte import detailler
-from moteur.config import EntrepriseCible
-from moteur.modeles import Offre
-from moteur.sources.ats import URLS, SourceAts, offres_workable
+from moteur.collection import add_details
+from moteur.config import TargetCompany
+from moteur.models import JobAd
+from moteur.sources.ats import URLS, SourceAts, ads_workable
 from moteur.sources.welcomekit import (
     SourceWelcomeKit,
-    completer_welcomekit,
-    offres_welcomekit,
+    ads_welcomekit,
+    complete_welcomekit,
 )
-from tests.conftest import FauxClient
+from tests.conftest import FakeClient
 
-ACCUEIL = """<html><ul class='jobs-list'>
+HOME_PAGE = """<html><ul class='jobs-list'>
 <li class='jobs-list-item'>
 <a class="jobs-list-item-link" href="/jobs/ml-engineer_saint-malo"><h3 class='jobs-list-item-title'>
 ML Engineer
@@ -58,9 +58,9 @@ Senior ML Engineer
 
 
 @pytest.mark.spec("SRC-60", "SRC-01", "SRC-02")
-def test_offres_de_la_page_d_accueil() -> None:
-    offres = offres_welcomekit("Exemple", "jobs.exemple.org", ACCUEIL)
-    assert [(o.poste, o.lieu, o.url, o.source) for o in offres] == [
+def test_ads_from_the_home_page() -> None:
+    ads = ads_welcomekit("Exemple", "jobs.exemple.org", HOME_PAGE)
+    assert [(o.title, o.location, o.url, o.source) for o in ads] == [
         (
             "ML Engineer",
             "Saint Malo",
@@ -74,44 +74,40 @@ def test_offres_de_la_page_d_accueil() -> None:
             "welcomekit",
         ),
     ]
-    assert offres_welcomekit("Exemple", "jobs.exemple.org", "pas du html") == []
+    assert ads_welcomekit("Exemple", "jobs.exemple.org", "pas du html") == []
 
 
 @pytest.mark.spec("SRC-60")
-def test_source_lit_la_page_d_accueil() -> None:
-    client = FauxClient({"https://jobs.exemple.org/": ACCUEIL})
-    cible = EntrepriseCible(
-        nom="Exemple", ats="welcomekit", identifiant="https://jobs.exemple.org/"
-    )
-    source = SourceWelcomeKit(client, cible)
-    assert len(source.collecter()) == 2
-    assert source.nom == "welcomekit:Exemple"
+def test_source_reads_the_home_page() -> None:
+    client = FakeClient({"https://jobs.exemple.org/": HOME_PAGE})
+    target = TargetCompany(name="Exemple", ats="welcomekit", identifier="https://jobs.exemple.org/")
+    source = SourceWelcomeKit(client, target)
+    assert len(source.collect()) == 2
+    assert source.name == "welcomekit:Exemple"
 
 
 @pytest.mark.spec("SRC-61", "SRC-02")
-def test_la_page_donne_intitule_lieu_et_texte() -> None:
-    offre = Offre("Exemple", "ML Engineer", lieu="Saint Malo", url="u", source="welcomekit")
-    complete = completer_welcomekit(offre, PAGE)
-    assert (complete.poste, complete.lieu) == ("Senior ML Engineer", "Paris")
+def test_the_page_gives_title_location_and_text() -> None:
+    ad = JobAd("Exemple", "ML Engineer", location="Saint Malo", url="u", source="welcomekit")
+    complete = complete_welcomekit(ad, PAGE)
+    assert (complete.title, complete.location) == ("Senior ML Engineer", "Paris")
     assert complete.description == (
         "About Chiffrement homomorphe. Job Description Construire des modèles."
     )
-    assert completer_welcomekit(offre, "<html></html>") == offre
+    assert complete_welcomekit(ad, "<html></html>") == ad
 
 
 @pytest.mark.spec("SRC-61")
-def test_seules_les_offres_retenues_sont_ouvertes() -> None:
+def test_only_retained_ads_are_opened() -> None:
     url = "https://jobs.exemple.org/jobs/ml-engineer_paris"
-    client = FauxClient({url: PAGE})
-    source = SourceWelcomeKit(
-        client, EntrepriseCible(nom="Exemple", identifiant="jobs.exemple.org")
-    )
-    (offre,) = detailler([Offre("Exemple", "ML Engineer", url=url, source="welcomekit")], [source])
-    assert offre.poste == "Senior ML Engineer"
-    assert [u for u, _ in client.appels] == [url]
+    client = FakeClient({url: PAGE})
+    source = SourceWelcomeKit(client, TargetCompany(name="Exemple", identifier="jobs.exemple.org"))
+    (ad,) = add_details([JobAd("Exemple", "ML Engineer", url=url, source="welcomekit")], [source])
+    assert ad.title == "Senior ML Engineer"
+    assert [u for u, _ in client.calls] == [url]
 
 
-REPONSE_WORKABLE = {
+WORKABLE_RESPONSE = {
     "name": "Exemple",
     "jobs": [
         {
@@ -132,24 +128,22 @@ REPONSE_WORKABLE = {
 
 
 @pytest.mark.spec("SRC-32", "SRC-31", "SRC-01", "SRC-02")
-def test_offres_workable() -> None:
-    offres = offres_workable("Exemple", REPONSE_WORKABLE)
-    assert [(o.poste, o.lieu, o.source) for o in offres] == [
+def test_workable_ads() -> None:
+    ads = ads_workable("Exemple", WORKABLE_RESPONSE)
+    assert [(o.title, o.location, o.source) for o in ads] == [
         ("AI Researcher", "Paris, France, Remote", "workable"),
         ("Office Manager", "Lyon, France", "workable"),
     ]
-    assert offres[0].url == "https://apply.workable.com/j/ABC"
-    assert offres[0].description == "Tester des agents & modèles."
-    assert offres[0].date_publication == "2026-11-02"
-    assert offres_workable("Exemple", None) == []
+    assert ads[0].url == "https://apply.workable.com/j/ABC"
+    assert ads[0].description == "Tester des agents & modèles."
+    assert ads[0].published_on == "2026-11-02"
+    assert ads_workable("Exemple", None) == []
 
 
 @pytest.mark.spec("SRC-30")
-def test_source_workable_interroge_le_widget() -> None:
+def test_workable_source_queries_the_widget() -> None:
     url = URLS["workable"].format(id="exemple")
-    client = FauxClient({url: REPONSE_WORKABLE})
-    source = SourceAts(
-        client, EntrepriseCible(nom="Exemple", ats="workable", identifiant="exemple")
-    )
-    assert len(source.collecter()) == 2
-    assert client.appels == [(url, {"details": "true"})]
+    client = FakeClient({url: WORKABLE_RESPONSE})
+    source = SourceAts(client, TargetCompany(name="Exemple", ats="workable", identifier="exemple"))
+    assert len(source.collect()) == 2
+    assert client.calls == [(url, {"details": "true"})]

@@ -1,1 +1,1 @@
-"""Sources d'offres : chacune renvoie des `Offre` sans appeler Claude."""
+"""Job ad sources: each returns `JobAd`s without calling Claude."""

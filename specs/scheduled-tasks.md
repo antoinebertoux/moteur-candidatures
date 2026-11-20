@@ -69,7 +69,7 @@ Checked by hand.
   interview, call or test → `suite` = entretien; offer → `suite` = offre; request for
   information → notes only. Each case appends one dated line to the notes, never twice.
 - **TACHE-16** · A direct approach by a recruiter or a company for a fitting role is
-  added as a new À traiter ad (`source` = "approche par e-mail"); replies about
+  added as a new To review ad (`source` = "approche par e-mail"); replies about
   applications absent from the database are only reported.
 - **TACHE-17** · The task never sends, answers, drafts, deletes or archives an email,
   never accepts an interview slot and never creates a calendar event. It does not prepare
@@ -78,6 +78,6 @@ Checked by hand.
 ## Common
 
 - **TACHE-20** · If the database is unavailable, the task says so on the first line and,
-  for job ads, gives them as JSON importable with the "Importer" button.
+  for job ads, gives them as JSON importable with the "Import" button.
 - **TACHE-21** · Each task sends User a short report (number of additions or checks,
   one line per item); approval happens in the page.

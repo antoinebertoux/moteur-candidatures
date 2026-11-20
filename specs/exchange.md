@@ -61,7 +61,7 @@ capability). Engine B therefore offers two channels carrying the same content:
 - **ECH-24** · Each call opens the local database and closes it before answering, so
   that `moteur` commands run from a terminal at the same time are not blocked.
 - **ECH-25** · The tools never call Claude and never generate a CV or a letter: they
-  only read and record (generation stays `moteur generer`, which takes minutes).
-- **ECH-26** · Single exception to ECH-25: `decisions` starts `moteur preparer` in the
+  only read and record (generation stays `moteur generate`, which takes minutes).
+- **ECH-26** · Single exception to ECH-25: `decisions` starts `moteur prepare` in the
   background when it records a new preparation request (PREP-41). It does not wait for
   it, and its answer does not depend on it.

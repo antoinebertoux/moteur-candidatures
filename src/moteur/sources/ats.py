@@ -8,9 +8,9 @@ from collections.abc import Callable
 from email.utils import parsedate_to_datetime
 from typing import Any
 
-from moteur.config import EntrepriseCible
-from moteur.modeles import Offre
-from moteur.sources.base import ClientHttp, chaine, liste, table, texte_brut
+from moteur.config import TargetCompany
+from moteur.models import JobAd
+from moteur.sources.base import HttpClient, items, plain_text, string, table
 
 URLS = {
     "greenhouse": "https://boards-api.greenhouse.io/v1/boards/{id}/jobs",
@@ -21,13 +21,13 @@ URLS = {
     "teamtailor": "https://{id}.teamtailor.com/jobs.rss",
     "workable": "https://apply.workable.com/api/v1/widget/accounts/{id}",
 }
-PARAMETRES: dict[str, dict[str, str]] = {
+PARAMETERS: dict[str, dict[str, str]] = {
     "greenhouse": {"content": "true"},
     "lever": {"mode": "json"},
     "smartrecruiters": {"limit": "100"},
     "workable": {"details": "true"},
 }
-URL_SMARTRECRUITERS = "https://jobs.smartrecruiters.com/{id}/{offre}"
+URL_SMARTRECRUITERS = "https://jobs.smartrecruiters.com/{id}/{ad}"
 GREENHOUSE_EU = "https://boards-api.eu.greenhouse.io/v1/boards/{id}/jobs"
 TEAMTAILOR_OWN_DOMAIN = "https://{id}/jobs.rss"
 EU_PREFIX = "eu:"
@@ -42,188 +42,188 @@ def ats_url(ats: str, identifier: str) -> str:
     return URLS[ats].format(id=identifier)
 
 
-def offres_greenhouse(entreprise: str, reponse: object) -> list[Offre]:
+def ads_greenhouse(company: str, answer: object) -> list[JobAd]:
     return [
-        Offre(
-            entreprise=entreprise,
-            poste=chaine(poste.get("title")),
-            lieu=chaine(table(poste.get("location")).get("name")),
-            url=chaine(poste.get("absolute_url")),
+        JobAd(
+            company=company,
+            title=string(title.get("title")),
+            location=string(table(title.get("location")).get("name")),
+            url=string(title.get("absolute_url")),
             source="greenhouse",
-            description=texte_brut(chaine(poste.get("content"))),
-            date_publication=chaine(poste.get("updated_at"))[:10],
+            description=plain_text(string(title.get("content"))),
+            published_on=string(title.get("updated_at"))[:10],
         )
-        for poste in map(table, liste(table(reponse).get("jobs")))
-        if chaine(poste.get("title"))
+        for title in map(table, items(table(answer).get("jobs")))
+        if string(title.get("title"))
     ]
 
 
-def offres_lever(entreprise: str, reponse: object) -> list[Offre]:
+def ads_lever(company: str, answer: object) -> list[JobAd]:
     return [
-        Offre(
-            entreprise=entreprise,
-            poste=chaine(poste.get("text")),
-            lieu=chaine(table(poste.get("categories")).get("location")),
-            url=chaine(poste.get("hostedUrl")),
+        JobAd(
+            company=company,
+            title=string(title.get("text")),
+            location=string(table(title.get("categories")).get("location")),
+            url=string(title.get("hostedUrl")),
             source="lever",
-            description=chaine(poste.get("descriptionPlain")),
+            description=string(title.get("descriptionPlain")),
         )
-        for poste in map(table, liste(reponse))
-        if chaine(poste.get("text"))
+        for title in map(table, items(answer))
+        if string(title.get("text"))
     ]
 
 
-def offres_ashby(entreprise: str, reponse: object) -> list[Offre]:
+def ads_ashby(company: str, answer: object) -> list[JobAd]:
     return [
-        Offre(
-            entreprise=entreprise,
-            poste=chaine(poste.get("title")),
-            lieu=chaine(poste.get("location")),
-            url=chaine(poste.get("jobUrl")),
+        JobAd(
+            company=company,
+            title=string(title.get("title")),
+            location=string(title.get("location")),
+            url=string(title.get("jobUrl")),
             source="ashby",
-            description=chaine(poste.get("descriptionPlain")),
-            date_publication=chaine(poste.get("publishedAt"))[:10],
+            description=string(title.get("descriptionPlain")),
+            published_on=string(title.get("publishedAt"))[:10],
         )
-        for poste in map(table, liste(table(reponse).get("jobs")))
-        if chaine(poste.get("title"))
+        for title in map(table, items(table(answer).get("jobs")))
+        if string(title.get("title"))
     ]
 
 
-def offres_smartrecruiters(entreprise: str, identifiant: str, reponse: object) -> list[Offre]:
-    offres: list[Offre] = []
-    for poste in map(table, liste(table(reponse).get("content"))):
-        titre = chaine(poste.get("name"))
-        if not titre:
+def ads_smartrecruiters(company: str, identifier: str, answer: object) -> list[JobAd]:
+    ads: list[JobAd] = []
+    for title in map(table, items(table(answer).get("content"))):
+        heading = string(title.get("name"))
+        if not heading:
             continue
-        lieu = table(poste.get("location"))
-        ville = chaine(lieu.get("city"))
-        pays = chaine(lieu.get("country")).upper()
-        offre_id = chaine(poste.get("id"))
-        offres.append(
-            Offre(
-                entreprise=entreprise,
-                poste=titre,
-                lieu=", ".join(x for x in (ville, pays) if x),
-                url=URL_SMARTRECRUITERS.format(id=identifiant, offre=offre_id) if offre_id else "",
+        location = table(title.get("location"))
+        city = string(location.get("city"))
+        country = string(location.get("country")).upper()
+        ad_id = string(title.get("id"))
+        ads.append(
+            JobAd(
+                company=company,
+                title=heading,
+                location=", ".join(x for x in (city, country) if x),
+                url=URL_SMARTRECRUITERS.format(id=identifier, ad=ad_id) if ad_id else "",
                 source="smartrecruiters",
-                date_publication=chaine(poste.get("releasedDate"))[:10],
+                published_on=string(title.get("releasedDate"))[:10],
             )
         )
-    return offres
+    return ads
 
 
-def offres_recruitee(entreprise: str, reponse: object) -> list[Offre]:
+def ads_recruitee(company: str, answer: object) -> list[JobAd]:
     return [
-        Offre(
-            entreprise=entreprise,
-            poste=chaine(poste.get("title")),
-            lieu=chaine(poste.get("location")),
-            url=chaine(poste.get("careers_url")),
+        JobAd(
+            company=company,
+            title=string(title.get("title")),
+            location=string(title.get("location")),
+            url=string(title.get("careers_url")),
             source="recruitee",
-            description=texte_brut(chaine(poste.get("description"))),
-            date_publication=chaine(poste.get("published_at"))[:10],
+            description=plain_text(string(title.get("description"))),
+            published_on=string(title.get("published_at"))[:10],
         )
-        for poste in map(table, liste(table(reponse).get("offers")))
-        if chaine(poste.get("title"))
+        for title in map(table, items(table(answer).get("offers")))
+        if string(title.get("title"))
     ]
 
 
-def offres_workable(entreprise: str, reponse: object) -> list[Offre]:
-    offres: list[Offre] = []
-    for poste in map(table, liste(table(reponse).get("jobs"))):
-        titre = chaine(poste.get("title"))
-        if not titre:
+def ads_workable(company: str, answer: object) -> list[JobAd]:
+    ads: list[JobAd] = []
+    for title in map(table, items(table(answer).get("jobs"))):
+        heading = string(title.get("title"))
+        if not heading:
             continue
-        premier = table(next(iter(liste(poste.get("locations"))), None))
-        ville = chaine(poste.get("city")) or chaine(premier.get("city"))
-        pays = chaine(poste.get("country")) or chaine(premier.get("country"))
-        morceaux = [x for x in (ville, pays) if x]
-        if poste.get("telecommuting") is True:
-            morceaux.append("Remote")
-        offres.append(
-            Offre(
-                entreprise=entreprise,
-                poste=titre,
-                lieu=", ".join(morceaux),
-                url=chaine(poste.get("url")),
+        first = table(next(iter(items(title.get("locations"))), None))
+        city = string(title.get("city")) or string(first.get("city"))
+        country = string(title.get("country")) or string(first.get("country"))
+        pieces = [x for x in (city, country) if x]
+        if title.get("telecommuting") is True:
+            pieces.append("Remote")
+        ads.append(
+            JobAd(
+                company=company,
+                title=heading,
+                location=", ".join(pieces),
+                url=string(title.get("url")),
                 source="workable",
-                description=texte_brut(chaine(poste.get("description"))),
-                date_publication=chaine(poste.get("published_on"))[:10],
+                description=plain_text(string(title.get("description"))),
+                published_on=string(title.get("published_on"))[:10],
             )
         )
-    return offres
+    return ads
 
 
-def _texte(element: ET.Element, suffixe: str) -> str:
-    """Texte du premier descendant de balise `suffixe`, espaces de noms ignorés."""
-    for enfant in element.iter():
-        if enfant.tag.rsplit("}", 1)[-1] == suffixe and enfant.text:
-            return enfant.text.strip()
+def _text(element: ET.Element, suffix: str) -> str:
+    """Text of the first descendant with tag `suffix`, namespaces ignored."""
+    for child in element.iter():
+        if child.tag.rsplit("}", 1)[-1] == suffix and child.text:
+            return child.text.strip()
     return ""
 
 
-def _date_rss(valeur: str) -> str:
+def _rss_date(value: str) -> str:
     try:
-        return parsedate_to_datetime(valeur).date().isoformat() if valeur else ""
+        return parsedate_to_datetime(value).date().isoformat() if value else ""
     except (TypeError, ValueError):
         return ""
 
 
-def offres_teamtailor(entreprise: str, flux: str) -> list[Offre]:
-    """Lit le flux RSS public d'une page carrières Teamtailor."""
+def ads_teamtailor(company: str, feed: str) -> list[JobAd]:
+    """Reads the public RSS feed of a Teamtailor career page."""
     try:
-        racine = ET.fromstring(flux)
+        root = ET.fromstring(feed)
     except ET.ParseError:
         return []
-    offres: list[Offre] = []
-    for item in racine.iter("item"):
-        titre = _texte(item, "title")
-        if not titre:
+    ads: list[JobAd] = []
+    for item in root.iter("item"):
+        heading = _text(item, "title")
+        if not heading:
             continue
-        offres.append(
-            Offre(
-                entreprise=entreprise,
-                poste=titre,
-                lieu=_texte(item, "city") or _texte(item, "location"),
-                url=_texte(item, "link"),
+        ads.append(
+            JobAd(
+                company=company,
+                title=heading,
+                location=_text(item, "city") or _text(item, "location"),
+                url=_text(item, "link"),
                 source="teamtailor",
-                description=texte_brut(_texte(item, "description")),
-                date_publication=_date_rss(_texte(item, "pubDate")),
+                description=plain_text(_text(item, "description")),
+                published_on=_rss_date(_text(item, "pubDate")),
             )
         )
-    return offres
+    return ads
 
 
-_ANALYSEURS: dict[str, Callable[[str, Any], list[Offre]]] = {
-    "greenhouse": offres_greenhouse,
-    "lever": offres_lever,
-    "ashby": offres_ashby,
-    "recruitee": offres_recruitee,
-    "workable": offres_workable,
+_PARSERS: dict[str, Callable[[str, Any], list[JobAd]]] = {
+    "greenhouse": ads_greenhouse,
+    "lever": ads_lever,
+    "ashby": ads_ashby,
+    "recruitee": ads_recruitee,
+    "workable": ads_workable,
 }
-_PRIS_EN_CHARGE = {*_ANALYSEURS, "smartrecruiters", "teamtailor"}
+_SUPPORTED = {*_PARSERS, "smartrecruiters", "teamtailor"}
 
 
 class SourceAts:
-    """Les offres publiées par une entreprise sur son outil de recrutement."""
+    """The ads a company publishes on its recruiting tool."""
 
-    def __init__(self, client: ClientHttp, entreprise: EntrepriseCible) -> None:
-        if entreprise.ats not in _PRIS_EN_CHARGE:
-            raise ValueError(f"{entreprise.nom} n'a pas d'ATS pris en charge")
+    def __init__(self, client: HttpClient, company: TargetCompany) -> None:
+        if company.ats not in _SUPPORTED:
+            raise ValueError(f"{company.name} has no supported ATS")
         self._client = client
-        self._entreprise = entreprise
+        self._company = company
 
     @property
-    def nom(self) -> str:
-        return f"{self._entreprise.ats}:{self._entreprise.nom}"
+    def name(self) -> str:
+        return f"{self._company.ats}:{self._company.name}"
 
-    def collecter(self) -> list[Offre]:
-        ats = self._entreprise.ats
-        identifiant = self._entreprise.identifiant
-        url = ats_url(ats, identifiant)
+    def collect(self) -> list[JobAd]:
+        ats = self._company.ats
+        identifier = self._company.identifier
+        url = ats_url(ats, identifier)
         if ats == "teamtailor":
-            return offres_teamtailor(self._entreprise.nom, self._client.get_texte(url))
-        reponse = self._client.get_json(url, params=PARAMETRES.get(ats, {}))
+            return ads_teamtailor(self._company.name, self._client.get_text(url))
+        answer = self._client.get_json(url, params=PARAMETERS.get(ats, {}))
         if ats == "smartrecruiters":
-            return offres_smartrecruiters(self._entreprise.nom, identifiant, reponse)
-        return _ANALYSEURS[ats](self._entreprise.nom, reponse)
+            return ads_smartrecruiters(self._company.name, identifier, answer)
+        return _PARSERS[ats](self._company.name, answer)

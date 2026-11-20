@@ -16,133 +16,133 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
 
-DELAI_SECONDES = 600
-_BLOC = re.compile(r"```[a-zA-Z]*\s*\n(.*?)```", re.DOTALL)
+DELAY_SECONDS = 600
+_BLOCK = re.compile(r"```[a-zA-Z]*\s*\n(.*?)```", re.DOTALL)
 
 
-class ErreurClaude(Exception):
-    """L'appel à Claude a échoué ou sa réponse est inexploitable."""
+class ClaudeError(Exception):
+    """The call to Claude failed or its answer cannot be used."""
 
 
 @dataclass(frozen=True, slots=True)
-class ResultatProcessus:
+class ProcessResult:
     code: int
-    sortie: str
-    erreur: str = ""
+    output: str
+    error: str = ""
 
 
-Executeur = Callable[[Sequence[str], str, int], ResultatProcessus]
+Runner = Callable[[Sequence[str], str, int], ProcessResult]
 """Runs a command with the given standard input and a time limit in seconds."""
 
 
 class Assistant(Protocol):
-    def demander(
+    def ask(
         self,
         prompt: str,
         *,
-        systeme: str,
-        modele: str,
-        outils: tuple[str, ...] = (),
-        delai: int = DELAI_SECONDES,
+        system: str,
+        model: str,
+        tools: tuple[str, ...] = (),
+        delay: int = DELAY_SECONDS,
     ) -> str: ...
 
 
-def executer(commande: Sequence[str], entree: str, delai: int) -> ResultatProcessus:
-    """Runs a command, passing `entree` on its standard input."""
+def execute(command: Sequence[str], entry: str, delay: int) -> ProcessResult:
+    """Runs a command, passing `entry` on its standard input."""
     try:
-        resultat = subprocess.run(
-            list(commande),
-            input=entree,
+        result = subprocess.run(
+            list(command),
+            input=entry,
             capture_output=True,
             text=True,
-            timeout=delai,
+            timeout=delay,
             check=False,
         )
-    except FileNotFoundError as erreur:
-        raise ErreurClaude(f"Commande introuvable : {commande[0]}") from erreur
-    except subprocess.TimeoutExpired as erreur:
-        raise ErreurClaude(f"{commande[0]} n'a pas répondu en {delai} s") from erreur
-    return ResultatProcessus(resultat.returncode, resultat.stdout, resultat.stderr)
+    except FileNotFoundError as error:
+        raise ClaudeError(f"Command not found: {command[0]}") from error
+    except subprocess.TimeoutExpired as error:
+        raise ClaudeError(f"{command[0]} did not answer within {delay} s") from error
+    return ProcessResult(result.returncode, result.stdout, result.stderr)
 
 
-def binaire_claude() -> str:
+def claude_binary() -> str:
     """`claude` from the PATH, or its usual install place when the PATH lacks it.
 
     A process started by the desktop app (PREP-41) may not have `~/.local/bin` in its PATH.
     """
-    trouve = shutil.which("claude")
-    if trouve:
-        return trouve
-    installe = Path.home() / ".local" / "bin" / "claude"
-    return str(installe) if installe.exists() else "claude"
+    found_one = shutil.which("claude")
+    if found_one:
+        return found_one
+    installed = Path.home() / ".local" / "bin" / "claude"
+    return str(installed) if installed.exists() else "claude"
 
 
 class ClaudeCli:
-    def __init__(self, executeur: Executeur = executer, binaire: str = "claude") -> None:
-        self._executeur = executeur
-        self._binaire = binaire
+    def __init__(self, runner: Runner = execute, binary: str = "claude") -> None:
+        self._runner = runner
+        self._binary = binary
 
-    def commande(self, *, systeme: str, modele: str, outils: tuple[str, ...] = ()) -> list[str]:
+    def command(self, *, system: str, model: str, tools: tuple[str, ...] = ()) -> list[str]:
         # CLA-01: no tools at all, except the web tools allowed by CLA-04.
-        autorises = ["--allowedTools", ",".join(outils)] if outils else []
+        allowed = ["--allowedTools", ",".join(tools)] if tools else []
         return [
-            self._binaire,
+            self._binary,
             "-p",
             "--model",
-            modele,
+            model,
             "--output-format",
             "json",
             "--system-prompt",
-            systeme,
+            system,
             "--tools",
-            ",".join(outils),
-            *autorises,
+            ",".join(tools),
+            *allowed,
             "--disallowedTools",
             "mcp__*",
             "--strict-mcp-config",
             "--no-session-persistence",
         ]
 
-    def demander(
+    def ask(
         self,
         prompt: str,
         *,
-        systeme: str,
-        modele: str,
-        outils: tuple[str, ...] = (),
-        delai: int = DELAI_SECONDES,
+        system: str,
+        model: str,
+        tools: tuple[str, ...] = (),
+        delay: int = DELAY_SECONDS,
     ) -> str:
-        commande = self.commande(systeme=systeme, modele=modele, outils=outils)
-        resultat = self._executeur(commande, prompt, delai)
-        if resultat.code != 0:
-            detail = (resultat.erreur or resultat.sortie).strip()[:500]
-            raise ErreurClaude(f"claude a échoué (code {resultat.code}) : {detail}")
+        command = self.command(system=system, model=model, tools=tools)
+        result = self._runner(command, prompt, delay)
+        if result.code != 0:
+            detail = (result.error or result.output).strip()[:500]
+            raise ClaudeError(f"claude failed (code {result.code}): {detail}")
         try:
-            reponse = json.loads(resultat.sortie)
-        except json.JSONDecodeError as erreur:
-            raise ErreurClaude("Sortie de claude illisible (JSON attendu)") from erreur
-        if not isinstance(reponse, dict) or reponse.get("is_error"):
-            raise ErreurClaude(f"claude a renvoyé une erreur : {str(reponse)[:500]}")
-        texte = reponse.get("result")
-        if not isinstance(texte, str) or not texte.strip():
-            raise ErreurClaude("Réponse de claude vide")
-        return texte
+            answer = json.loads(result.output)
+        except json.JSONDecodeError as error:
+            raise ClaudeError("Unreadable claude output (JSON expected)") from error
+        if not isinstance(answer, dict) or answer.get("is_error"):
+            raise ClaudeError(f"claude returned an error: {str(answer)[:500]}")
+        text = answer.get("result")
+        if not isinstance(text, str) or not text.strip():
+            raise ClaudeError("Empty answer from claude")
+        return text
 
 
-def extraire_bloc(texte: str) -> str:
-    """Contenu du premier bloc ``` de la réponse, ou la réponse entière s'il n'y en a pas."""
-    bloc = _BLOC.search(texte)
-    return (bloc.group(1) if bloc else texte).strip()
+def extract_block(text: str) -> str:
+    """Contents of the first ``` block of the answer, or the whole answer if there is none."""
+    block = _BLOCK.search(text)
+    return (block.group(1) if block else text).strip()
 
 
-def extraire_json(texte: str) -> Any:
-    """Décode le JSON d'une réponse, même entouré de texte ou d'un bloc ```."""
-    candidat = extraire_bloc(texte)
-    debuts = [i for i in (candidat.find("["), candidat.find("{")) if i >= 0]
-    fin = max(candidat.rfind("]"), candidat.rfind("}"))
-    if not debuts or fin < min(debuts):
-        raise ErreurClaude("Pas de JSON dans la réponse de claude")
+def extract_json(text: str) -> Any:
+    """Decodes the JSON of an answer, even surrounded by text or a ``` block."""
+    candidate = extract_block(text)
+    starts = [i for i in (candidate.find("["), candidate.find("{")) if i >= 0]
+    end = max(candidate.rfind("]"), candidate.rfind("}"))
+    if not starts or end < min(starts):
+        raise ClaudeError("No JSON in the answer from claude")
     try:
-        return json.loads(candidat[min(debuts) : fin + 1])
-    except json.JSONDecodeError as erreur:
-        raise ErreurClaude("JSON invalide dans la réponse de claude") from erreur
+        return json.loads(candidate[min(starts) : end + 1])
+    except json.JSONDecodeError as error:
+        raise ClaudeError("Invalid JSON in the answer from claude") from error

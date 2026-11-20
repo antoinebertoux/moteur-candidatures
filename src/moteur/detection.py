@@ -6,7 +6,7 @@ import re
 from collections.abc import Sequence
 from dataclasses import dataclass
 
-from moteur.sources.base import ClientHttp, ErreurSource
+from moteur.sources.base import HttpClient, SourceError
 
 # (tool, pattern): the identifier is the first group; Workday keeps the whole address.
 _PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
@@ -40,10 +40,10 @@ class Detection:
     def block(self, name: str = "") -> str:
         """The `[[entreprises]]` block to paste into config.toml (CLI-06)."""
         source = self.address if self.ats == "workday" else self.identifier.removeprefix("eu:")
-        nom = name or _name_from(source)
+        name = name or _name_from(source)
         return (
             "[[entreprises]]\n"
-            f'nom = "{nom}"\n'
+            f'nom = "{name}"\n'
             f'ats = "{self.ats}"\n'
             f'identifiant = "{self.identifier}"\n'
             f'site = "{self.address}"\n'
@@ -73,30 +73,30 @@ def find_tool(text: str) -> tuple[str, str] | None:
     return ats, identifier
 
 
-def detect(address: str, client: ClientHttp) -> Detection:
+def detect(address: str, client: HttpClient) -> Detection:
     address = address.strip()
     direct = find_tool(address)
     if direct:
         return Detection(address, *direct)
     url = address if "://" in address else f"https://{address}"
     try:
-        page = client.get_texte(url)
-    except ErreurSource as error:
+        page = client.get_text(url)
+    except SourceError as error:
         return Detection(address, error=str(error))
     in_page = find_tool(page)
     if in_page is None:
-        return Detection(address, error="outil non reconnu")
+        return Detection(address, error="unrecognised tool")
     return Detection(address, *in_page)
 
 
-def report(addresses: Sequence[str], client: ClientHttp, name: str = "") -> str:
+def report(addresses: Sequence[str], client: HttpClient, name: str = "") -> str:
     """Text printed by `moteur detecter`: one block per recognised address."""
     single_name = name if len(addresses) == 1 else ""
     parts: list[str] = []
     for address in addresses:
         detection = detect(address, client)
         if detection.error:
-            parts.append(f"# {address} : {detection.error}\n")
+            parts.append(f"# {address}: {detection.error}\n")
         else:
             parts.append(detection.block(single_name))
     return "\n".join(parts)

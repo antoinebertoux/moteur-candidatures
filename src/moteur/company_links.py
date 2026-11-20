@@ -15,11 +15,11 @@ from datetime import date, timedelta
 from typing import TYPE_CHECKING
 from urllib.parse import urlsplit
 
-from moteur.claude_cli import Assistant, ErreurClaude, extraire_json
-from moteur.modeles import Offre, normaliser
+from moteur.claude_cli import Assistant, ClaudeError, extract_json
+from moteur.models import JobAd, normalise
 
 if TYPE_CHECKING:
-    from moteur.base_locale import BaseLocale
+    from moteur.local_db import LocalDb
 
 log = logging.getLogger(__name__)
 
@@ -78,7 +78,7 @@ class CompanyLinks:
 
 def company_key(name: str) -> str:
     """One record per company, keyed by its normalised name (LNK-01)."""
-    return normaliser(name)
+    return normalise(name)
 
 
 def is_web_address(value: str) -> bool:
@@ -120,13 +120,13 @@ Laisse un champ vide ("") si tu n'es pas sûr : ne devine jamais une adresse.
 Réponds uniquement par un tableau JSON, sans texte autour."""
 
 
-def build_prompt(companies: Sequence[Offre]) -> str:
+def build_prompt(companies: Sequence[JobAd]) -> str:
     """Only the company name and one of its ads' title, location and link (LNK-12)."""
     return json.dumps(
         [
             {
-                "entreprise": offer.entreprise,
-                "offre": {"poste": offer.poste, "lieu": offer.lieu, "lien": offer.url},
+                "entreprise": offer.company,
+                "offre": {"poste": offer.title, "lieu": offer.location, "lien": offer.url},
             }
             for offer in companies
         ],
@@ -137,9 +137,9 @@ def build_prompt(companies: Sequence[Offre]) -> str:
 def parse_response(text: str, asked: set[str]) -> dict[str, CompanyLinks]:
     """Links found per company key; unknown companies and malformed links are dropped
     (LNK-14). A response that is not an array raises `ErreurClaude`."""
-    data = extraire_json(text)
+    data = extract_json(text)
     if not isinstance(data, list):
-        raise ErreurClaude("La recherche de liens doit renvoyer un tableau JSON")
+        raise ClaudeError("The link lookup must return a JSON array")
     found: dict[str, CompanyLinks] = {}
     for entry in data:
         if not isinstance(entry, dict) or not isinstance(entry.get("entreprise"), str):
@@ -153,15 +153,15 @@ def parse_response(text: str, asked: set[str]) -> dict[str, CompanyLinks]:
     return found
 
 
-def to_look_up(base: BaseLocale, today: date) -> list[Offre]:
+def to_look_up(base: LocalDb, today: date) -> list[JobAd]:
     """One ad per company still missing a link and not looked up recently (LNK-10, LNK-11)."""
     links = base.company_links()
     looked_up = base.company_lookups()
     limit = (today - RETRY_AFTER).isoformat()
-    chosen: dict[str, Offre] = {}
-    for application in base.pour_la_page() + base.a_generer():
-        offer = application.offre
-        key = company_key(offer.entreprise)
+    chosen: dict[str, JobAd] = {}
+    for application in base.for_the_page() + base.to_generate():
+        offer = application.ad
+        key = company_key(offer.company)
         if not key or key in chosen or links.get(key, CompanyLinks()).complete:
             continue
         if looked_up.get(key, "") > limit:
@@ -171,7 +171,7 @@ def to_look_up(base: BaseLocale, today: date) -> list[Offre]:
 
 
 def look_up(
-    base: BaseLocale, assistant: Assistant, *, model: str, today: date | None = None
+    base: LocalDb, assistant: Assistant, *, model: str, today: date | None = None
 ) -> tuple[int, int]:
     """Looks up the missing links, in batches; returns (companies looked up, links found).
 
@@ -182,14 +182,14 @@ def look_up(
     looked_up = found = 0
     for start in range(0, len(companies), BATCH_SIZE):
         batch = companies[start : start + BATCH_SIZE]
-        asked = {company_key(offer.entreprise) for offer in batch}
+        asked = {company_key(offer.company) for offer in batch}
         try:
-            answer = assistant.demander(
-                build_prompt(batch), systeme=_INSTRUCTIONS, modele=model, outils=LOOKUP_TOOLS
+            answer = assistant.ask(
+                build_prompt(batch), system=_INSTRUCTIONS, model=model, tools=LOOKUP_TOOLS
             )
             results = parse_response(answer, asked)
-        except ErreurClaude as error:
-            log.warning("Liens de %d entreprises non cherchés : %s", len(batch), error)
+        except ClaudeError as error:
+            log.warning("Links of %d companies not looked up: %s", len(batch), error)
             continue
         for key in sorted(asked):
             links = results.get(key, CompanyLinks())

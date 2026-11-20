@@ -1,91 +1,90 @@
-"""API « Offres d'emploi v2 » de France Travail (identifiants gratuits sur francetravail.io)."""
+"""France Travail "Offres d'emploi v2" API (free credentials on francetravail.io)."""
 
 from __future__ import annotations
 
 from collections.abc import Sequence
 from typing import Any
 
-from moteur.modeles import Offre
-from moteur.sources.base import ClientHttp, ErreurSource, chaine, liste, table
+from moteur.models import JobAd
+from moteur.sources.base import HttpClient, SourceError, items, string, table
 
-URL_JETON = "https://entreprise.francetravail.fr/connexion/oauth2/access_token"
-URL_RECHERCHE = "https://api.francetravail.io/partenaire/offresdemploi/v2/offres/search"
-URL_DETAIL = "https://candidat.francetravail.fr/offres/recherche/detail/"
-PORTEE = "api_offresdemploiv2 o2dsoffre"
+TOKEN_URL = "https://entreprise.francetravail.fr/connexion/oauth2/access_token"
+SEARCH_URL = "https://api.francetravail.io/partenaire/offresdemploi/v2/offres/search"
+DETAIL_URL = "https://candidat.francetravail.fr/offres/recherche/detail/"
+SCOPE = "api_offresdemploiv2 o2dsoffre"
 
 
-def offre_depuis_resultat(resultat: dict[str, Any]) -> Offre | None:
-    """Convertit un résultat de l'API ; `None` si l'intitulé manque."""
-    poste = chaine(resultat.get("intitule"))
-    if not poste:
+def ad_from_result(result: dict[str, Any]) -> JobAd | None:
+    """Converts an API result; `None` if the title is missing."""
+    title = string(result.get("intitule"))
+    if not title:
         return None
-    identifiant = chaine(resultat.get("id"))
-    url = chaine(table(resultat.get("origineOffre")).get("urlOrigine"))
-    return Offre(
-        entreprise=chaine(table(resultat.get("entreprise")).get("nom"))
-        or "Entreprise non précisée",
-        poste=poste,
-        lieu=chaine(table(resultat.get("lieuTravail")).get("libelle")),
-        url=url or (URL_DETAIL + identifiant if identifiant else ""),
+    identifier = string(result.get("id"))
+    url = string(table(result.get("origineOffre")).get("urlOrigine"))
+    return JobAd(
+        company=string(table(result.get("entreprise")).get("nom")) or "Entreprise non précisée",
+        title=title,
+        location=string(table(result.get("lieuTravail")).get("libelle")),
+        url=url or (DETAIL_URL + identifier if identifier else ""),
         source="france_travail",
-        description=chaine(resultat.get("description")),
-        salaire=chaine(table(resultat.get("salaire")).get("libelle")),
-        date_publication=chaine(resultat.get("dateCreation"))[:10],
+        description=string(result.get("description")),
+        salary=string(table(result.get("salaire")).get("libelle")),
+        published_on=string(result.get("dateCreation"))[:10],
     )
 
 
 class SourceFranceTravail:
     def __init__(
         self,
-        client: ClientHttp,
-        identifiant: str,
+        client: HttpClient,
+        identifier: str,
         secret: str,
-        recherches: Sequence[str],
-        departements: Sequence[str] = (),
-        publiee_depuis: int = 7,
+        searches: Sequence[str],
+        departments: Sequence[str] = (),
+        published_since: int = 7,
     ) -> None:
         self._client = client
-        self._identifiant = identifiant
+        self._identifier = identifier
         self._secret = secret
-        self._recherches = recherches
-        self._departements = departements
-        self._publiee_depuis = publiee_depuis
+        self._searches = searches
+        self._departments = departments
+        self._published_since = published_since
 
     @property
-    def nom(self) -> str:
+    def name(self) -> str:
         return "france_travail"
 
-    def _jeton(self) -> str:
-        reponse = self._client.post_formulaire(
-            URL_JETON,
+    def _token(self) -> str:
+        answer = self._client.post_form(
+            TOKEN_URL,
             params={"realm": "/partenaire"},
-            donnees={
+            data={
                 "grant_type": "client_credentials",
-                "client_id": self._identifiant,
+                "client_id": self._identifier,
                 "client_secret": self._secret,
-                "scope": PORTEE,
+                "scope": SCOPE,
             },
         )
-        jeton = chaine(table(reponse).get("access_token"))
-        if not jeton:
-            raise ErreurSource("France Travail : pas de jeton d'accès dans la réponse")
-        return jeton
+        token = string(table(answer).get("access_token"))
+        if not token:
+            raise SourceError("France Travail: no access token in the answer")
+        return token
 
-    def collecter(self) -> list[Offre]:
-        entetes = {"Authorization": f"Bearer {self._jeton()}", "Accept": "application/json"}
-        offres: list[Offre] = []
-        for mots in self._recherches:
-            for departement in self._departements or ("",):
+    def collect(self) -> list[JobAd]:
+        headers = {"Authorization": f"Bearer {self._token()}", "Accept": "application/json"}
+        ads: list[JobAd] = []
+        for words in self._searches:
+            for department in self._departments or ("",):
                 params = {
-                    "motsCles": mots,
-                    "publieeDepuis": str(self._publiee_depuis),
+                    "motsCles": words,
+                    "publieeDepuis": str(self._published_since),
                     "range": "0-149",
                 }
-                if departement:
-                    params["departement"] = departement
-                reponse = self._client.get_json(URL_RECHERCHE, params=params, entetes=entetes)
-                for resultat in liste(table(reponse).get("resultats")):
-                    offre = offre_depuis_resultat(table(resultat))
-                    if offre is not None:
-                        offres.append(offre)
-        return offres
+                if department:
+                    params["departement"] = department
+                answer = self._client.get_json(SEARCH_URL, params=params, headers=headers)
+                for result in items(table(answer).get("resultats")):
+                    ad = ad_from_result(table(result))
+                    if ad is not None:
+                        ads.append(ad)
+        return ads

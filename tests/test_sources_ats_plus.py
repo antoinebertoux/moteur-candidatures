@@ -4,37 +4,37 @@ from typing import Any
 
 import pytest
 
-from moteur.config import EntrepriseCible
+from moteur.config import TargetCompany
 from moteur.sources.ats import (
     URLS,
     SourceAts,
-    offres_recruitee,
-    offres_smartrecruiters,
-    offres_teamtailor,
+    ads_recruitee,
+    ads_smartrecruiters,
+    ads_teamtailor,
 )
-from moteur.sources.workday import SourceWorkday, decouper, offres_workday, workday_description
-from tests.conftest import FauxClient
+from moteur.sources.workday import SourceWorkday, ads_workday, split_address, workday_description
+from tests.conftest import FakeClient
 
-EXEMPLE = "https://exemple.wd3.myworkdayjobs.com/fr-FR/Careers"
+EXAMPLE = "https://exemple.wd3.myworkdayjobs.com/fr-FR/Careers"
 
 
 @pytest.mark.spec("SRC-40")
-def test_decouper_une_adresse_workday() -> None:
-    site = decouper(EXEMPLE)
-    assert (site.hote, site.tenant, site.site) == (
+def test_split_a_workday_address() -> None:
+    site = split_address(EXAMPLE)
+    assert (site.host, site.tenant, site.site) == (
         "exemple.wd3.myworkdayjobs.com",
         "exemple",
         "Careers",
     )
     assert site.api == "https://exemple.wd3.myworkdayjobs.com/wday/cxs/exemple/Careers/jobs"
-    assert decouper("groupe.wd3.myworkdayjobs.com/Groupe").site == "Groupe"
+    assert split_address("groupe.wd3.myworkdayjobs.com/Groupe").site == "Groupe"
     with pytest.raises(ValueError):
-        decouper("https://exemple.fr/carrieres")
+        split_address("https://exemple.fr/carrieres")
 
 
 @pytest.mark.spec("SRC-41")
-def test_offres_workday() -> None:
-    reponse = {
+def test_workday_ads() -> None:
+    answer = {
         "total": 1,
         "jobPostings": [
             {
@@ -45,117 +45,119 @@ def test_offres_workday() -> None:
             {"title": ""},
         ],
     }
-    (offre,) = offres_workday("Exemple", decouper(EXEMPLE), reponse)
-    assert (offre.poste, offre.lieu, offre.source) == (
+    (ad,) = ads_workday("Exemple", split_address(EXAMPLE), answer)
+    assert (ad.title, ad.location, ad.source) == (
         "Ingénieur IA F/H",
         "Vélizy-Villacoublay",
         "workday",
     )
-    assert offre.url == "https://exemple.wd3.myworkdayjobs.com/Careers/job/Velizy/Ingenieur-IA_R001"
-    assert offres_workday("Exemple", decouper(EXEMPLE), None) == []
+    assert ad.url == "https://exemple.wd3.myworkdayjobs.com/Careers/job/Velizy/Ingenieur-IA_R001"
+    assert ads_workday("Exemple", split_address(EXAMPLE), None) == []
 
 
-def _page(debut: int, nombre: int, total: int) -> dict[str, object]:
+def _page(start: int, count: int, total: int) -> dict[str, object]:
     return {
         "total": total,
         "jobPostings": [
             {"title": f"Poste {i}", "externalPath": f"/job/{i}"}
-            for i in range(debut, debut + nombre)
+            for i in range(start, start + count)
         ],
     }
 
 
-class ClientWorkday(FauxClient):
-    """Répond selon le mot-clé et la position, quel que soit l'ordre des appels."""
+class WorkdayClient(FakeClient):
+    """Answers by keyword and offset, whatever the order of the calls."""
 
     def __init__(
         self,
         pages: dict[tuple[str, int], dict[str, object]],
-        barrage: threading.Barrier | None = None,
+        gate: threading.Barrier | None = None,
     ) -> None:
         super().__init__({})
         self.pages = pages
-        self.barrage = barrage
+        self.gate = gate
 
     def post_json(
-        self, url: str, *, corps: Mapping[str, Any], entetes: Mapping[str, str] | None = None
+        self, url: str, *, body: Mapping[str, Any], headers: Mapping[str, str] | None = None
     ) -> Any:
-        self.appels.append((url, dict(corps)))
-        if self.barrage is not None and corps["offset"] == 0:
-            self.barrage.wait()  # échoue si les mots-clés passent l'un après l'autre
-        return self.pages.get((corps["searchText"], corps["offset"]))
+        self.calls.append((url, dict(body)))
+        if self.gate is not None and body["offset"] == 0:
+            self.gate.wait()  # fails if the keywords run one after the other
+        return self.pages.get((body["searchText"], body["offset"]))
 
 
 @pytest.mark.spec("SRC-41")
-def test_workday_pagine_et_dedoublonne() -> None:
-    # Total annoncé sur la première page seulement, comme le fait Workday.
-    client = ClientWorkday(
+def test_workday_pages_and_deduplicates() -> None:
+    # Total given on the first page only, as Workday does.
+    client = WorkdayClient(
         {("ia", 0): _page(0, 20, 25), ("ia", 20): _page(20, 5, 0), ("data", 0): _page(0, 3, 3)}
     )
-    cible = EntrepriseCible(
-        nom="Exemple", ats="workday", identifiant=EXEMPLE, recherches=("ia", "data")
+    target = TargetCompany(
+        name="Exemple", ats="workday", identifier=EXAMPLE, searches=("ia", "data")
     )
-    source = SourceWorkday(client, cible)
-    offres = source.collecter()
-    assert len(offres) == 25  # les 3 offres de « data » sont déjà vues
-    assert sorted((c["searchText"], c["offset"]) for _, c in client.appels) == [
+    source = SourceWorkday(client, target)
+    ads = source.collect()
+    assert len(ads) == 25  # the 3 ads for "data" are already seen
+    assert sorted((c["searchText"], c["offset"]) for _, c in client.calls) == [
         ("data", 0),
         ("ia", 0),
         ("ia", 20),
     ]
-    assert source.nom == "workday:Exemple"
+    assert source.name == "workday:Exemple"
 
 
 @pytest.mark.spec("SRC-05")
-def test_workday_lance_les_mots_cles_en_parallele_et_garde_leur_ordre() -> None:
-    client = ClientWorkday(
+def test_workday_runs_keywords_in_parallel_keeping_order() -> None:
+    client = WorkdayClient(
         {("ia", 0): _page(0, 2, 2), ("data", 0): _page(1, 2, 2)}, threading.Barrier(2, timeout=5)
     )
-    cible = EntrepriseCible(
-        nom="Exemple", ats="workday", identifiant=EXEMPLE, recherches=("ia", "data")
+    target = TargetCompany(
+        name="Exemple", ats="workday", identifier=EXAMPLE, searches=("ia", "data")
     )
-    offres = SourceWorkday(client, cible).collecter()
-    assert [o.poste for o in offres] == ["Poste 0", "Poste 1", "Poste 2"]
+    ads = SourceWorkday(client, target).collect()
+    assert [o.title for o in ads] == ["Poste 0", "Poste 1", "Poste 2"]
 
 
 @pytest.mark.spec("SRC-42")
 def test_workday_opens_the_detail_page_of_a_retained_ad() -> None:
     detail = "https://exemple.wd3.myworkdayjobs.com/wday/cxs/exemple/Careers/job/Paris/IA_R001"
-    client = FauxClient(
+    client = FakeClient(
         {detail: {"jobPostingInfo": {"jobDescription": "<p>Missions &amp; profil</p>"}}}
     )
-    cible = EntrepriseCible(nom="Exemple", ats="workday", identifiant=EXEMPLE)
-    (offre,) = offres_workday(
+    target = TargetCompany(name="Exemple", ats="workday", identifier=EXAMPLE)
+    (ad,) = ads_workday(
         "Exemple",
-        decouper(EXEMPLE),
+        split_address(EXAMPLE),
         {"jobPostings": [{"title": "IA", "externalPath": "/job/Paris/IA_R001"}]},
     )
-    detaillee = SourceWorkday(client, cible).detailler(offre)
-    assert detaillee.description == "Missions & profil"
-    assert client.appels[0][0] == detail
+    detailed = SourceWorkday(client, target).add_details(ad)
+    assert detailed.description == "Missions & profil"
+    assert client.calls[0][0] == detail
 
 
 @pytest.mark.spec("SRC-42")
 def test_workday_unreadable_or_foreign_detail_leaves_no_text() -> None:
     assert workday_description(None) == ""
     assert workday_description({"jobPostingInfo": "?"}) == ""
-    client = FauxClient({})
-    cible = EntrepriseCible(nom="Exemple", ats="workday", identifiant=EXEMPLE)
-    source = SourceWorkday(client, cible)
-    (offre,) = offres_workday(
-        "Exemple", decouper(EXEMPLE), {"jobPostings": [{"title": "IA", "externalPath": "/job/1"}]}
+    client = FakeClient({})
+    target = TargetCompany(name="Exemple", ats="workday", identifier=EXAMPLE)
+    source = SourceWorkday(client, target)
+    (ad,) = ads_workday(
+        "Exemple",
+        split_address(EXAMPLE),
+        {"jobPostings": [{"title": "IA", "externalPath": "/job/1"}]},
     )
-    assert source.detailler(offre).description == ""
+    assert source.add_details(ad).description == ""
     from dataclasses import replace
 
-    etrangere = replace(offre, url="https://ailleurs.fr/offre/1")
-    assert source.detailler(etrangere) is etrangere
-    assert len(client.appels) == 1
+    foreign = replace(ad, url="https://ailleurs.fr/offre/1")
+    assert source.add_details(foreign) is foreign
+    assert len(client.calls) == 1
 
 
 @pytest.mark.spec("SRC-31")
 def test_smartrecruiters() -> None:
-    reponse = {
+    answer = {
         "content": [
             {
                 "id": "744",
@@ -166,18 +168,18 @@ def test_smartrecruiters() -> None:
             {"name": ""},
         ]
     }
-    (offre,) = offres_smartrecruiters("Acme", "Acme1", reponse)
-    assert (offre.poste, offre.lieu, offre.date_publication) == (
+    (ad,) = ads_smartrecruiters("Acme", "Acme1", answer)
+    assert (ad.title, ad.location, ad.published_on) == (
         "Data Scientist",
         "Paris, FR",
         "2026-11-02",
     )
-    assert offre.url == "https://jobs.smartrecruiters.com/Acme1/744"
+    assert ad.url == "https://jobs.smartrecruiters.com/Acme1/744"
 
 
 @pytest.mark.spec("SRC-31")
 def test_recruitee() -> None:
-    reponse = {
+    answer = {
         "offers": [
             {
                 "title": "Lead AI",
@@ -188,15 +190,15 @@ def test_recruitee() -> None:
             }
         ]
     }
-    (offre,) = offres_recruitee("Acme", reponse)
-    assert (offre.poste, offre.description, offre.date_publication) == (
+    (ad,) = ads_recruitee("Acme", answer)
+    assert (ad.title, ad.description, ad.published_on) == (
         "Lead AI",
         "Diriger l’IA",
         "2026-11-05",
     )
 
 
-FLUX = """<?xml version="1.0" encoding="UTF-8"?>
+FEED = """<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:tt="https://teamtailor.com/locations">
   <channel>
     <item>
@@ -213,29 +215,29 @@ FLUX = """<?xml version="1.0" encoding="UTF-8"?>
 
 @pytest.mark.spec("SRC-31")
 def test_teamtailor() -> None:
-    (offre,) = offres_teamtailor("Acme", FLUX)
-    assert (offre.poste, offre.lieu, offre.url) == (
+    (ad,) = ads_teamtailor("Acme", FEED)
+    assert (ad.title, ad.location, ad.url) == (
         "AI Engineer",
         "Paris",
         "https://acme.teamtailor.com/jobs/1-ai-engineer",
     )
-    assert (offre.description, offre.date_publication) == ("Agents LLM", "2026-11-10")
-    assert offres_teamtailor("Acme", "pas du xml") == []
+    assert (ad.description, ad.published_on) == ("Agents LLM", "2026-11-10")
+    assert ads_teamtailor("Acme", "pas du xml") == []
 
 
 @pytest.mark.spec("SRC-30")
-def test_source_ats_teamtailor_lit_le_flux_rss() -> None:
+def test_teamtailor_source_reads_the_rss_feed() -> None:
     url = URLS["teamtailor"].format(id="acme")
-    client = FauxClient({url: FLUX})
-    cible = EntrepriseCible(nom="Acme", ats="teamtailor", identifiant="acme")
-    assert [o.poste for o in SourceAts(client, cible).collecter()] == ["AI Engineer"]
-    assert client.appels == [(url, {})]
+    client = FakeClient({url: FEED})
+    target = TargetCompany(name="Acme", ats="teamtailor", identifier="acme")
+    assert [o.title for o in SourceAts(client, target).collect()] == ["AI Engineer"]
+    assert client.calls == [(url, {})]
 
 
 @pytest.mark.spec("SRC-30")
-def test_source_ats_smartrecruiters_appelle_la_bonne_adresse() -> None:
+def test_smartrecruiters_source_calls_the_right_address() -> None:
     url = URLS["smartrecruiters"].format(id="Acme1")
-    client = FauxClient({url: {"content": [{"id": "1", "name": "ML Engineer"}]}})
-    cible = EntrepriseCible(nom="Acme", ats="smartrecruiters", identifiant="Acme1")
-    assert [o.poste for o in SourceAts(client, cible).collecter()] == ["ML Engineer"]
-    assert client.appels == [(url, {"limit": "100"})]
+    client = FakeClient({url: {"content": [{"id": "1", "name": "ML Engineer"}]}})
+    target = TargetCompany(name="Acme", ats="smartrecruiters", identifier="Acme1")
+    assert [o.title for o in SourceAts(client, target).collect()] == ["ML Engineer"]
+    assert client.calls == [(url, {"limit": "100"})]

@@ -23,15 +23,15 @@ reference: when the code and a spec disagree, one of them is wrong and must be f
             │  search the web for job ads and write directly to the database  │
             └─────────────────────────────────┬──────────────────────────────┘
                                               ▼
- Engine B (this repo, on the PC)       "Suivi des candidatures" page
- collecter → noter                     (claude.ai artifact + its database)
+ Engine B (this repo, on the PC)       "Application tracker" page
+ collect → score                       (claude.ai artifact + its database)
  moteur mcp ── propositions ────────▶  imported at load and every minute
             ◀── decisions ───────────  sent after each change
                                         User sorts: yes / no, letter, edits
- generer / lettre  → PDFs in ../Candidatures/, picked up by the next "propositions"
- servir  ◀── CV / Lettre links ───────  User reviews, approves, applies himself
+ generate / letter → PDFs in ../Candidatures/, picked up by the next "propositions"
+ serve   ◀── CV / Letter links ───────  User reviews, approves, applies himself
 
- Fallback without the desktop app: exporter ─JSON─▶ Importer, Exporter ─JSON─▶ decisions
+ Fallback without the desktop app: export ─JSON─▶ Import, Export ─JSON─▶ decisions
 ```
 
 Claude is only called to **score** (Haiku), to **write** (Sonnet) and to **prepare an
@@ -44,12 +44,12 @@ code, at 0 tokens.
 | Page (`statut` field) | Step shown | Engine B local database |
 | --- | --- | --- |
 | — | — | `a_noter`: collected, not scored yet |
-| `a_traiter` | À traiter | `notee`: proposed to the page |
-| `acceptee` | À préparer | `acceptee`: CV (and letter) to generate |
-| `prete` | À valider | `generee`: PDFs ready |
-| `validee` | À envoyer | `generee` |
-| `postulee` | Postulée | `close` |
-| `refusee` | Refusée | `refusee` |
+| `a_traiter` | To review (À traiter) | `notee`: proposed to the page |
+| `acceptee` | To prepare (À préparer) | `acceptee`: CV (and letter) to generate |
+| `prete` | To validate (À valider) | `generee`: PDFs ready |
+| `validee` | To send (À envoyer) | `generee` |
+| `postulee` | Applied (Postulée) | `close` |
+| `refusee` | Rejected (Refusée) | `refusee` |
 
 ## Files
 

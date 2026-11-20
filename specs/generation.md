@@ -1,6 +1,6 @@
 # CV and cover letter generation
 
-`moteur generer` prepares a folder for each `acceptee` application, from the `../latex/`
+`moteur generate` prepares a folder for each `acceptee` application, from the `../latex/`
 repository: CV template, block bank (fr or en), letter skeleton, paragraph bank and
 `compiler.sh`. Writing is done by Claude (Sonnet by default).
 
@@ -65,14 +65,14 @@ repository: CV template, block bank (fr or en), letter skeleton, paragraph bank 
     defence-focused role;
   - unsolicited: proposes the given role;
   - direct style, no hollow phrases, 250 to 350 words, one page.
-- **LET-04** · `moteur lettre` adds a letter to an already generated folder **without
+- **LET-04** · `moteur letter` adds a letter to an already generated folder **without
   touching the CV**: for the given identifiers, or otherwise for every missing letter
   (BASE-08).
 - **LET-05** · An existing letter is used as a starting point only if a letter
   instruction comes with it; otherwise it is rewritten from the skeleton.
 - **LET-06** · A letter longer than one page is a failure: the folder keeps no letter. An
   identifier unknown to the database is a failure.
-- **LET-07** · "Régénérer la lettre" in the page is taken into account only if the
+- **LET-07** · "Regenerate the letter" in the page is taken into account only if the
   request is more recent than the current letter PDF; the letter then becomes missing
   again, with the letter instruction if any.
 
@@ -84,5 +84,5 @@ repository: CV template, block bank (fr or en), letter skeleton, paragraph bank 
 - **GEN-02** · A successful folder becomes `generee` with the paths of its PDFs, relative
   to the root folder (`Candidatures/…/cv_<first name>_<last name>.pdf`, CV-16). A failed folder is listed with the
   reason, stays `acceptee`, and does not block the following ones.
-- **GEN-03** · After the folders, `generer` adds the missing letters then exports the
+- **GEN-03** · After the folders, `generate` adds the missing letters then exports the
   file for the page automatically. *(untested)*

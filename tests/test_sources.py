@@ -1,14 +1,14 @@
 import httpx
 import pytest
 
-from moteur.config import EntrepriseCible
+from moteur.config import TargetCompany
 from moteur.sources import france_travail
-from moteur.sources.ats import URLS, SourceAts, offres_ashby, offres_greenhouse, offres_lever
-from moteur.sources.base import ClientHttpx, ErreurSource, texte_brut
-from moteur.sources.france_travail import SourceFranceTravail, offre_depuis_resultat
-from tests.conftest import FauxClient
+from moteur.sources.ats import URLS, SourceAts, ads_ashby, ads_greenhouse, ads_lever
+from moteur.sources.base import HttpxClient, SourceError, plain_text
+from moteur.sources.france_travail import SourceFranceTravail, ad_from_result
+from tests.conftest import FakeClient
 
-RESULTAT = {
+RESULT = {
     "id": "123ABC",
     "intitule": "Data Scientist (H/F)",
     "description": "Vous concevez des modèles.",
@@ -21,47 +21,47 @@ RESULTAT = {
 
 
 @pytest.mark.spec("SRC-02")
-def test_texte_brut_retire_le_html_echappe() -> None:
-    assert texte_brut("&lt;p&gt;Bonjour &amp;amp; <b>bienvenue</b>&lt;/p&gt;") == (
+def test_plain_text_removes_escaped_html() -> None:
+    assert plain_text("&lt;p&gt;Bonjour &amp;amp; <b>bienvenue</b>&lt;/p&gt;") == (
         "Bonjour & bienvenue"
     )
 
 
 @pytest.mark.spec("SRC-12")
-def test_resultat_france_travail() -> None:
-    offre = offre_depuis_resultat(RESULTAT)
-    assert offre is not None
-    assert (offre.entreprise, offre.poste, offre.lieu) == (
+def test_france_travail_result() -> None:
+    ad = ad_from_result(RESULT)
+    assert ad is not None
+    assert (ad.company, ad.title, ad.location) == (
         "Acme",
         "Data Scientist (H/F)",
         "75 - PARIS 14",
     )
-    assert offre.url == "https://exemple.fr/offre/123ABC"
-    assert offre.date_publication == "2026-11-10"
-    assert offre.source == "france_travail"
+    assert ad.url == "https://exemple.fr/offre/123ABC"
+    assert ad.published_on == "2026-11-10"
+    assert ad.source == "france_travail"
 
 
 @pytest.mark.spec("SRC-01", "SRC-12")
-def test_resultat_france_travail_incomplet() -> None:
-    assert offre_depuis_resultat({"id": "1"}) is None
-    offre = offre_depuis_resultat({"id": "9", "intitule": "Ingénieur IA"})
-    assert offre is not None
-    assert offre.entreprise == "Entreprise non précisée"
-    assert offre.url.endswith("/9")
+def test_incomplete_france_travail_result() -> None:
+    assert ad_from_result({"id": "1"}) is None
+    ad = ad_from_result({"id": "9", "intitule": "Ingénieur IA"})
+    assert ad is not None
+    assert ad.company == "Entreprise non précisée"
+    assert ad.url.endswith("/9")
 
 
 @pytest.mark.spec("SRC-11")
-def test_france_travail_demande_un_jeton_puis_cherche() -> None:
-    client = FauxClient(
+def test_france_travail_gets_a_token_then_searches() -> None:
+    client = FakeClient(
         {
-            france_travail.URL_JETON: {"access_token": "jeton"},
-            france_travail.URL_RECHERCHE: {"resultats": [RESULTAT, {"id": "sans intitulé"}]},
+            france_travail.TOKEN_URL: {"access_token": "jeton"},
+            france_travail.SEARCH_URL: {"resultats": [RESULT, {"id": "sans intitulé"}]},
         }
     )
     source = SourceFranceTravail(client, "id", "secret", ["ia", "data"], ["75", "92"])
-    assert len(source.collecter()) == 4
-    recherches = [params for url, params in client.appels if url == france_travail.URL_RECHERCHE]
-    assert {(p["motsCles"], p["departement"]) for p in recherches} == {
+    assert len(source.collect()) == 4
+    searches = [params for url, params in client.calls if url == france_travail.SEARCH_URL]
+    assert {(p["motsCles"], p["departement"]) for p in searches} == {
         ("ia", "75"),
         ("ia", "92"),
         ("data", "75"),
@@ -70,16 +70,16 @@ def test_france_travail_demande_un_jeton_puis_cherche() -> None:
 
 
 @pytest.mark.spec("SRC-11")
-def test_france_travail_sans_resultat_ni_jeton() -> None:
-    vide = FauxClient({france_travail.URL_JETON: {"access_token": "jeton"}})
-    assert SourceFranceTravail(vide, "id", "secret", ["ia"]).collecter() == []
-    with pytest.raises(ErreurSource):
-        SourceFranceTravail(FauxClient({}), "id", "secret", ["ia"]).collecter()
+def test_france_travail_without_result_or_token() -> None:
+    empty = FakeClient({france_travail.TOKEN_URL: {"access_token": "jeton"}})
+    assert SourceFranceTravail(empty, "id", "secret", ["ia"]).collect() == []
+    with pytest.raises(SourceError):
+        SourceFranceTravail(FakeClient({}), "id", "secret", ["ia"]).collect()
 
 
 @pytest.mark.spec("SRC-31")
 def test_greenhouse() -> None:
-    reponse = {
+    answer = {
         "jobs": [
             {
                 "title": "ML Engineer",
@@ -91,14 +91,14 @@ def test_greenhouse() -> None:
             {"title": ""},
         ]
     }
-    (offre,) = offres_greenhouse("Acme", reponse)
-    assert (offre.poste, offre.lieu, offre.description) == ("ML Engineer", "Paris", "Build models")
-    assert offre.date_publication == "2026-11-01"
+    (ad,) = ads_greenhouse("Acme", answer)
+    assert (ad.title, ad.location, ad.description) == ("ML Engineer", "Paris", "Build models")
+    assert ad.published_on == "2026-11-01"
 
 
 @pytest.mark.spec("SRC-31")
 def test_lever() -> None:
-    reponse = [
+    answer = [
         {
             "text": "AI Engineer",
             "hostedUrl": "https://jobs.lever.co/acme/1",
@@ -106,8 +106,8 @@ def test_lever() -> None:
             "descriptionPlain": "Ship LLM features",
         }
     ]
-    (offre,) = offres_lever("Acme", reponse)
-    assert (offre.poste, offre.lieu, offre.url) == (
+    (ad,) = ads_lever("Acme", answer)
+    assert (ad.title, ad.location, ad.url) == (
         "AI Engineer",
         "Paris",
         "https://jobs.lever.co/acme/1",
@@ -116,90 +116,90 @@ def test_lever() -> None:
 
 @pytest.mark.spec("SRC-01", "SRC-31")
 def test_ashby_et_reponses_inattendues() -> None:
-    reponse = {"jobs": [{"title": "Head of AI", "location": "Remote", "jobUrl": "https://a/1"}]}
-    (offre,) = offres_ashby("Acme", reponse)
-    assert (offre.poste, offre.lieu, offre.source) == ("Head of AI", "Remote", "ashby")
-    assert offres_ashby("Acme", None) == []
-    assert offres_greenhouse("Acme", ["pas un objet"]) == []
-    assert offres_lever("Acme", {"pas": "une liste"}) == []
+    answer = {"jobs": [{"title": "Head of AI", "location": "Remote", "jobUrl": "https://a/1"}]}
+    (ad,) = ads_ashby("Acme", answer)
+    assert (ad.title, ad.location, ad.source) == ("Head of AI", "Remote", "ashby")
+    assert ads_ashby("Acme", None) == []
+    assert ads_greenhouse("Acme", ["pas un objet"]) == []
+    assert ads_lever("Acme", {"pas": "une liste"}) == []
 
 
 @pytest.mark.spec("SRC-30")
-def test_source_ats_appelle_la_bonne_adresse() -> None:
+def test_ats_source_calls_the_right_address() -> None:
     url = URLS["lever"].format(id="acme")
-    client = FauxClient({url: [{"text": "AI Engineer"}]})
-    source = SourceAts(client, EntrepriseCible(nom="Acme", ats="lever", identifiant="acme"))
-    assert [o.poste for o in source.collecter()] == ["AI Engineer"]
-    assert client.appels == [(url, {"mode": "json"})]
-    assert source.nom == "lever:Acme"
+    client = FakeClient({url: [{"text": "AI Engineer"}]})
+    source = SourceAts(client, TargetCompany(name="Acme", ats="lever", identifier="acme"))
+    assert [o.title for o in source.collect()] == ["AI Engineer"]
+    assert client.calls == [(url, {"mode": "json"})]
+    assert source.name == "lever:Acme"
 
 
 @pytest.mark.spec("SRC-30")
-def test_source_ats_refuse_une_entreprise_sans_ats() -> None:
+def test_ats_source_rejects_company_without_ats() -> None:
     with pytest.raises(ValueError, match="ATS"):
-        SourceAts(FauxClient({}), EntrepriseCible(nom="Acme"))
+        SourceAts(FakeClient({}), TargetCompany(name="Acme"))
 
 
-def _client_qui_repond(*statuts: tuple[int, dict[str, str]]) -> tuple[ClientHttpx, list[float]]:
-    """Client dont le serveur répond tour à tour les statuts donnés ; renvoie aussi les pauses."""
-    reponses = iter(statuts)
+def _answering_client(*statuses: tuple[int, dict[str, str]]) -> tuple[HttpxClient, list[float]]:
+    """Client whose server answers the given statuses in turn; also returns the pauses."""
+    answers = iter(statuses)
     pauses: list[float] = []
 
-    def repondre(requete: httpx.Request) -> httpx.Response:
-        statut, entetes = next(reponses)
-        return httpx.Response(statut, headers=entetes, json={"ok": statut})
+    def answer_with(query: httpx.Request) -> httpx.Response:
+        status, headers = next(answers)
+        return httpx.Response(status, headers=headers, json={"ok": status})
 
-    client = ClientHttpx(transport=httpx.MockTransport(repondre), pause=pauses.append)
+    client = HttpxClient(transport=httpx.MockTransport(answer_with), pause=pauses.append)
     return client, pauses
 
 
 @pytest.mark.spec("SRC-04")
-def test_un_429_est_reessaye_apres_le_delai_demande() -> None:
-    client, pauses = _client_qui_repond((429, {"Retry-After": "120"}), (429, {}), (200, {}))
-    assert client.post_json("https://exemple.test/jobs", corps={}) == {"ok": 200}
+def test_a_429_is_retried_after_the_requested_delay() -> None:
+    client, pauses = _answering_client((429, {"Retry-After": "120"}), (429, {}), (200, {}))
+    assert client.post_json("https://exemple.test/jobs", body={}) == {"ok": 200}
     assert pauses == [30.0, 5.0]
 
 
 @pytest.mark.spec("SRC-04")
-def test_trois_429_de_suite_font_une_erreur_de_source() -> None:
-    client, pauses = _client_qui_repond((429, {}), (429, {"Retry-After": "2"}), (429, {}))
-    with pytest.raises(ErreurSource, match="HTTP 429"):
+def test_three_429_in_a_row_make_a_source_error() -> None:
+    client, pauses = _answering_client((429, {}), (429, {"Retry-After": "2"}), (429, {}))
+    with pytest.raises(SourceError, match="HTTP 429"):
         client.get_json("https://exemple.test/jobs")
     assert pauses == [5.0, 2.0]
 
 
 @pytest.mark.spec("SRC-06")
-def test_une_erreur_du_serveur_est_reessayee_une_fois() -> None:
-    client, pauses = _client_qui_repond((500, {}), (200, {}))
-    assert client.post_json("https://exemple.test/jobs", corps={}) == {"ok": 200}
+def test_a_server_error_is_retried_once() -> None:
+    client, pauses = _answering_client((500, {}), (200, {}))
+    assert client.post_json("https://exemple.test/jobs", body={}) == {"ok": 200}
     assert pauses == [2.0]
 
 
 @pytest.mark.spec("SRC-06")
-def test_deux_erreurs_du_serveur_font_une_erreur_de_source() -> None:
-    client, pauses = _client_qui_repond((502, {}), (503, {}))
-    with pytest.raises(ErreurSource, match="HTTP 503"):
-        client.get_texte("https://exemple.test/page")
+def test_two_server_errors_make_a_source_error() -> None:
+    client, pauses = _answering_client((502, {}), (503, {}))
+    with pytest.raises(SourceError, match="HTTP 503"):
+        client.get_text("https://exemple.test/page")
     assert pauses == [2.0]
 
 
 @pytest.mark.spec("SRC-33")
 def test_greenhouse_board_hosted_in_europe() -> None:
     url = "https://boards-api.eu.greenhouse.io/v1/boards/sifflet/jobs"
-    client = FauxClient({url: {"jobs": [{"title": "ML Engineer", "absolute_url": "https://x"}]}})
-    cible = EntrepriseCible(nom="Sifflet", ats="greenhouse", identifiant="eu:sifflet")
-    assert [o.poste for o in SourceAts(client, cible).collecter()] == ["ML Engineer"]
-    assert client.appels == [(url, {"content": "true"})]
+    client = FakeClient({url: {"jobs": [{"title": "ML Engineer", "absolute_url": "https://x"}]}})
+    target = TargetCompany(name="Sifflet", ats="greenhouse", identifier="eu:sifflet")
+    assert [o.title for o in SourceAts(client, target).collect()] == ["ML Engineer"]
+    assert client.calls == [(url, {"content": "true"})]
 
 
 @pytest.mark.spec("SRC-34")
 def test_teamtailor_site_on_the_company_domain() -> None:
     url = "https://careers.pruna.ai/jobs.rss"
-    flux = "<rss><channel><item><title>ML Engineer</title><link>https://y</link></item></channel></rss>"
-    client = FauxClient({url: flux})
-    cible = EntrepriseCible(nom="Pruna AI", ats="teamtailor", identifiant="careers.pruna.ai")
-    assert [o.poste for o in SourceAts(client, cible).collecter()] == ["ML Engineer"]
-    assert client.appels[0][0] == url
-    plain = EntrepriseCible(nom="Qevlar", ats="teamtailor", identifiant="qevlar")
-    SourceAts(client, plain).collecter()
-    assert client.appels[1][0] == "https://qevlar.teamtailor.com/jobs.rss"
+    feed = "<rss><channel><item><title>ML Engineer</title><link>https://y</link></item></channel></rss>"
+    client = FakeClient({url: feed})
+    target = TargetCompany(name="Pruna AI", ats="teamtailor", identifier="careers.pruna.ai")
+    assert [o.title for o in SourceAts(client, target).collect()] == ["ML Engineer"]
+    assert client.calls[0][0] == url
+    plain = TargetCompany(name="Qevlar", ats="teamtailor", identifier="qevlar")
+    SourceAts(client, plain).collect()
+    assert client.calls[1][0] == "https://qevlar.teamtailor.com/jobs.rss"

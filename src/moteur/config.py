@@ -1,4 +1,4 @@
-"""Chargement et validation de `config.toml`."""
+"""Loading and validation of `config.toml`."""
 
 from __future__ import annotations
 
@@ -9,9 +9,9 @@ from pathlib import Path
 from typing import Any, Literal, cast, get_args
 
 from moteur.company_links import is_web_address
-from moteur.sources.service_public import DOMAINES, EMPLOYEURS, identifiant
+from moteur.sources.service_public import DOMAINS, EMPLOYERS, identifier
 
-TypeAts = Literal[
+AtsType = Literal[
     "greenhouse",
     "lever",
     "ashby",
@@ -26,228 +26,226 @@ TypeAts = Literal[
 ]
 
 
-class ErreurConfig(ValueError):
-    """Le fichier de configuration est absent ou mal formé."""
+class ConfigError(ValueError):
+    """The configuration file is missing or malformed."""
 
 
 @dataclass(frozen=True, slots=True)
-class Criteres:
-    mots_cles: tuple[str, ...]
+class Criteria:
+    keywords: tuple[str, ...]
     exclusions: tuple[str, ...]
-    lieux: tuple[str, ...]
-    salaire_plancher: int
+    locations: tuple[str, ...]
+    salary_floor: int
 
 
 @dataclass(frozen=True, slots=True)
 class FranceTravail:
-    actif: bool
-    recherches: tuple[str, ...]
-    departements: tuple[str, ...]
-    publiee_depuis: int
+    enabled: bool
+    searches: tuple[str, ...]
+    departments: tuple[str, ...]
+    published_since: int
 
 
 @dataclass(frozen=True, slots=True)
-class ServicePublic:
-    """Recherche sur Choisir le service public ; domaines et employeurs en identifiants."""
+class PublicService:
+    """Search on Choisir le service public; domains and employers as identifiers."""
 
-    actif: bool
-    recherches: tuple[str, ...]
-    domaines: tuple[int, ...] = ()
-    employeurs: tuple[int, ...] = ()
+    enabled: bool
+    searches: tuple[str, ...]
+    domains: tuple[int, ...] = ()
+    employers: tuple[int, ...] = ()
     pages_max: int = 3
 
 
 @dataclass(frozen=True, slots=True)
-class EntrepriseCible:
-    nom: str
-    ats: TypeAts = ""
-    identifiant: str = ""
+class TargetCompany:
+    name: str
+    ats: AtsType = ""
+    identifier: str = ""
     site: str = ""
-    spontanee: bool = False
+    unsolicited: bool = False
     linkedin: str = ""
     """LinkedIn page of the company (CONF-09)."""
-    # Mots-clés envoyés à la recherche de l'ATS (Workday) ; vide = valeurs par défaut.
-    recherches: tuple[str, ...] = ()
+    # Keywords sent to the ATS search (Workday); empty = defaults.
+    searches: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
-class Chemins:
-    racine: Path
+class Paths:
+    root: Path
     base: Path
-    echange: Path
+    exchange: Path
 
     @property
     def latex(self) -> Path:
-        return self.racine / "latex"
+        return self.root / "latex"
 
     @property
-    def candidatures(self) -> Path:
-        return self.racine / "Candidatures"
+    def applications(self) -> Path:
+        return self.root / "Candidatures"
 
     @property
-    def entreprises_vues(self) -> Path:
-        return self.racine / "suivi" / "entreprises_vues.csv"
+    def seen_companies(self) -> Path:
+        return self.root / "suivi" / "entreprises_vues.csv"
 
 
 @dataclass(frozen=True, slots=True)
 class Config:
-    profil: str
-    role_spontane: str
-    taille_lot: int
-    modele_notation: str
-    modele_generation: str
-    criteres: Criteres
+    profile: str
+    unsolicited_role: str
+    batch_size: int
+    scoring_model: str
+    generation_model: str
+    criteria: Criteria
     france_travail: FranceTravail
-    service_public: ServicePublic
-    entreprises: tuple[EntrepriseCible, ...]
-    chemins: Chemins
-    modele_preparation: str = "sonnet"
+    service_public: PublicService
+    companies: tuple[TargetCompany, ...]
+    paths: Paths
+    preparation_model: str = "sonnet"
 
 
-def _table(donnees: Mapping[str, Any], cle: str) -> Mapping[str, Any]:
-    valeur = donnees.get(cle, {})
-    if not isinstance(valeur, dict):
-        raise ErreurConfig(f"[{cle}] doit être une table")
-    return valeur
+def _table(data: Mapping[str, Any], key: str) -> Mapping[str, Any]:
+    value = data.get(key, {})
+    if not isinstance(value, dict):
+        raise ConfigError(f"[{key}] must be a table")
+    return value
 
 
-def _chaine(table: Mapping[str, Any], cle: str, defaut: str = "") -> str:
-    valeur = table.get(cle, defaut)
-    if not isinstance(valeur, str):
-        raise ErreurConfig(f"« {cle} » doit être une chaîne")
-    return valeur
+def _string(table: Mapping[str, Any], key: str, default_value: str = "") -> str:
+    value = table.get(key, default_value)
+    if not isinstance(value, str):
+        raise ConfigError(f'"{key}" must be a string')
+    return value
 
 
-def _chaines(table: Mapping[str, Any], cle: str) -> tuple[str, ...]:
-    valeur = table.get(cle, [])
-    if not isinstance(valeur, list) or not all(isinstance(v, str) for v in valeur):
-        raise ErreurConfig(f"« {cle} » doit être une liste de chaînes")
-    return tuple(valeur)
+def _strings(table: Mapping[str, Any], key: str) -> tuple[str, ...]:
+    value = table.get(key, [])
+    if not isinstance(value, list) or not all(isinstance(v, str) for v in value):
+        raise ConfigError(f'"{key}" must be a list of strings')
+    return tuple(value)
 
 
-def _entier(table: Mapping[str, Any], cle: str, defaut: int) -> int:
-    valeur = table.get(cle, defaut)
-    if isinstance(valeur, bool) or not isinstance(valeur, int):
-        raise ErreurConfig(f"« {cle} » doit être un entier")
-    return valeur
+def _integer(table: Mapping[str, Any], key: str, default_value: int) -> int:
+    value = table.get(key, default_value)
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise ConfigError(f'"{key}" must be an integer')
+    return value
 
 
-def _booleen(table: Mapping[str, Any], cle: str, defaut: bool) -> bool:
-    valeur = table.get(cle, defaut)
-    if not isinstance(valeur, bool):
-        raise ErreurConfig(f"« {cle} » doit valoir true ou false")
-    return valeur
+def _boolean(table: Mapping[str, Any], key: str, default_value: bool) -> bool:
+    value = table.get(key, default_value)
+    if not isinstance(value, bool):
+        raise ConfigError(f'"{key}" must be true or false')
+    return value
 
 
-def _identifiants(table: Mapping[str, Any], cle: str, connus: dict[str, int]) -> tuple[int, ...]:
-    """Noms (« DGSE », « Numérique ») ou identifiants numériques du site."""
-    valeurs = table.get(cle, [])
-    if not isinstance(valeurs, list):
-        raise ErreurConfig(f"« {cle} » doit être une liste")
-    resultat: list[int] = []
-    for valeur in valeurs:
-        trouve = (
-            valeur
-            if isinstance(valeur, int) and not isinstance(valeur, bool)
-            else identifiant(valeur, connus)
-            if isinstance(valeur, str)
+def _identifiers(table: Mapping[str, Any], key: str, known: dict[str, int]) -> tuple[int, ...]:
+    """Names ("DGSE", "Numérique") or numeric identifiers of the site."""
+    values = table.get(key, [])
+    if not isinstance(values, list):
+        raise ConfigError(f'"{key}" must be a list')
+    result: list[int] = []
+    for value in values:
+        found_one = (
+            value
+            if isinstance(value, int) and not isinstance(value, bool)
+            else identifier(value, known)
+            if isinstance(value, str)
             else None
         )
-        if trouve is None:
-            noms = ", ".join(connus)
-            raise ErreurConfig(f"« {cle} » : {valeur!r} inconnu (noms reconnus : {noms})")
-        resultat.append(trouve)
-    return tuple(resultat)
+        if found_one is None:
+            names = ", ".join(known)
+            raise ConfigError(f'"{key}": unknown {value!r} (known names: {names})')
+        result.append(found_one)
+    return tuple(result)
 
 
-def _service_public(table: Mapping[str, Any]) -> ServicePublic:
-    pages_max = _entier(table, "pages_max", 3)
+def _public_service(table: Mapping[str, Any]) -> PublicService:
+    pages_max = _integer(table, "pages_max", 3)
     if pages_max < 1:
-        raise ErreurConfig("« pages_max » doit être supérieur ou égal à 1")
-    return ServicePublic(
-        actif=_booleen(table, "actif", False),
-        recherches=_chaines(table, "recherches"),
-        domaines=_identifiants(table, "domaines", DOMAINES),
-        employeurs=_identifiants(table, "employeurs", EMPLOYEURS),
+        raise ConfigError('"pages_max" must be at least 1')
+    return PublicService(
+        enabled=_boolean(table, "actif", False),
+        searches=_strings(table, "recherches"),
+        domains=_identifiers(table, "domaines", DOMAINS),
+        employers=_identifiers(table, "employeurs", EMPLOYERS),
         pages_max=pages_max,
     )
 
 
-def _entreprise(table: Mapping[str, Any]) -> EntrepriseCible:
-    nom = _chaine(table, "nom")
-    if not nom:
-        raise ErreurConfig("Chaque [[entreprises]] doit avoir un nom")
-    ats = _chaine(table, "ats")
-    if ats not in get_args(TypeAts):
-        raise ErreurConfig(f"ats inconnu pour {nom} : {ats}")
-    identifiant = _chaine(table, "identifiant")
-    if ats and not identifiant:
-        raise ErreurConfig(f"{nom} : « identifiant » est requis quand « ats » est renseigné")
-    liens = {cle: _chaine(table, cle).strip() for cle in ("site", "linkedin")}
-    for cle, valeur in liens.items():
-        if valeur and not is_web_address(valeur):
-            raise ErreurConfig(f"{nom} : « {cle} » doit être une adresse http(s)")
-    return EntrepriseCible(
-        nom=nom,
-        ats=cast(TypeAts, ats),
-        identifiant=identifiant,
-        site=liens["site"],
-        linkedin=liens["linkedin"],
-        spontanee=_booleen(table, "spontanee", False),
-        recherches=_chaines(table, "recherches"),
+def _company(table: Mapping[str, Any]) -> TargetCompany:
+    name = _string(table, "nom")
+    if not name:
+        raise ConfigError("Every [[entreprises]] must have a nom")
+    ats = _string(table, "ats")
+    if ats not in get_args(AtsType):
+        raise ConfigError(f"unknown ats for {name}: {ats}")
+    identifier = _string(table, "identifiant")
+    if ats and not identifier:
+        raise ConfigError(f'{name}: "identifiant" is required when "ats" is set')
+    links = {key: _string(table, key).strip() for key in ("site", "linkedin")}
+    for key, value in links.items():
+        if value and not is_web_address(value):
+            raise ConfigError(f'{name}: "{key}" must be an http(s) address')
+    return TargetCompany(
+        name=name,
+        ats=cast(AtsType, ats),
+        identifier=identifier,
+        site=links["site"],
+        linkedin=links["linkedin"],
+        unsolicited=_boolean(table, "spontanee", False),
+        searches=_strings(table, "recherches"),
     )
 
 
-def analyser(donnees: Mapping[str, Any], dossier: Path) -> Config:
-    """Construit la configuration ; les chemins relatifs partent de `dossier`."""
-    criteres = _table(donnees, "criteres")
-    france_travail = _table(donnees, "france_travail")
-    modeles = _table(donnees, "modeles")
-    chemins = _table(donnees, "chemins")
-    entreprises = donnees.get("entreprises", [])
-    if not isinstance(entreprises, list) or not all(isinstance(e, dict) for e in entreprises):
-        raise ErreurConfig("[[entreprises]] doit être une liste de tables")
-    taille_lot = _entier(donnees, "taille_lot", 8)
-    if taille_lot < 1:
-        raise ErreurConfig("« taille_lot » doit être supérieur ou égal à 1")
+def parse(data: Mapping[str, Any], folder: Path) -> Config:
+    """Builds the configuration; relative paths start from `folder`."""
+    criteria = _table(data, "criteres")
+    france_travail = _table(data, "france_travail")
+    models = _table(data, "modeles")
+    paths = _table(data, "chemins")
+    companies = data.get("entreprises", [])
+    if not isinstance(companies, list) or not all(isinstance(e, dict) for e in companies):
+        raise ConfigError("[[entreprises]] must be a list of tables")
+    batch_size = _integer(data, "taille_lot", 8)
+    if batch_size < 1:
+        raise ConfigError('"taille_lot" must be at least 1')
     return Config(
-        profil=_chaine(donnees, "profil").strip(),
-        role_spontane=_chaine(donnees, "role_spontane", "Ingénieur IA"),
-        taille_lot=taille_lot,
-        modele_notation=_chaine(modeles, "notation", "haiku"),
-        modele_generation=_chaine(modeles, "generation", "sonnet"),
-        criteres=Criteres(
-            mots_cles=_chaines(criteres, "mots_cles"),
-            exclusions=_chaines(criteres, "exclusions"),
-            lieux=_chaines(criteres, "lieux"),
-            salaire_plancher=_entier(criteres, "salaire_plancher", 0),
+        profile=_string(data, "profil").strip(),
+        unsolicited_role=_string(data, "role_spontane", "Ingénieur IA"),
+        batch_size=batch_size,
+        scoring_model=_string(models, "notation", "haiku"),
+        generation_model=_string(models, "generation", "sonnet"),
+        criteria=Criteria(
+            keywords=_strings(criteria, "mots_cles"),
+            exclusions=_strings(criteria, "exclusions"),
+            locations=_strings(criteria, "lieux"),
+            salary_floor=_integer(criteria, "salaire_plancher", 0),
         ),
         france_travail=FranceTravail(
-            actif=_booleen(france_travail, "actif", False),
-            recherches=_chaines(france_travail, "recherches"),
-            departements=_chaines(france_travail, "departements"),
-            publiee_depuis=_entier(france_travail, "publiee_depuis", 7),
+            enabled=_boolean(france_travail, "actif", False),
+            searches=_strings(france_travail, "recherches"),
+            departments=_strings(france_travail, "departements"),
+            published_since=_integer(france_travail, "publiee_depuis", 7),
         ),
-        service_public=_service_public(_table(donnees, "service_public")),
-        entreprises=tuple(_entreprise(e) for e in entreprises),
-        chemins=Chemins(
-            racine=(dossier / _chaine(chemins, "racine", "..")).resolve(),
-            base=dossier / "moteur.sqlite3",
-            echange=dossier / "echange",
+        service_public=_public_service(_table(data, "service_public")),
+        companies=tuple(_company(e) for e in companies),
+        paths=Paths(
+            root=(folder / _string(paths, "racine", "..")).resolve(),
+            base=folder / "moteur.sqlite3",
+            exchange=folder / "echange",
         ),
-        modele_preparation=_chaine(modeles, "preparation", "sonnet"),
+        preparation_model=_string(models, "preparation", "sonnet"),
     )
 
 
-def charger(chemin: Path) -> Config:
+def load_config(path: Path) -> Config:
     """Lit `config.toml`."""
     try:
-        with chemin.open("rb") as fichier:
-            donnees = tomllib.load(fichier)
-    except FileNotFoundError as erreur:
-        raise ErreurConfig(
-            f"{chemin} introuvable : copie config.exemple.toml en config.toml"
-        ) from erreur
-    except tomllib.TOMLDecodeError as erreur:
-        raise ErreurConfig(f"{chemin} illisible : {erreur}") from erreur
-    return analyser(donnees, chemin.resolve().parent)
+        with path.open("rb") as file:
+            data = tomllib.load(file)
+    except FileNotFoundError as error:
+        raise ConfigError(f"{path} not found: copy config.exemple.toml to config.toml") from error
+    except tomllib.TOMLDecodeError as error:
+        raise ConfigError(f"{path} unreadable: {error}") from error
+    return parse(data, path.resolve().parent)

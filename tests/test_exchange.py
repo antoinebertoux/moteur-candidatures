@@ -4,22 +4,22 @@ from pathlib import Path
 
 import pytest
 
-from moteur.echange import Decision, ErreurEchange, lire_decisions, pour_la_page, serialiser
-from moteur.modeles import Candidature, Offre
+from moteur.exchange import Decision, ExchangeError, for_the_page, read_decisions, serialise
+from moteur.models import Application, JobAd
 
 
 @pytest.mark.spec("ECH-01")
-def test_format_lu_par_la_page() -> None:
-    notee = Candidature(Offre("Acme", "Data Scientist", url="https://a"), "notee", score=80)
-    generee = Candidature(
-        Offre("Libre", "Lead AI", type="spontanee"),
+def test_format_read_by_the_page() -> None:
+    scored = Application(JobAd("Acme", "Data Scientist", url="https://a"), "notee", score=80)
+    generated = Application(
+        JobAd("Libre", "Lead AI", type="spontanee"),
         "generee",
-        lettre_demandee=True,
+        letter_requested=True,
         cv_ref="Candidatures/Libre/cv.pdf",
-        lettre_ref="Candidatures/Libre/lettre.pdf",
+        letter_ref="Candidatures/Libre/lettre.pdf",
     )
-    premiere, seconde = pour_la_page([notee, generee])
-    assert premiere == {
+    first_one, second_one = for_the_page([scored, generated])
+    assert first_one == {
         "type": "offre",
         "entreprise": "Acme",
         "poste": "Data Scientist",
@@ -31,14 +31,14 @@ def test_format_lu_par_la_page() -> None:
         "lettre_demandee": False,
         "score": 80,
     }
-    assert "id" not in premiere
-    assert "score" not in seconde
-    assert seconde["cv_ref"] == "Candidatures/Libre/cv.pdf"
-    assert json.loads(serialiser([notee])) == [premiere]
+    assert "id" not in first_one
+    assert "score" not in second_one
+    assert second_one["cv_ref"] == "Candidatures/Libre/cv.pdf"
+    assert json.loads(serialise([scored])) == [first_one]
 
 
 @pytest.mark.spec("ECH-10")
-def test_lire_decisions() -> None:
+def test_read_decisions() -> None:
     export = {
         "exporte_le": "2026-11-16",
         "candidatures": [
@@ -48,22 +48,22 @@ def test_lire_decisions() -> None:
             "bruit",
         ],
     }
-    assert lire_decisions(json.dumps(export)) == [
+    assert read_decisions(json.dumps(export)) == [
         Decision("offre_acme_data-scientist", "acceptee", "Plus court"),
         Decision("offre_bolt_ai-engineer", "refusee"),
     ]
-    assert lire_decisions("[]") == []
+    assert read_decisions("[]") == []
 
 
 @pytest.mark.spec("ECH-10")
-@pytest.mark.parametrize("texte", ["pas du json", '{"autre": 1}', '"chaine"'])
-def test_export_illisible(texte: str) -> None:
-    with pytest.raises(ErreurEchange):
-        lire_decisions(texte)
+@pytest.mark.parametrize("text", ["pas du json", '{"autre": 1}', '"chaine"'])
+def test_unreadable_export(text: str) -> None:
+    with pytest.raises(ExchangeError):
+        read_decisions(text)
 
 
 @pytest.mark.spec("ECH-11")
-def test_lire_decisions_avec_l_offre() -> None:
+def test_read_decisions_with_the_ad() -> None:
     export = [
         {
             "id": "offre_axa_ingenieur-ia",
@@ -78,29 +78,31 @@ def test_lire_decisions_avec_l_offre() -> None:
             "lettre_demandee": True,
         }
     ]
-    (decision,) = lire_decisions(json.dumps(export))
-    assert decision.offre == Offre(
+    (decision,) = read_decisions(json.dumps(export))
+    assert decision.ad == JobAd(
         "AXA",
         "Ingénieur IA",
-        lieu="Paris",
+        location="Paris",
         url="https://www.linkedin.com/jobs/view/1/",
         source="linkedin",
         description="Missions : ...",
     )
-    assert decision.lettre_demandee
+    assert decision.letter_requested
 
 
 @pytest.mark.spec("ECH-02")
-def test_date_de_generation_du_cv(tmp_path: Path) -> None:
+def test_cv_generation_date(tmp_path: Path) -> None:
     cv = tmp_path / "Candidatures" / "Libre" / "cv.pdf"
     cv.parent.mkdir(parents=True)
     cv.write_bytes(b"%PDF")
     os.utime(cv, (0, 1_700_000_000.5))
-    generee = Candidature(Offre("Libre", "Lead AI"), "generee", cv_ref="Candidatures/Libre/cv.pdf")
-    (ligne,) = pour_la_page([generee], tmp_path)
-    assert ligne["genere_le"] == "2023-11-14T22:13:20.500Z"
-    (sans_fichier,) = pour_la_page([generee], tmp_path / "ailleurs")
-    assert "genere_le" not in sans_fichier
+    generated = Application(
+        JobAd("Libre", "Lead AI"), "generee", cv_ref="Candidatures/Libre/cv.pdf"
+    )
+    (row,) = for_the_page([generated], tmp_path)
+    assert row["genere_le"] == "2023-11-14T22:13:20.500Z"
+    (without_file,) = for_the_page([generated], tmp_path / "ailleurs")
+    assert "genere_le" not in without_file
 
 
 @pytest.mark.spec("ECH-11", "BASE-11")
@@ -110,7 +112,7 @@ def test_refusal_reason_is_read_from_the_page() -> None:
         {"id": "b", "statut": "refusee", "motif_refus": "inconnu", "motif_detail": "x" * 300},
         {"id": "c", "statut": "refusee"},
     ]
-    a, b, c = lire_decisions(json.dumps(export))
-    assert (a.motif_refus, a.motif_detail) == ("salaire", "45 K€")
-    assert (b.motif_refus, len(b.motif_detail)) == ("autre", 200)
-    assert (c.motif_refus, c.motif_detail) == ("", "")
+    a, b, c = read_decisions(json.dumps(export))
+    assert (a.refusal_reason, a.reason_detail) == ("salaire", "45 K€")
+    assert (b.refusal_reason, len(b.reason_detail)) == ("autre", 200)
+    assert (c.refusal_reason, c.reason_detail) == ("", "")

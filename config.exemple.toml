@@ -1,7 +1,8 @@
-# Copie ce fichier en config.toml (ignoré par Git) puis adapte-le.
+# Copy this file to config.toml (ignored by Git), then adapt it.
+# Keys and values stay as they are (French names); only these comments are in English.
 
-# Envoyé à Claude pour noter les offres. N'y mets rien de confidentiel :
-# le plancher salarial reste dans [criteres] et n'est jamais transmis.
+# Sent to Claude to score the ads. Put nothing confidential here:
+# the salary floor stays in [criteres] and is never sent.
 profil = """
 Décris ici ton profil en quelques lignes : métier, années d'expérience, compétences clés,
 poste visé, types de structures et secteurs préférés ou exclus, lieux acceptés.
@@ -9,10 +10,10 @@ Exemple : Data Scientist, 5 ans d'expérience (NLP, MLOps). Vise un poste senior
 startup ou scale-up, à Lyon ou en télétravail. Pas de cabinet de conseil.
 """
 
-# Intitulé utilisé pour les candidatures spontanées.
+# Title used for unsolicited applications.
 role_spontane = "Data Scientist"
 
-# Nombre d'offres notées par appel à Claude.
+# Number of ads scored per call to Claude.
 taille_lot = 8
 
 [modeles]
@@ -22,56 +23,57 @@ generation = "sonnet"
 preparation = "sonnet"
 
 [criteres]
-# Au moins une expression doit apparaître dans l'intitulé (mots entiers, accents ignorés).
+# At least one expression must appear in the title (whole words, accents ignored).
 mots_cles = [
   "data scientist", "machine learning engineer", "ml engineer", "ingenieur ia",
-  # Intitulés courants dans la fonction publique.
+  # Common titles in the French civil service.
   "science des donnees", "intelligence artificielle",
 ]
-# Aucune de ces expressions ne doit apparaître dans l'intitulé.
+# None of these expressions may appear in the title.
 exclusions = ["stage", "stagiaire", "alternance", "apprenti", "intern", "internship"]
-# Vide = partout. Une offre sans lieu indiqué passe toujours.
+# Empty = anywhere. An ad without a location always passes.
 lieux = ["lyon", "69", "remote", "teletravail"]
-# Rejette une offre seulement si son salaire annuel maximum affiché est inférieur. 0 = pas de filtre.
+# Rejects an ad only if its displayed maximum annual salary is lower. 0 = no filter.
 salaire_plancher = 0
 
 [france_travail]
-# Identifiants gratuits sur https://francetravail.io, à fournir par les variables
-# d'environnement FRANCE_TRAVAIL_ID et FRANCE_TRAVAIL_SECRET.
+# Free credentials on https://francetravail.io, given through the environment
+# variables FRANCE_TRAVAIL_ID and FRANCE_TRAVAIL_SECRET (or the .env file).
 actif = false
 recherches = ["intelligence artificielle", "data scientist", "machine learning"]
 departements = ["69"]
 publiee_depuis = 7
 
 [service_public]
-# Choisir le service public (choisirleservicepublic.gouv.fr) : les postes des ministères,
-# de la DGSE, de la DGSI, de la DINUM, de l'AMIAD, de l'ANSSI (via le SGDSN)… Sans
-# identifiants. Chaque recherche est lancée sur tout le site, puis chez les employeurs
-# ci-dessous (les résultats sont triés par pertinence, 20 par page).
+# Choisir le service public (choisirleservicepublic.gouv.fr): positions in the ministries,
+# DGSE, DGSI, DINUM, AMIAD, ANSSI (through the SGDSN)… No credentials. Each search runs
+# over the whole site, then at the employers below (results sorted by relevance, 20 per
+# page).
 actif = true
 recherches = ["data scientist", "machine learning", "science des données"]
-# Restreint toutes les recherches à ces domaines ; vide = tous.
-# Noms reconnus : Défense, Numérique, Recherche, Renseignement, Sécurité, Environnement…
+# Restricts every search to these domains; empty = all.
+# Known names: Défense, Numérique, Recherche, Renseignement, Sécurité, Environnement…
 domaines = []
-# Noms reconnus (voir EMPLOYEURS dans src/moteur/sources/service_public.py) ou identifiant
-# numérique du site : le nombre après /organisme/ dans l'adresse d'une recherche filtrée.
+# Known names (see EMPLOYERS in src/moteur/sources/service_public.py) or the site's
+# numeric identifier: the number after /organisme/ in the address of a filtered search.
 employeurs = ["DINUM", "INSEE"]
-# Pages lues par recherche (20 offres par page).
+# Pages read per search (20 ads per page).
 pages_max = 3
 
-# Entreprises suivies. « ats » et « identifiant » selon l'outil de la page carrières :
-#   greenhouse, lever, ashby : job-boards.greenhouse.io/<id>, jobs.lever.co/<id>, jobs.ashbyhq.com/<id>
-#   smartrecruiters : jobs.smartrecruiters.com/<id>
-#   recruitee, teamtailor : <id>.recruitee.com, <id>.teamtailor.com
-#   greenhouse hébergé en Europe (job-boards.eu.greenhouse.io/<id>) : identifiant « eu:<id> »
-#   teamtailor sur le domaine de l'entreprise : identifiant = l'hôte (ex. careers.exemple.com)
-#   workday : l'adresse complète (https://<tenant>.wd3.myworkdayjobs.com/<site>),
-#             avec « recherches » = mots-clés (sinon IA, machine learning, data scientist)
-#   radancy : l'adresse du site carrières (ex. careers.moodys.com), lu via son plan du site
-#   workable : apply.workable.com/<id>
-#   welcomekit : l'adresse de la page carrières hébergée par Welcome to the Jungle
-#                (ex. jobs.zama.org) ; le site welcometothejungle.com lui-même bloque les robots
-# « spontanee = true » propose une candidature spontanée quand aucune offre ne correspond.
+# Tracked companies. "ats" and "identifiant" depend on the career page's tool
+# (`uv run moteur detect <address>` finds them):
+#   greenhouse, lever, ashby: job-boards.greenhouse.io/<id>, jobs.lever.co/<id>, jobs.ashbyhq.com/<id>
+#   smartrecruiters: jobs.smartrecruiters.com/<id>
+#   recruitee, teamtailor: <id>.recruitee.com, <id>.teamtailor.com
+#   greenhouse hosted in Europe (job-boards.eu.greenhouse.io/<id>): identifiant "eu:<id>"
+#   teamtailor on the company's domain: identifiant = the host (e.g. careers.exemple.com)
+#   workday: the full address (https://<tenant>.wd3.myworkdayjobs.com/<site>),
+#            with "recherches" = keywords (otherwise IA, machine learning, data scientist)
+#   radancy: the career site's address (e.g. careers.moodys.com), read through its sitemap
+#   workable: apply.workable.com/<id>
+#   welcomekit: the address of the career page hosted by Welcome to the Jungle
+#               (e.g. jobs.zama.org); welcometothejungle.com itself blocks robots
+# "spontanee = true" proposes an unsolicited application when no ad matches.
 #
 # [[entreprises]]
 # nom = "Exemple"

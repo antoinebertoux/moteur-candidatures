@@ -1,4 +1,4 @@
-"""Contrats communs aux sources et client HTTP."""
+"""Contracts shared by the sources, and the HTTP client."""
 
 from __future__ import annotations
 
@@ -11,175 +11,175 @@ from typing import Any, Protocol, TypeVar, runtime_checkable
 
 import httpx
 
-from moteur.modeles import Offre
+from moteur.models import JobAd
 
-_BALISE = re.compile(r"<[^>]+>")
-_ESPACES = re.compile(r"\s+")
+_TAG = re.compile(r"<[^>]+>")
+_SPACES = re.compile(r"\s+")
 
-# « Trop de requêtes » (429) : nouvelles tentatives, attente par défaut et maximale.
-ESSAIS_SUR_429 = 2
-ATTENTE_429 = 5.0
-ATTENTE_429_MAX = 30.0
-# Erreur du serveur (5xx) : une nouvelle tentative, après cette attente.
-ATTENTE_5XX = 2.0
-# Recherches d'une même source lancées en même temps (elles visent le même site).
-RECHERCHES_EN_PARALLELE = 4
+# "Too many requests" (429): retries, default and maximum wait.
+TRIES_ON_429 = 2
+WAIT_429 = 5.0
+WAIT_429_MAX = 30.0
+# Server error (5xx): one retry, after this wait.
+WAIT_5XX = 2.0
+# Searches of one source run at the same time (they target the same site).
+SEARCHES_IN_PARALLEL = 4
 
 _E = TypeVar("_E")
 _R = TypeVar("_R")
 
 
-def en_parallele(fonction: Callable[[_E], _R], elements: Iterable[_E], maximum: int) -> list[_R]:
-    """Applique `fonction` à chaque élément, `maximum` à la fois ; garde l'ordre des éléments."""
-    with ThreadPoolExecutor(max_workers=maximum) as executeur:
-        return list(executeur.map(fonction, elements))
+def in_parallel(function: Callable[[_E], _R], elements: Iterable[_E], maximum: int) -> list[_R]:
+    """Applies `function` to each item, `maximum` at a time; keeps the order of the items."""
+    with ThreadPoolExecutor(max_workers=maximum) as runner:
+        return list(runner.map(function, elements))
 
 
-class ErreurSource(Exception):
-    """Une source n'a pas pu être interrogée ; les autres continuent."""
+class SourceError(Exception):
+    """A source could not be queried; the others carry on."""
 
 
-class ClientHttp(Protocol):
+class HttpClient(Protocol):
     def get_json(
         self,
         url: str,
         *,
         params: Mapping[str, str] | None = None,
-        entetes: Mapping[str, str] | None = None,
+        headers: Mapping[str, str] | None = None,
     ) -> Any: ...
 
-    def post_formulaire(
-        self, url: str, *, donnees: Mapping[str, str], params: Mapping[str, str] | None = None
+    def post_form(
+        self, url: str, *, data: Mapping[str, str], params: Mapping[str, str] | None = None
     ) -> Any: ...
 
     def post_json(
-        self, url: str, *, corps: Mapping[str, Any], entetes: Mapping[str, str] | None = None
+        self, url: str, *, body: Mapping[str, Any], headers: Mapping[str, str] | None = None
     ) -> Any: ...
 
-    def get_texte(self, url: str, *, params: Mapping[str, str] | None = None) -> str: ...
+    def get_text(self, url: str, *, params: Mapping[str, str] | None = None) -> str: ...
 
 
 class Source(Protocol):
     @property
-    def nom(self) -> str: ...
+    def name(self) -> str: ...
 
-    def collecter(self) -> list[Offre]: ...
+    def collect(self) -> list[JobAd]: ...
 
 
 @runtime_checkable
-class SourceDetaillee(Protocol):
-    """Source dont les résultats n'ont pas le texte de l'offre : il faut ouvrir sa page."""
+class DetailedSource(Protocol):
+    """Source whose results lack the ad text: its page has to be opened."""
 
     @property
-    def nom(self) -> str: ...
+    def name(self) -> str: ...
 
-    def detailler(self, offre: Offre) -> Offre: ...
+    def add_details(self, ad: JobAd) -> JobAd: ...
 
 
-class ClientHttpx:
-    """Client HTTP réel. Une réponse vide (204) donne `None`."""
+class HttpxClient:
+    """Real HTTP client. An empty response (204) gives `None`."""
 
     def __init__(
         self,
-        delai: float = 20.0,
+        delay: float = 20.0,
         *,
         transport: httpx.BaseTransport | None = None,
         pause: Callable[[float], None] = time.sleep,
     ) -> None:
         self._client = httpx.Client(
-            timeout=delai,
+            timeout=delay,
             follow_redirects=True,
             headers={"User-Agent": "moteur-candidatures/0.1 (usage personnel)"},
             transport=transport,
         )
         self._pause = pause
 
-    def _envoyer(self, appel: Callable[[], httpx.Response]) -> httpx.Response:
-        """Envoie la requête ; réessaie une fois sur une erreur du serveur, et sur un 429
-        après le délai demandé."""
-        reponse = appel()
-        if reponse.is_server_error:
-            self._pause(ATTENTE_5XX)
-            reponse = appel()
-        for _ in range(ESSAIS_SUR_429):
-            if reponse.status_code != httpx.codes.TOO_MANY_REQUESTS:
+    def _send(self, call: Callable[[], httpx.Response]) -> httpx.Response:
+        """Sends the request; retries once on a server error, and on a 429 after the
+        requested delay."""
+        answer = call()
+        if answer.is_server_error:
+            self._pause(WAIT_5XX)
+            answer = call()
+        for _ in range(TRIES_ON_429):
+            if answer.status_code != httpx.codes.TOO_MANY_REQUESTS:
                 break
-            self._pause(_attente(reponse.headers.get("Retry-After")))
-            reponse = appel()
-        return reponse
+            self._pause(_wait(answer.headers.get("Retry-After")))
+            answer = call()
+        return answer
 
     def get_json(
         self,
         url: str,
         *,
         params: Mapping[str, str] | None = None,
-        entetes: Mapping[str, str] | None = None,
+        headers: Mapping[str, str] | None = None,
     ) -> Any:
-        return self._json(lambda: self._client.get(url, params=params, headers=entetes), url)
+        return self._json(lambda: self._client.get(url, params=params, headers=headers), url)
 
-    def post_formulaire(
-        self, url: str, *, donnees: Mapping[str, str], params: Mapping[str, str] | None = None
+    def post_form(
+        self, url: str, *, data: Mapping[str, str], params: Mapping[str, str] | None = None
     ) -> Any:
-        return self._json(lambda: self._client.post(url, data=donnees, params=params), url)
+        return self._json(lambda: self._client.post(url, data=data, params=params), url)
 
     def post_json(
-        self, url: str, *, corps: Mapping[str, Any], entetes: Mapping[str, str] | None = None
+        self, url: str, *, body: Mapping[str, Any], headers: Mapping[str, str] | None = None
     ) -> Any:
-        return self._json(lambda: self._client.post(url, json=dict(corps), headers=entetes), url)
+        return self._json(lambda: self._client.post(url, json=dict(body), headers=headers), url)
 
-    def get_texte(self, url: str, *, params: Mapping[str, str] | None = None) -> str:
+    def get_text(self, url: str, *, params: Mapping[str, str] | None = None) -> str:
         try:
-            reponse = self._envoyer(lambda: self._client.get(url, params=params))
-            reponse.raise_for_status()
-        except httpx.HTTPStatusError as erreur:
-            raise ErreurSource(f"{url} : HTTP {erreur.response.status_code}") from erreur
-        except httpx.HTTPError as erreur:
-            raise ErreurSource(f"{url} : {erreur}") from erreur
-        return reponse.text
+            answer = self._send(lambda: self._client.get(url, params=params))
+            answer.raise_for_status()
+        except httpx.HTTPStatusError as error:
+            raise SourceError(f"{url}: HTTP {error.response.status_code}") from error
+        except httpx.HTTPError as error:
+            raise SourceError(f"{url}: {error}") from error
+        return answer.text
 
-    def fermer(self) -> None:
+    def close(self) -> None:
         self._client.close()
 
-    def _json(self, appel: Callable[[], httpx.Response], url: str) -> Any:
+    def _json(self, call: Callable[[], httpx.Response], url: str) -> Any:
         try:
-            reponse = self._envoyer(appel)
-            reponse.raise_for_status()
-            if reponse.status_code == httpx.codes.NO_CONTENT or not reponse.content:
+            answer = self._send(call)
+            answer.raise_for_status()
+            if answer.status_code == httpx.codes.NO_CONTENT or not answer.content:
                 return None
-            return reponse.json()
-        except httpx.HTTPStatusError as erreur:
-            # Le corps explique souvent l'erreur (ex. OAuth : invalid_scope, invalid_client).
-            detail = " ".join(erreur.response.text.split())[:300]
-            message = f"{url} : HTTP {erreur.response.status_code}"
-            raise ErreurSource(f"{message} : {detail}" if detail else message) from erreur
-        except (httpx.HTTPError, ValueError) as erreur:
-            raise ErreurSource(f"{url} : {erreur}") from erreur
+            return answer.json()
+        except httpx.HTTPStatusError as error:
+            # The body often explains the error (e.g. OAuth: invalid_scope, invalid_client).
+            detail = " ".join(error.response.text.split())[:300]
+            message = f"{url}: HTTP {error.response.status_code}"
+            raise SourceError(f"{message}: {detail}" if detail else message) from error
+        except (httpx.HTTPError, ValueError) as error:
+            raise SourceError(f"{url}: {error}") from error
 
 
-def _attente(valeur: str | None) -> float:
-    """Délai d'un en-tête Retry-After en secondes, borné ; 5 s s'il est absent ou illisible."""
+def _wait(value: str | None) -> float:
+    """Delay of a Retry-After header in seconds, bounded; 5 s if missing or unreadable."""
     try:
-        return min(max(float(valeur or ""), 0.0), ATTENTE_429_MAX)
+        return min(max(float(value or ""), 0.0), WAIT_429_MAX)
     except ValueError:
-        return ATTENTE_429
+        return WAIT_429
 
 
-def texte_brut(contenu: str) -> str:
-    """Retire les balises HTML (éventuellement échappées) et resserre les espaces."""
-    sans_balises = _BALISE.sub(" ", html.unescape(contenu))
-    return _ESPACES.sub(" ", html.unescape(sans_balises)).strip()
+def plain_text(contents: str) -> str:
+    """Removes HTML tags (possibly escaped) and collapses spaces."""
+    without_tags = _TAG.sub(" ", html.unescape(contents))
+    return _SPACES.sub(" ", html.unescape(without_tags)).strip()
 
 
-def chaine(valeur: object) -> str:
-    """Convertit une valeur JSON incertaine en chaîne propre."""
-    return valeur.strip() if isinstance(valeur, str) else ""
+def string(value: object) -> str:
+    """Turns an uncertain JSON value into a clean string."""
+    return value.strip() if isinstance(value, str) else ""
 
 
-def table(valeur: object) -> dict[str, Any]:
-    """Renvoie la valeur si c'est un objet JSON, sinon un objet vide."""
-    return valeur if isinstance(valeur, dict) else {}
+def table(value: object) -> dict[str, Any]:
+    """Returns the value if it is a JSON object, otherwise an empty object."""
+    return value if isinstance(value, dict) else {}
 
 
-def liste(valeur: object) -> list[Any]:
-    """Renvoie la valeur si c'est un tableau JSON, sinon un tableau vide."""
-    return valeur if isinstance(valeur, list) else []
+def items(value: object) -> list[Any]:
+    """Returns the value if it is a JSON array, otherwise an empty array."""
+    return value if isinstance(value, list) else []

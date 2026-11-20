@@ -1,9 +1,8 @@
-"""Pages carrières Workday des grands groupes.
+"""Workday career pages of large companies.
 
-L'identifiant est l'adresse de la page carrières telle qu'elle s'affiche dans le
-navigateur, par exemple « https://exemple.wd3.myworkdayjobs.com/fr-FR/Careers ».
-Workday ne renvoie pas toutes les offres d'un coup : on interroge sa recherche
-avec quelques mots-clés, page par page.
+The identifier is the address of the career page as shown in the browser, for example
+"https://exemple.wd3.myworkdayjobs.com/fr-FR/Careers". Workday does not return every ad
+at once: its search is queried with a few keywords, page by page.
 """
 
 from __future__ import annotations
@@ -13,121 +12,121 @@ from collections.abc import Sequence
 from dataclasses import dataclass, replace
 from urllib.parse import urlsplit
 
-from moteur.config import EntrepriseCible
-from moteur.modeles import Offre
+from moteur.config import TargetCompany
+from moteur.models import JobAd
 from moteur.sources.base import (
-    RECHERCHES_EN_PARALLELE,
-    ClientHttp,
-    chaine,
-    en_parallele,
-    liste,
+    SEARCHES_IN_PARALLEL,
+    HttpClient,
+    in_parallel,
+    items,
+    plain_text,
+    string,
     table,
-    texte_brut,
 )
 
-RECHERCHES_PAR_DEFAUT = ("machine learning", "intelligence artificielle", "data scientist")
-TAILLE_PAGE = 20
+DEFAULT_SEARCHES = ("machine learning", "intelligence artificielle", "data scientist")
+PAGE_SIZE = 20
 PAGES_MAX = 5
-_LANGUE = re.compile(r"^[a-z]{2}-[A-Z]{2}$")
+_LANGUAGE = re.compile(r"^[a-z]{2}-[A-Z]{2}$")
 
 
 @dataclass(frozen=True, slots=True)
-class SiteWorkday:
-    hote: str
+class WorkdaySite:
+    host: str
     tenant: str
     site: str
 
     @property
     def api(self) -> str:
-        return f"https://{self.hote}/wday/cxs/{self.tenant}/{self.site}/jobs"
+        return f"https://{self.host}/wday/cxs/{self.tenant}/{self.site}/jobs"
 
-    def url_offre(self, chemin: str) -> str:
-        return f"https://{self.hote}/{self.site}{chemin}" if chemin else ""
+    def posting_url(self, path: str) -> str:
+        return f"https://{self.host}/{self.site}{path}" if path else ""
 
     def detail_url(self, ad_url: str) -> str:
         """Public detail address of an ad, from its link (empty if the link is foreign)."""
-        prefix = f"https://{self.hote}/{self.site}/"
+        prefix = f"https://{self.host}/{self.site}/"
         if not ad_url.startswith(prefix):
             return ""
-        return f"https://{self.hote}/wday/cxs/{self.tenant}/{self.site}/{ad_url[len(prefix) :]}"
+        return f"https://{self.host}/wday/cxs/{self.tenant}/{self.site}/{ad_url[len(prefix) :]}"
 
 
-def decouper(adresse: str) -> SiteWorkday:
-    """Extrait hôte, tenant et site d'une adresse de page carrières Workday."""
-    morceaux = urlsplit(adresse if "://" in adresse else f"https://{adresse}")
-    hote = morceaux.netloc
-    segments = [s for s in morceaux.path.split("/") if s and not _LANGUE.match(s)]
-    if not hote.endswith("myworkdayjobs.com") or not segments:
-        raise ValueError(f"adresse Workday inattendue : {adresse}")
-    return SiteWorkday(hote=hote, tenant=hote.split(".")[0], site=segments[0])
+def split_address(address: str) -> WorkdaySite:
+    """Extracts host, tenant and site from a Workday career page address."""
+    pieces = urlsplit(address if "://" in address else f"https://{address}")
+    host = pieces.netloc
+    segments = [s for s in pieces.path.split("/") if s and not _LANGUAGE.match(s)]
+    if not host.endswith("myworkdayjobs.com") or not segments:
+        raise ValueError(f"unexpected Workday address: {address}")
+    return WorkdaySite(host=host, tenant=host.split(".")[0], site=segments[0])
 
 
 def workday_description(response: object) -> str:
     """Plain text of an ad from its detail response (empty if unreadable)."""
-    return texte_brut(chaine(table(table(response).get("jobPostingInfo")).get("jobDescription")))
+    return plain_text(string(table(table(response).get("jobPostingInfo")).get("jobDescription")))
 
 
-def offres_workday(entreprise: str, site: SiteWorkday, reponse: object) -> list[Offre]:
+def ads_workday(company: str, site: WorkdaySite, answer: object) -> list[JobAd]:
     return [
-        Offre(
-            entreprise=entreprise,
-            poste=chaine(poste.get("title")),
-            lieu=chaine(poste.get("locationsText")),
-            url=site.url_offre(chaine(poste.get("externalPath"))),
+        JobAd(
+            company=company,
+            title=string(title.get("title")),
+            location=string(title.get("locationsText")),
+            url=site.posting_url(string(title.get("externalPath"))),
             source="workday",
         )
-        for poste in map(table, liste(table(reponse).get("jobPostings")))
-        if chaine(poste.get("title"))
+        for title in map(table, items(table(answer).get("jobPostings")))
+        if string(title.get("title"))
     ]
 
 
 class SourceWorkday:
-    def __init__(self, client: ClientHttp, entreprise: EntrepriseCible) -> None:
+    def __init__(self, client: HttpClient, company: TargetCompany) -> None:
         self._client = client
-        self._entreprise = entreprise
-        self._site = decouper(entreprise.identifiant)
-        self._recherches: Sequence[str] = entreprise.recherches or RECHERCHES_PAR_DEFAUT
+        self._company = company
+        self._site = split_address(company.identifier)
+        self._searches: Sequence[str] = company.searches or DEFAULT_SEARCHES
 
     @property
-    def nom(self) -> str:
-        return f"workday:{self._entreprise.nom}"
+    def name(self) -> str:
+        return f"workday:{self._company.name}"
 
-    def _rechercher(self, recherche: str) -> list[Offre]:
-        """Les offres d'un mot-clé, page après page."""
-        trouvees: list[Offre] = []
+    def _search(self, search: str) -> list[JobAd]:
+        """The ads of one keyword, page after page."""
+        found_ones: list[JobAd] = []
         total = 0
         for page in range(PAGES_MAX):
-            reponse = self._client.post_json(
+            answer = self._client.post_json(
                 self._site.api,
-                corps={
+                body={
                     "appliedFacets": {},
-                    "limit": TAILLE_PAGE,
-                    "offset": page * TAILLE_PAGE,
-                    "searchText": recherche,
+                    "limit": PAGE_SIZE,
+                    "offset": page * PAGE_SIZE,
+                    "searchText": search,
                 },
-                entetes={"Accept": "application/json"},
+                headers={"Accept": "application/json"},
             )
-            offres = offres_workday(self._entreprise.nom, self._site, reponse)
-            trouvees.extend(offres)
-            # Workday n'indique le total que sur la première page.
-            annonce = table(reponse).get("total")
-            if isinstance(annonce, int) and annonce > 0:
-                total = annonce
-            if len(offres) < TAILLE_PAGE or (total and (page + 1) * TAILLE_PAGE >= total):
+            ads = ads_workday(self._company.name, self._site, answer)
+            found_ones.extend(ads)
+            # Workday only gives the total on the first page.
+            posting = table(answer).get("total")
+            if isinstance(posting, int) and posting > 0:
+                total = posting
+            if len(ads) < PAGE_SIZE or (total and (page + 1) * PAGE_SIZE >= total):
                 break
-        return trouvees
+        return found_ones
 
-    def detailler(self, offre: Offre) -> Offre:
+    def add_details(self, ad: JobAd) -> JobAd:
         """The ad with the text of its detail page; search results give none (SRC-42)."""
-        url = self._site.detail_url(offre.url)
+        url = self._site.detail_url(ad.url)
         if not url:
-            return offre
-        response = self._client.get_json(url, entetes={"Accept": "application/json"})
-        return replace(offre, description=workday_description(response))
+            return ad
+        response = self._client.get_json(url, headers={"Accept": "application/json"})
+        return replace(ad, description=workday_description(response))
 
-    def collecter(self) -> list[Offre]:
-        vues: dict[str, Offre] = {}
-        for offres in en_parallele(self._rechercher, self._recherches, RECHERCHES_EN_PARALLELE):
-            for offre in offres:
-                vues.setdefault(offre.url or offre.poste, offre)
-        return list(vues.values())
+    def collect(self) -> list[JobAd]:
+        seen: dict[str, JobAd] = {}
+        for ads in in_parallel(self._search, self._searches, SEARCHES_IN_PARALLEL):
+            for ad in ads:
+                seen.setdefault(ad.url or ad.title, ad)
+        return list(seen.values())

@@ -3,8 +3,8 @@ from collections.abc import Mapping
 import pytest
 
 from moteur.detection import detect, find_tool, report
-from moteur.sources.base import ErreurSource
-from tests.conftest import FauxClient
+from moteur.sources.base import SourceError
+from tests.conftest import FakeClient
 
 
 @pytest.mark.spec("CLI-04")
@@ -31,7 +31,7 @@ from tests.conftest import FauxClient
 )
 def test_address_gives_tool_and_identifier(address: str, expected: tuple[str, str]) -> None:
     assert find_tool(address) == expected
-    detection = detect(address, FauxClient({}))
+    detection = detect(address, FakeClient({}))
     assert (detection.ats, detection.identifier) == expected
 
 
@@ -42,28 +42,28 @@ def test_company_page_is_read_for_the_first_tool_link() -> None:
         '<a href="https://jobs.ashbyhq.com/acme-ai">Postuler</a>'
         '<a href="https://jobs.lever.co/autre">x</a>'
     )
-    client = FauxClient({"https://acme.ai/careers": page})
+    client = FakeClient({"https://acme.ai/careers": page})
     detection = detect("acme.ai/careers", client)
     assert (detection.ats, detection.identifier) == ("ashby", "acme-ai")
 
 
 @pytest.mark.spec("CLI-05")
 def test_unrecognised_or_unreachable_page_is_reported_and_others_carry_on() -> None:
-    class Failing(FauxClient):
-        def get_texte(self, url: str, *, params: Mapping[str, str] | None = None) -> str:
+    class Failing(FakeClient):
+        def get_text(self, url: str, *, params: Mapping[str, str] | None = None) -> str:
             if "panne" in url:
-                raise ErreurSource(f"{url} : HTTP 503")
+                raise SourceError(f"{url}: HTTP 503")
             return "<p>Pas d'outil</p>"
 
     text = report(["https://panne.fr", "https://rien.fr", "jobs.ashbyhq.com/dust"], Failing({}))
-    assert "# https://panne.fr : https://panne.fr : HTTP 503" in text
-    assert "# https://rien.fr : outil non reconnu" in text
+    assert "# https://panne.fr: https://panne.fr: HTTP 503" in text
+    assert "# https://rien.fr: unrecognised tool" in text
     assert 'identifiant = "dust"' in text
 
 
 @pytest.mark.spec("CLI-06")
 def test_block_to_paste() -> None:
-    client = FauxClient({})
+    client = FakeClient({})
     assert report(["https://jobs.ashbyhq.com/comand-ai"], client, "Comand AI") == (
         "[[entreprises]]\n"
         'nom = "Comand AI"\n'
@@ -73,4 +73,4 @@ def test_block_to_paste() -> None:
     )
     two = report(["https://jobs.ashbyhq.com/alta-ares", "https://jobs.lever.co/x"], client, "N")
     assert 'nom = "Alta Ares"' in two  # --nom only applies to a single address
-    assert client.appels == []  # known addresses need no download
+    assert client.calls == []  # known addresses need no download

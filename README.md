@@ -11,7 +11,7 @@ It works together with two other pieces, all kept in this repository:
 | Piece | Where it runs | Folder |
 | --- | --- | --- |
 | **Engine B** — collection, scoring, CV and letter generation | on the PC | [`src/moteur/`](src/moteur/) |
-| **Tracking page** "Suivi des candidatures" — where every application is sorted and followed | claude.ai artifact with its own database | [`page-suivi/`](page-suivi/README.md) |
+| **Tracking page** "Application tracker" (English or French, flag menu) — where every application is sorted and followed | claude.ai artifact with its own database | [`page-suivi/`](page-suivi/README.md) |
 | **Engine A** — Claude scheduled tasks that search the web and the mailbox | in Claude | [`taches/`](taches/README.md) |
 
 ## How it fits together
@@ -26,13 +26,13 @@ flowchart LR
 
     subgraph B["Engine B (this repo, on the PC)"]
         direction TB
-        COL["collecter<br/>filter: keywords, places, salary<br/>(0 token)"]
+        COL["collect<br/>filter: keywords, places, salary<br/>(0 token)"]
         DB[("moteur.sqlite3")]
-        NOT["noter<br/>score + summary<br/>(Claude Haiku)"]
-        GEN["generer / lettre<br/>LaTeX CV + letter<br/>(Claude Sonnet)"]
-        PREP["preparer<br/>interview sheet, web search<br/>(Claude Sonnet)"]
+        NOT["score<br/>score + summary<br/>(Claude Haiku)"]
+        GEN["generate / letter<br/>LaTeX CV + letter<br/>(Claude Sonnet)"]
+        PREP["prepare<br/>interview sheet, web search<br/>(Claude Sonnet)"]
         MCP["moteur mcp<br/>MCP server"]
-        SRV["servir<br/>127.0.0.1:8765"]
+        SRV["serve<br/>127.0.0.1:8765"]
         COL --> DB --> NOT --> DB
         DB --> GEN
         DB --> PREP
@@ -68,18 +68,18 @@ sequenceDiagram
     participant P as Tracking page
     participant U as User
 
-    E->>E: collecter: query sources, filter (0 token)
-    E->>C: noter: score new ads in batches
+    E->>E: collect: query sources, filter (0 token)
+    E->>C: score: score new ads in batches
     C-->>E: score + summary
     E->>P: propositions (via moteur mcp, every minute)
     U->>P: yes / no (with refusal reason), letter toggle
     P->>E: decisions (a few seconds after each change)
-    E->>C: generer: CV + letter for accepted ads
+    E->>C: generate: CV + letter for accepted ads
     C-->>E: LaTeX, compiled to PDF
-    E->>P: ready folders, PDFs served by moteur servir
-    U->>P: "Préparer l'entretien" once an interview is set
+    E->>P: ready folders, PDFs served by moteur serve
+    U->>P: "Prepare the interview" once an interview is set
     P->>E: request recorded
-    E->>C: preparer: research the company, write the sheet
+    E->>C: prepare: research the company, write the sheet
     E->>P: preparation sheet
 ```
 
@@ -126,26 +126,26 @@ suivi/entreprises_vues.csv          # optional: columns "entreprise;…;statut"
 ## Usage
 
 ```bash
-uv run moteur quotidien          # collect + score + company links + export
-uv run moteur generer            # CV and letter in ../Candidatures/<Company - Role>/
-uv run moteur servir             # keep running: the page's CV / Letter buttons open your PDFs
-uv run moteur preparer           # pending interview preparation sheets
+uv run moteur daily              # collect + score + company links + export
+uv run moteur generate           # CV and letter in ../Candidatures/<Company - Role>/
+uv run moteur serve              # keep running: the page's CV / Letter buttons open your PDFs
+uv run moteur prepare            # pending interview preparation sheets
 ```
 
 | Command | What it does | Claude |
 | --- | --- | --- |
-| `collecter` | queries the sources and filters | no |
-| `noter` | scores the new ads | Haiku |
-| `liens` | looks up the missing company website and LinkedIn page (web search) | Haiku |
-| `exporter` | writes the file to import into the page | no |
-| `quotidien` | `collecter`, `noter`, `liens`, then `exporter` | Haiku |
+| `collect` | queries the sources and filters | no |
+| `score` | scores the new ads | Haiku |
+| `links` | looks up the missing company website and LinkedIn page (web search) | Haiku |
+| `export` | writes the file to import into the page | no |
+| `daily` | `collect`, `score`, `links`, then `export` | Haiku |
 | `decisions <file>` | reads the page's export | no |
-| `generer` | prepares CV and letter for accepted ads | Sonnet |
-| `lettre [ids…]` | adds the missing letter to folders whose CV already exists | Sonnet |
-| `preparer [ids…]` | interview preparation sheets (all pending requests by default) | Sonnet |
+| `generate` | prepares CV and letter for accepted ads | Sonnet |
+| `letter [ids…]` | adds the missing letter to folders whose CV already exists | Sonnet |
+| `prepare [ids…]` | interview preparation sheets (all pending requests by default) | Sonnet |
 | `mcp` | direct link with the page, started by the Claude desktop app | no |
-| `detecter <urls…>` | recognises the recruiting tool behind career pages | no |
-| `servir [--port]` | serves CVs and letters for the page's links | no |
+| `detect <urls…>` | recognises the recruiting tool behind career pages | no |
+| `serve [--port]` | serves CVs and letters for the page's links | no |
 
 Add `-v` to any command for per-source details. The Claude models are the defaults and
 can be changed in `[modeles]` of `config.toml`.
@@ -174,8 +174,8 @@ The "Moteur B" chip in the page header shows whether the link is up.
 ### Interview preparation
 
 On an application marked *Postulée* whose follow-up is *Entretien*, the page's
-"Préparer l'entretien" button records a request. `moteur mcp` then starts
-`moteur preparer` in the background, which writes `preparation-entretien.md` in the
+"Prepare the interview" button records a request. `moteur mcp` then starts
+`moteur prepare` in the background, which writes `preparation-entretien.md` in the
 application's folder and sends the sheet back to the page
 ([`specs/interview-prep.md`](specs/interview-prep.md)). The output of the last
 background run is in `echange/preparation.log`.
@@ -185,18 +185,18 @@ background run is in `echange/preparation.log`.
 Elsewhere (phone, browser, app closed), exchange by hand:
 
 ```bash
-uv run moteur exporter                                         # then import echange/pour-la-page.json in the page
+uv run moteur export                                           # then import echange/pour-la-page.json in the page
 ```
 
 ```bash
-uv run moteur decisions ~/Downloads/candidatures-export.json   # after "Exporter" in the page
+uv run moteur decisions ~/Downloads/candidatures-export.json   # after "Export" in the page
 ```
 
 ### Why a local server and an MCP link?
 
 - The page cannot `fetch()` the PC: the artifact platform blocks every call to another
   host, `127.0.0.1` included. Only the MCP server gets through, via the desktop app.
-- The page lives on claude.ai, where the browser blocks `file://` links. `servir`
+- The page lives on claude.ai, where the browser blocks `file://` links. `serve`
   therefore exposes **only** `../Candidatures/`, read-only, on `http://127.0.0.1:8765`
   (`--port` to change it; the page assumes 8765).
 
@@ -233,20 +233,20 @@ checked by a test that cites it (`@pytest.mark.spec("FILT-03")`);
 | Module | Role | Claude |
 | --- | --- | --- |
 | `sources/` | France Travail, Choisir le service public, ATS career pages (`ats.py`), Workday, Radancy, Welcome Kit | no |
-| `filtre.py` | keywords, exclusions, places, salary | no |
-| `collecte.py` | gathers the sources, suggests unsolicited applications | no |
-| `base_locale.py` | SQLite: seen, scored, to generate | no |
-| `notation.py` | score and summary, in batches | Haiku |
+| `filtering.py` | keywords, exclusions, places, salary | no |
+| `collection.py` | gathers the sources, suggests unsolicited applications | no |
+| `local_db.py` | SQLite: seen, scored, to generate | no |
+| `scoring.py` | score and summary, in batches | Haiku |
 | `refusal.py` | refusal reasons shared by the page, the database and scoring | no |
 | `generation.py` | LaTeX CV and letter, compilation | Sonnet |
-| `lettre.py` | letter alone, for a folder whose CV exists | Sonnet |
-| `preparation.py` | interview preparation sheet, with web search | Sonnet |
+| `cover_letter.py` | letter alone, for a folder whose CV exists | Sonnet |
+| `interview_prep.py` | interview preparation sheet, with web search | Sonnet |
 | `claude_cli.py` | calls to `claude -p` | — |
-| `echange.py` | files exchanged with the tracking page | no |
+| `exchange.py` | files exchanged with the tracking page | no |
 | `decisions.py` | applies the page's decisions (file or direct link) | no |
-| `liaison.py` | MCP server `moteur mcp`, direct link with the page | no |
-| `serveur.py` | serves the PDFs of `Candidatures/` to the page | no |
-| `detection.py` | `moteur detecter`: finds a company's recruiting tool | no |
+| `mcp_link.py` | MCP server `moteur mcp`, direct link with the page | no |
+| `pdf_server.py` | serves the PDFs of `Candidatures/` to the page | no |
+| `detection.py` | `moteur detect`: finds a company's recruiting tool | no |
 
 Application identifiers (`Offre.cle`) are computed exactly as in the tracking page
 ([`specs/identifiers.md`](specs/identifiers.md)): never change `normaliser` on one side

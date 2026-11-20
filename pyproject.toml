@@ -1,7 +1,7 @@
 [project]
 name = "moteur-candidatures"
 version = "0.1.0"
-description = "Moteur local : collecte, tri et préparation de candidatures, avec Claude appelé seulement pour noter et rédiger."
+description = "Local engine: collects, sorts and prepares job applications, calling Claude only to score and write."
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
@@ -29,7 +29,7 @@ src = ["src", "tests"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "SIM", "C4", "PTH", "RET", "RUF"]
-ignore = ["RUF001", "RUF002", "RUF003"]  # apostrophes et espaces typographiques du français
+ignore = ["RUF001", "RUF002", "RUF003"]  # French typographic apostrophes and spaces (data, prompts)
 
 [tool.mypy]
 strict = true
@@ -39,4 +39,4 @@ files = ["src", "tests"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q --strict-markers"
-markers = ["spec(*regles): règles de specs/ vérifiées par ce test"]
+markers = ["spec(*rules): rules of specs/ checked by this test"]

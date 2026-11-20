@@ -2,57 +2,57 @@ from pathlib import Path
 
 import pytest
 
-from moteur.config import ErreurConfig, analyser, charger
+from moteur.config import ConfigError, load_config, parse
 
-RACINE = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent.parent
 
 
 @pytest.mark.spec("CONF-06")
-def test_la_config_d_exemple_est_valide() -> None:
-    config = charger(RACINE / "config.exemple.toml")
-    assert config.modele_notation == "haiku"
-    assert config.criteres.salaire_plancher == 0
-    assert config.profil.startswith("Décris ici ton profil")
-    assert config.entreprises == ()
-    assert config.chemins.latex == RACINE.parent / "latex"
-    assert config.chemins.base == RACINE / "moteur.sqlite3"
+def test_the_example_config_is_valid() -> None:
+    config = load_config(ROOT / "config.exemple.toml")
+    assert config.scoring_model == "haiku"
+    assert config.criteria.salary_floor == 0
+    assert config.profile.startswith("Décris ici ton profil")
+    assert config.companies == ()
+    assert config.paths.latex == ROOT.parent / "latex"
+    assert config.paths.base == ROOT / "moteur.sqlite3"
 
 
 @pytest.mark.spec("CONF-02", "CONF-07")
-def test_valeurs_par_defaut(tmp_path: Path) -> None:
-    config = analyser({}, tmp_path)
-    assert (config.taille_lot, config.modele_generation) == (8, "sonnet")
-    assert not config.france_travail.actif
-    assert config.chemins.candidatures == tmp_path.parent / "Candidatures"
+def test_default_values(tmp_path: Path) -> None:
+    config = parse({}, tmp_path)
+    assert (config.batch_size, config.generation_model) == (8, "sonnet")
+    assert not config.france_travail.enabled
+    assert config.paths.applications == tmp_path.parent / "Candidatures"
 
 
 @pytest.mark.spec("CONF-04")
-def test_entreprises() -> None:
-    donnees = {
+def test_companies() -> None:
+    data = {
         "entreprises": [
             {"nom": "Acme", "ats": "lever", "identifiant": "acme", "spontanee": True},
             {"nom": "Libre", "site": "https://libre.io"},
         ]
     }
-    acme, libre = analyser(donnees, Path()).entreprises
-    assert (acme.ats, acme.identifiant, acme.spontanee) == ("lever", "acme", True)
-    assert (libre.ats, libre.site, libre.spontanee) == ("", "https://libre.io", False)
+    acme, free = parse(data, Path()).companies
+    assert (acme.ats, acme.identifier, acme.unsolicited) == ("lever", "acme", True)
+    assert (free.ats, free.site, free.unsolicited) == ("", "https://libre.io", False)
 
 
 @pytest.mark.spec("CONF-04")
-def test_entreprises_workable_et_welcomekit() -> None:
-    donnees = {
+def test_workable_and_welcomekit_companies() -> None:
+    data = {
         "entreprises": [
             {"nom": "A", "ats": "workable", "identifiant": "a"},
             {"nom": "B", "ats": "welcomekit", "identifiant": "jobs.b.org"},
         ]
     }
-    assert [e.ats for e in analyser(donnees, Path()).entreprises] == ["workable", "welcomekit"]
+    assert [e.ats for e in parse(data, Path()).companies] == ["workable", "welcomekit"]
 
 
 @pytest.mark.spec("CONF-04")
-def test_entreprise_workday_avec_recherches() -> None:
-    donnees = {
+def test_workday_company_with_searches() -> None:
+    data = {
         "entreprises": [
             {
                 "nom": "Exemple",
@@ -62,14 +62,14 @@ def test_entreprise_workday_avec_recherches() -> None:
             }
         ]
     }
-    (exemple,) = analyser(donnees, Path()).entreprises
-    assert (exemple.ats, exemple.recherches) == ("workday", ("IA", "data"))
-    with pytest.raises(ErreurConfig):
-        analyser({"entreprises": [{"nom": "X", "recherches": "IA"}]}, Path())
+    (example,) = parse(data, Path()).companies
+    assert (example.ats, example.searches) == ("workday", ("IA", "data"))
+    with pytest.raises(ConfigError):
+        parse({"entreprises": [{"nom": "X", "recherches": "IA"}]}, Path())
 
 
 @pytest.mark.parametrize(
-    "donnees",
+    "data",
     [
         {"criteres": "texte"},
         {"criteres": {"mots_cles": "ia"}},
@@ -82,15 +82,15 @@ def test_entreprise_workday_avec_recherches() -> None:
     ],
 )
 @pytest.mark.spec("CONF-03")
-def test_config_invalide(donnees: dict[str, object]) -> None:
-    with pytest.raises(ErreurConfig):
-        analyser(donnees, Path())
+def test_invalid_config(data: dict[str, object]) -> None:
+    with pytest.raises(ConfigError):
+        parse(data, Path())
 
 
 @pytest.mark.spec("CONF-01")
-def test_fichier_absent_ou_illisible(tmp_path: Path) -> None:
-    with pytest.raises(ErreurConfig, match=r"config\.exemple\.toml"):
-        charger(tmp_path / "config.toml")
+def test_missing_or_unreadable_file(tmp_path: Path) -> None:
+    with pytest.raises(ConfigError, match=r"config\.exemple\.toml"):
+        load_config(tmp_path / "config.toml")
     (tmp_path / "config.toml").write_text("criteres = [", encoding="utf-8")
-    with pytest.raises(ErreurConfig, match="illisible"):
-        charger(tmp_path / "config.toml")
+    with pytest.raises(ConfigError, match="unreadable"):
+        load_config(tmp_path / "config.toml")
