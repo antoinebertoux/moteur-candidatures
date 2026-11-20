@@ -1,8 +1,9 @@
 # CV and cover letter generation
 
 `moteur generate` prepares a folder for each `acceptee` application, from the `../latex/`
-repository: CV template, block bank (fr or en), letter skeleton, paragraph bank and
-`compiler.sh`. Writing is done by Claude (Sonnet by default).
+repository: CV template, block bank (fr or en), letter skeleton, paragraph bank,
+personal instructions and `compiler.sh`. Its expected format is in
+[latex-repository.md](latex-repository.md). Writing is done by Claude (Sonnet by default).
 
 ## Folder
 
@@ -28,15 +29,17 @@ repository: CV template, block bank (fr or en), letter skeleton, paragraph bank 
   - it only chooses macros from the bank: no free text, no invented experience or macro,
     preamble and structure kept;
   - a single headline, the one whose usage best matches the ad;
-  - Eurofins: every bullet except those truly off-topic (at least 7), from most to least
-    relevant;
-  - both academic projects, the most relevant first;
-  - interests: climbing and games; geopolitics only for a defence-focused role (Armées, DGA, AID, defence industry, ...), never elsewhere.
+  - main experience (LTX-13): every bullet of the bank except those truly off-topic, from
+    most to least relevant, since the program removes the last ones;
+  - projects: every project of the bank, the most relevant first;
+  - then the candidate's own rules from `consignes-cv.md` (LTX-17).
+  The candidate-specific rules (minimum number of bullets, interests to show per kind of
+  role…) live only in that file, never in the engine.
 - **CV-13** · The response must be a complete LaTeX file (`\documentclass` …
   `\end{document}`), otherwise the folder fails.
 - **CV-14** · **The CV fits on one page and fills it.** The program compiles the full
-  version, then first removes the second project, then the last Eurofins bullets (keeping
-  at least 5) until it fits on one page. It then tries to put back, in order, the removed
+  version, then first removes the last projects (keeping one), then the last bullets of
+  the main experience (LTX-13, keeping at least 5) until it fits on one page. It then tries to put back, in order, the removed
   items shorter than the first one, and keeps each one that fits.
 - **CV-15** · If even the shortest version exceeds one page, the folder is still
   generated and a "to be reworked" warning is printed.
@@ -57,14 +60,15 @@ repository: CV template, block bank (fr or en), letter skeleton, paragraph bank 
   model)*:
   - skeleton kept; only the content and the company name change;
   - in the ad's language; in English, "Dear Hiring Manager,";
-  - four paragraphs: hook (exact role, why this company); one or two Eurofins
-    achievements that answer the ad; what he brings beyond technical skills; why them,
-    with concrete elements;
-  - no invented fact, everything comes from the paragraph bank; never "certified in
-    generative AI"; no salary or expectations; geopolitics or Le Collimateur only for a
-    defence-focused role;
+  - four paragraphs: hook (exact role, why this company); one or two achievements of the
+    main experience that answer the ad; what the candidate brings beyond technical
+    skills; why them, with concrete elements;
+  - no invented fact, everything comes from the paragraph bank; no salary or
+    expectations;
   - unsolicited: proposes the given role;
-  - direct style, no hollow phrases, 250 to 350 words, one page.
+  - direct style, no hollow phrases, 250 to 350 words, one page;
+  - then the candidate's own rules from `consignes-lettre.md` (LTX-17), which hold every
+    candidate-specific rule (claims to avoid, topics kept for some kinds of role…).
 - **LET-04** · `moteur letter` adds a letter to an already generated folder **without
   touching the CV**: for the given identifiers, or otherwise for every missing letter
   (BASE-08).

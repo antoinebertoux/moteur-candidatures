@@ -109,19 +109,44 @@ FRANCE_TRAVAIL_SECRET=...
 Interior, DGSE, DGSI, DINUM, AMIAD, ANSSI…) needs no credentials: set keywords, fields and
 employers in `[service_public]`.
 
-### Expected folder layout
+### CV and letters: the `latex/` folder
 
-The parent folder (`racine` in `[chemins]`, `..` by default) must contain:
+CVs and letters are written in LaTeX and compiled with XeLaTeX. Install a TeX
+distribution with `latexmk`, XeLaTeX and the `noto`, `lato`, `raleway`, `fontawesome`
+packages (TeX Live full has them all), plus `pdfinfo` (poppler):
 
-```text
-latex/
-  compiler.sh                       # compiles a folder; reports "<name>.pdf fait N pages"
-  cv/modele-cv.tex                  # starting CV, with \def\latexroot{...}
-  cv/banque-fr.tex, banque-en.tex   # allowed block macros
-  lettres/modele-lettre.tex         # letter skeleton
-  lettres/banque-paragraphes.md
-suivi/entreprises_vues.csv          # optional: columns "entreprise;…;statut"
+```bash
+sudo apt install texlive-full latexmk poppler-utils   # Debian / Ubuntu
+sudo pacman -S texlive texlive-langfrench poppler     # Arch / Manjaro
 ```
+
+The engine writes from your own `latex/` folder, next to `moteur/` (under the root folder,
+`..` by default). It stays outside the repository. Start from the example shipped here,
+written for a fictional person (Jane Doe):
+
+```bash
+uv run moteur init-latex   # copies latex-exemple/ to ../latex/
+```
+
+Then replace Jane Doe with yourself:
+
+| File | What to put in it |
+| --- | --- |
+| `commun/coordonnees.tex` | name, e-mail, phone, LinkedIn, years of experience |
+| `cv/banque-fr.tex`, `cv/banque-en.tex` | **every** block you may want on a CV: titles, headlines with their `% Usage :` comment, skills, bullets, projects, interests. Claude only picks blocks; it never writes text |
+| `cv/modele-cv.tex` | your reference CV, built from the bank's macros |
+| `lettres/banque-paragraphes.md` | validated letter paragraphs: Claude invents no fact about you |
+| `consignes-cv.md`, `consignes-lettre.md` | your own rules for Claude (optional) |
+
+The engine relies on a few conventions: the main experience is the first
+`\explanationdetail` of the Experience section, its bullets are `\p…` macros, projects
+are `\proj…` macros. They are what gets removed to fit the CV on one page. The full
+contract is [`specs/latex-repository.md`](specs/latex-repository.md); the comments at the
+top of the example's templates sum it up. `generate` stops with the list of missing files
+if the folder is incomplete.
+
+Optional: `suivi/entreprises_vues.csv` under the root folder (columns
+`entreprise;…;statut`) lists companies already approached.
 
 ## Usage
 
@@ -134,6 +159,7 @@ uv run moteur prepare            # pending interview preparation sheets
 
 | Command | What it does | Claude |
 | --- | --- | --- |
+| `init-latex` | copies the LaTeX example to `../latex/` | no |
 | `collect` | queries the sources and filters | no |
 | `score` | scores the new ads | Haiku |
 | `links` | looks up the missing company website and LinkedIn page (web search) | Haiku |
@@ -210,7 +236,7 @@ the repository:
 | `config.toml` | profile sent to Claude, criteria, salary floor, followed companies |
 | `.env` | France Travail credentials |
 | `moteur.sqlite3`, `echange/` | ads seen, scores, decisions |
-| `../latex/` | CV, block and paragraph banks, `compiler.sh` |
+| `../latex/` | CV, block and paragraph banks, personal instructions, `compiler.sh` |
 | `../Candidatures/`, `../suivi/` | generated folders, companies already approached |
 | `prive/` | export of the page's database, filled-in text of the scheduled tasks |
 
@@ -239,6 +265,7 @@ checked by a test that cites it (`@pytest.mark.spec("FILT-03")`);
 | `scoring.py` | score and summary, in batches | Haiku |
 | `refusal.py` | refusal reasons shared by the page, the database and scoring | no |
 | `generation.py` | LaTeX CV and letter, compilation | Sonnet |
+| `latex_repository.py` | `latex/` folder: required files, personal instructions, `init-latex` | no |
 | `cover_letter.py` | letter alone, for a folder whose CV exists | Sonnet |
 | `interview_prep.py` | interview preparation sheet, with web search | Sonnet |
 | `claude_cli.py` | calls to `claude -p` | — |

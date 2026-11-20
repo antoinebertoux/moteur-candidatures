@@ -1,0 +1,2 @@
+- L'expérience principale est Exemplar Industries.
+- Ne mentionne jamais le stage de fin d'études.

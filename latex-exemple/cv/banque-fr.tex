@@ -1,0 +1,75 @@
+% =====================================================================
+%  BLOCK BANK — FRENCH CV (fictional person: Jane Doe)
+%  Every block is a macro. Claude only picks macros from this bank:
+%  write here everything you may want on a CV, the engine never invents
+%  text. banque-en.tex defines the same macro names in English.
+% =====================================================================
+
+% ---------- Intitulés de poste ----------
+\newcommand{\titreDataScientist}{Data Scientist}
+\newcommand{\titreMLEngineer}{Machine Learning Engineer}
+\newcommand{\titreDataAnalyst}{Data Analyst / Data Scientist}
+
+% ---------- Accroches ----------
+% Choose ONE headline: the one whose "Usage" comment best matches the ad.
+% Usage : généraliste, data scientist, poste sans dominante marquée
+\newcommand{\profilStandard}{Data Scientist avec \xpFR\ d’expérience dans l’industrie, je conçois des modèles de prévision et de classification, de l’exploration des données à leur mise en production, en lien étroit avec les équipes métier.}
+% Usage : poste centré ingénierie ML, MLOps, mise en production
+\newcommand{\profilMLOps}{Machine Learning Engineer avec \xpFR\ d’expérience, j’industrialise des modèles : pipelines reproductibles, déploiement continu, suivi en production. J’aime rendre les modèles fiables et maintenables.}
+% Usage : poste orienté analyse, aide à la décision, tableaux de bord
+\newcommand{\profilAnalyse}{Data Scientist avec \xpFR\ d’expérience en aide à la décision : je transforme des données hétérogènes en indicateurs fiables et en recommandations claires pour les directions métier.}
+
+% ---------- Compétences (lignes \createskill) ----------
+\newcommand{\compLangages}{\createskill{Langages}{Python \cpshalf\ SQL \cpshalf\ R \cpshalf\ Git}}
+\newcommand{\compML}{\createskill{Machine learning}{scikit-learn \cpshalf\ PyTorch \cpshalf\ XGBoost \cpshalf\ séries temporelles}}
+\newcommand{\compDonnees}{\createskill{Données}{pandas \cpshalf\ Spark \cpshalf\ dbt \cpshalf\ Power BI}}
+\newcommand{\compMLOps}{\createskill{MLOps}{Docker \cpshalf\ MLflow \cpshalf\ GitHub Actions \cpshalf\ AWS}}
+\newcommand{\compLangues}{\createskill{Langues}{Français : langue maternelle \cpshalf\ Anglais : courant}}
+
+% ---------- Expérience principale ----------
+\newcommand{\posteEntreprise}{Exemplar Industries}
+\newcommand{\posteDates}{Septembre 2022 -- Présent}
+\newcommand{\posteIntitule}{Data Scientist (Lyon)}
+% Bullets: \p followed by a capital letter. List them from the most general.
+\newcommand{\pPrevision}{\coloredbullet\ Conception d’un modèle de prévision de la demande sur 2\,000 références, réduisant de 18\,\% l’erreur de prévision et les ruptures de stock.}
+\newcommand{\pChurn}{\coloredbullet\ Développement d’un modèle de détection du risque de départ client, utilisé chaque semaine par l’équipe commerciale pour prioriser ses relances.}
+\newcommand{\pPipeline}{\coloredbullet\ Mise en place d’un pipeline de données quotidien (Spark, dbt) alimentant les modèles et les tableaux de bord de trois directions.}
+\newcommand{\pTableauBord}{\coloredbullet\ Création de tableaux de bord de suivi de la production utilisés par 40 responsables d’atelier.}
+\newcommand{\pNLP}{\coloredbullet\ Classification automatique des réclamations clients par traitement du langage, divisant par trois le temps de tri.}
+\newcommand{\pMLOps}{\coloredbullet\ Industrialisation des modèles : conteneurs Docker, suivi des expériences avec MLflow, déploiement continu.}
+\newcommand{\pFormation}{\coloredbullet\ Animation d’ateliers d’initiation à la donnée pour les équipes métier.}
+\newcommand{\pMentorat}{\coloredbullet\ Encadrement de deux stagiaires en data science.}
+
+% ---------- Autre expérience ----------
+\newcommand{\stageEntreprise}{Laboratoire Exemple}
+\newcommand{\stageDates}{2022}
+\newcommand{\stageIntitule}{Stage de fin d’études -- Data Scientist}
+\newcommand{\stageDetail}{\coloredbullet\ Analyse statistique de données de capteurs et détection d’anomalies.}
+
+% ---------- Projets (\proj followed by a capital letter) ----------
+\newcommand{\projMemoire}{%
+  \datedexperience{Université Exemple}{2022}
+  \explanation{Mémoire de master : apprentissage sur séries temporelles}
+  \explanationdetail{\coloredbullet\ Comparaison de modèles de prévision sur des données énergétiques publiques.}}
+\newcommand{\projKaggle}{%
+  \datedexperience{Compétition en ligne}{2021}
+  \explanation{Projet : vision par ordinateur}
+  \explanationdetail{\coloredbullet\ Classification d’images médicales en équipe de trois, classée dans les 10\,\% premiers.}}
+
+% ---------- Formation ----------
+\newcommand{\formation}{%
+  \datedexperience{Master : Université Exemple}{2020--2022}
+  \explanation{Mathématiques appliquées et science des données}}
+
+% ---------- Centres d’intérêt ----------
+\newcommand{\extraCourse}{\textbf{Course à pied} -- semi-marathons}
+\newcommand{\extraLecture}{\textbf{Lecture} -- romans et vulgarisation scientifique}
+\newcommand{\extraBenevolat}{\textbf{Bénévolat} -- cours de soutien en mathématiques}
+
+% ---------- Libellés ----------
+\newcommand{\secCompetences}{Compétences}
+\newcommand{\secExperience}{Expérience professionnelle}
+\newcommand{\secProjets}{Projets}
+\newcommand{\secFormation}{Formation}
+\newcommand{\secInterets}{Centres d’intérêt}
+\newcommand{\mobilite}{Mobilité : Lyon, télétravail}

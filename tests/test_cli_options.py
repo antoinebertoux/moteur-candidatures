@@ -8,6 +8,7 @@ import pytest
 from moteur.cli import build_parser, read_options
 
 ENGLISH_COMMANDS = {
+    "init-latex",
     "collect",
     "score",
     "export",

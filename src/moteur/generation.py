@@ -1,7 +1,7 @@
 """Preparing an application folder: tailored LaTeX CV and letter, then compiled.
 
-Relies on the existing `latex/` repository: CV template, block bank, letter skeleton,
-paragraph bank and `compiler.sh`.
+Relies on the user's `latex/` folder (specs/latex-repository.md): CV template, block bank,
+letter skeleton, paragraph bank, personal instructions and `compiler.sh`.
 """
 
 from __future__ import annotations
@@ -14,6 +14,13 @@ from pathlib import Path
 
 from moteur.claude_cli import Assistant, ClaudeError, ProcessResult, extract_block
 from moteur.config import Paths
+from moteur.latex_repository import (
+    CV_INSTRUCTIONS,
+    LETTER_INSTRUCTIONS,
+    bank,
+    check,
+    personal_instructions,
+)
 from moteur.local_db import LocalDb
 from moteur.models import Application, JobAd, Language
 
@@ -29,11 +36,16 @@ _FORBIDDEN = re.compile(r'[/\\:*?"<>|\x00-\x1f]+')
 _SPACES = re.compile(r"\s+")
 _TOO_MANY_PAGES = re.compile(r"(\S+)\.pdf fait (\d+) pages")
 _CONTACT_LINE = r"\\newcommand\{{\\{}\}}\{{([^}}]*)\}}"
-_EUROFINS = re.compile(
-    r"(\\datedexperience\{Eurofins\}.*?\\explanationdetail\{%?)(.*?)(\n?\s*\}\s*\n)", re.S
+# LTX-13: the main experience is the first \explanationdetail of the Experience section.
+_MAIN_EXPERIENCE = re.compile(
+    r"(^[^%\n]*\\section\{\\secExperience\}.*?\\explanationdetail\{%?)(.*?)(\n?\s*\}\s*\n)",
+    re.S | re.M,
 )
 _BULLET = re.compile(r"\\p[A-Z]\w*")
-_PROJECTS = re.compile(r"(\\section\{\\secProjets\}[^\n]*\n)(.*?)(\n\s*\\section)", re.S)
+# Commented-out lines (template explanations) never count as the section.
+_PROJECTS = re.compile(
+    r"(^[^%\n]*\\section\{\\secProjets\}[^\n]*\n)(.*?)(\n\s*\\section)", re.S | re.M
+)
 _PROJECT = re.compile(r"\\proj[A-Z]\w*")
 MIN_BULLETS = 5
 
@@ -45,18 +57,14 @@ compétences, puces d'expérience, projets, centres d'intérêt.
 libre, tu n'inventes aucune expérience et aucune macro.
 3. Accroche : une seule, celle de la banque dont le commentaire « Usage » correspond le \
 mieux à l'offre.
-4. Expérience Eurofins : pars de toutes les puces \\p... de la banque, retire celles qui \
-sont vraiment sans rapport avec l'offre (garde-en au moins 7), puis range les autres, \
-séparées par \\\\, de la plus pertinente à la moins pertinente. Le programme retire \
-ensuite les dernières jusqu'à ce que le CV remplisse exactement une page : l'ordre est \
-décisif.
-5. Projets académiques : mets les deux projets de la banque, le plus pertinent en premier.
-6. Centres d'intérêt : \\extraEscalade et \\extraJeux. \\extraGeoPo seulement si le poste \
-est axé défense (DGSE, ministère des Armées, DGA, AID, CND, industriel de défense) ; \
-jamais ailleurs, ni dans le reste du secteur public (justice, intérieur, finances, \
-régulateurs, etc.).
-7. Tu conserves le préambule et la structure du fichier de départ.
-Réponds uniquement par le fichier cv.tex complet, dans un bloc ```latex."""
+4. Expérience principale (la première de la section Expérience) : pars de toutes les \
+puces \\p... de la banque, retire celles qui sont vraiment sans rapport avec l'offre, \
+puis range les autres, séparées par \\\\, de la plus pertinente à la moins pertinente. Le \
+programme retire ensuite les dernières jusqu'à ce que le CV remplisse exactement une \
+page : l'ordre est décisif.
+5. Projets : mets tous les projets \\proj... de la banque, le plus pertinent en premier.
+6. Tu conserves le préambule et la structure du fichier de départ."""
+CV_ANSWER = "Réponds uniquement par le fichier cv.tex complet, dans un bloc ```latex."
 
 LETTER_SYSTEM = """Tu rédiges une lettre de motivation LaTeX à partir d'un squelette.
 Règles strictes :
@@ -65,19 +73,28 @@ contenu des \\lettercontent{...} et ENTREPRISE dans \\companyname.
 2. Langue : celle indiquée. En anglais, salutation « Dear Hiring Manager, » et formule \
 finale anglaise de la banque.
 3. Entre la salutation et la formule finale, quatre paragraphes : accroche (le poste \
-exact et pourquoi cette entreprise) ; une ou deux réalisations Eurofins qui répondent aux \
-exigences précises de l'offre ; ce que le candidat apporte au-delà du technique ; \
-pourquoi eux, avec des éléments concrets tirés de l'offre ou du résumé.
+exact et pourquoi cette entreprise) ; une ou deux réalisations de l'expérience \
+principale qui répondent aux exigences précises de l'offre ; ce que le candidat apporte \
+au-delà du technique ; pourquoi eux, avec des éléments concrets tirés de l'offre ou du \
+résumé.
 4. Tu n'inventes aucun fait sur le candidat : tout vient de la banque de paragraphes, \
-dont tu respectes les « points à vérifier ». N'écris jamais que le candidat est certifié \
-en IA générative. Aucun salaire, aucune prétention. Géopolitique ou podcast Le Collimateur \
-seulement pour un poste axé défense.
+dont tu respectes les « points à vérifier ». Aucun salaire, aucune prétention.
 5. Candidature spontanée : pas d'offre publiée ; propose le rôle indiqué et appuie-toi \
 sur l'angle du résumé.
 6. Style direct et concret : pas de formule creuse (« passionné », « dynamique », \
 « je me permets »), pas de recopie de l'offre. 250 à 350 mots : la lettre tient sur une \
-page. Échappe les caractères spéciaux LaTeX (& % $ # _).
-Réponds uniquement par le fichier lettre.tex complet, dans un bloc ```latex."""
+page. Échappe les caractères spéciaux LaTeX (& % $ # _)."""
+LETTER_ANSWER = "Réponds uniquement par le fichier lettre.tex complet, dans un bloc ```latex."
+
+
+def system_prompt(rules: str, answer: str, latex: Path, instructions_file: str) -> str:
+    """General rules, then the candidate's own rules (LTX-17), then the answer format."""
+    own = personal_instructions(latex, instructions_file)
+    parts = [rules]
+    if own:
+        parts.append(f"Règles propres au candidat (à respecter aussi) :\n{own}")
+    parts.append(answer)
+    return "\n\n".join(parts)
 
 
 class GenerationError(Exception):
@@ -176,18 +193,18 @@ def _compile(folder: Path, file: str, compile_fn: Compiler) -> dict[str, int]:
 
 
 def cv_contents(tex: str) -> tuple[list[str], list[str]]:
-    """Eurofins bullets and projects of the CV, in the order of relevance chosen by Claude."""
-    eurofins = _EUROFINS.search(tex)
+    """Main experience bullets and projects (LTX-13), in Claude's order of relevance."""
+    main = _MAIN_EXPERIENCE.search(tex)
     projects = _PROJECTS.search(tex)
     return (
-        _BULLET.findall(eurofins.group(2)) if eurofins else [],
+        _BULLET.findall(main.group(2)) if main else [],
         _PROJECT.findall(projects.group(2)) if projects else [],
     )
 
 
 def with_content(tex: str, bullets: list[str], projects: list[str]) -> str:
-    """The CV with only these Eurofins bullets and these projects."""
-    tex = _EUROFINS.sub(
+    """The CV with only these main experience bullets and these projects."""
+    tex = _MAIN_EXPERIENCE.sub(
         lambda m: m.group(1) + "\n" + " \\\\\n".join(bullets) + m.group(3), tex, count=1
     )
     return _PROJECTS.sub(lambda m: m.group(1) + "\n".join(projects) + m.group(3), tex, count=1)
@@ -196,7 +213,7 @@ def with_content(tex: str, bullets: list[str], projects: list[str]) -> str:
 def reduced_versions(
     bullets: list[str], projects: list[str]
 ) -> Iterator[tuple[list[str], list[str]]]:
-    """From the full CV to the shortest: first the second project, then the last bullets."""
+    """From the full CV to the shortest: first the last projects, then the last bullets."""
     yield bullets, projects
     while len(projects) > 1:
         projects = projects[:-1]
@@ -267,8 +284,9 @@ def write_letter(
         start = prepare_template(skeleton, application.language)
     paragraphs = (paths.latex / "lettres" / "banque-paragraphes.md").read_text(encoding="utf-8")
     prompt = _prompt(application, start, paragraphs, instruction)
+    system = system_prompt(LETTER_SYSTEM, LETTER_ANSWER, paths.latex, LETTER_INSTRUCTIONS)
     letter.write_text(
-        extract_tex(assistant.ask(prompt, system=LETTER_SYSTEM, model=model)),
+        extract_tex(assistant.ask(prompt, system=system, model=model)),
         encoding="utf-8",
     )
 
@@ -298,12 +316,16 @@ def generate_folder(
 ) -> tuple[str, str]:
     """Generates and compiles the folder; returns the CV and letter paths ('' if none)."""
     ad, language = application.ad, application.language
+    cv_bank_file = bank(paths.latex, language)
+    if not cv_bank_file.is_file():
+        # LTX-10: only the applications in that language fail.
+        raise GenerationError(f"missing bank {cv_bank_file.relative_to(paths.root)}")
     folder = paths.applications / folder_name(ad)
     folder.mkdir(parents=True, exist_ok=True)
     _write_sheet(folder, ad)
 
     cv = folder / "cv.tex"
-    cv_bank = (paths.latex / "cv" / f"banque-{language}.tex").read_text(encoding="utf-8")
+    cv_bank = cv_bank_file.read_text(encoding="utf-8")
     if application.instruction and cv.exists():
         starting_cv = cv.read_text(encoding="utf-8")
     else:
@@ -311,8 +333,9 @@ def generate_folder(
         starting_cv = prepare_template(cv_template, language)
 
     cv_prompt_text = _prompt(application, starting_cv, cv_bank, application.instruction)
+    cv_system = system_prompt(CV_SYSTEM, CV_ANSWER, paths.latex, CV_INSTRUCTIONS)
     cv.write_text(
-        extract_tex(assistant.ask(cv_prompt_text, system=CV_SYSTEM, model=model)),
+        extract_tex(assistant.ask(cv_prompt_text, system=cv_system, model=model)),
         encoding="utf-8",
     )
 
@@ -345,9 +368,15 @@ def generate(
     model: str,
     compile_fn: Compiler,
 ) -> tuple[int, list[str]]:
-    """Generates every accepted folder. Returns the number of successes and the failures."""
+    """Generates every accepted folder. Returns the number of successes and the failures.
+
+    Raises `LatexRepositoryError` before any folder if a required file is missing (LTX-10).
+    """
+    applications = base.to_generate()
+    if applications:
+        check(paths.latex)
     successes, failures = 0, []
-    for application in base.to_generate():
+    for application in applications:
         ad = application.ad
         try:
             cv_ref, letter_ref = generate_folder(application, assistant, paths, model, compile_fn)

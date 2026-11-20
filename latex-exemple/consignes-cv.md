@@ -1,0 +1,2 @@
+- Expérience principale (Exemplar Industries) : garde au moins 6 puces.
+- Centres d'intérêt : \extraCourse et \extraLecture ; \extraBenevolat seulement pour une association ou le secteur public.

@@ -38,6 +38,9 @@ def paths(tmp_path: Path) -> Paths:
     (latex / "cv" / "banque-en.tex").write_text("\\newcommand{\\pRAG}{RAG en}", encoding="utf-8")
     (latex / "lettres" / "modele-lettre.tex").write_text(TEMPLATE, encoding="utf-8")
     (latex / "lettres" / "banque-paragraphes.md").write_text("Paragraphe.", encoding="utf-8")
+    (latex / "commun").mkdir()
+    (latex / "commun" / "coordonnees.tex").write_text("% vide", encoding="utf-8")
+    (latex / "compiler.sh").write_text("#!/bin/sh\n", encoding="utf-8")
     return Paths(root=tmp_path, base=tmp_path / "b.sqlite3", exchange=tmp_path / "echange")
 
 

@@ -1,0 +1,36 @@
+% =====================================================================
+%  LETTER SKELETON — the engine copies it into each application folder.
+%  Claude keeps everything and only rewrites ENTREPRISE in \companyname
+%  and the content of each \lettercontent, from banque-paragraphes.md.
+% =====================================================================
+\def\latexroot{../}
+\documentclass{lettre}
+\input{\latexroot commun/coordonnees}
+
+\begin{document}
+\namesection{\coPrenom}{\coNom}{\href{mailto:\coMail}{\coMail} | \coTel\ | \href{\coLinkedin}{LinkedIn}}
+
+\begin{minipage}[t]{0.5\textwidth}
+\companyname{ENTREPRISE}
+\end{minipage}
+\begin{minipage}[t]{0.49\textwidth}
+\currentdate{\datejour}
+\end{minipage}
+\vspace{0.6cm}
+
+\lettercontent{Madame, Monsieur,}
+
+\lettercontent{Accroche : le poste, pourquoi cette entreprise.}
+
+\lettercontent{Expérience : une ou deux réalisations qui répondent à l’offre.}
+
+\lettercontent{Ce que j’apporte au-delà du technique.}
+
+\lettercontent{Pourquoi eux : mission, produit, secteur.}
+
+\lettercontent{Je me tiens à votre disposition pour un entretien afin d’échanger plus en détail sur ma candidature.
+
+Je vous prie d’agréer, Madame, Monsieur, l’expression de mes salutations distinguées.}
+
+\signature{\coPrenom\ \coNom}
+\end{document}

@@ -16,6 +16,7 @@ from moteur.generation import (
     folder_name,
     write_letter,
 )
+from moteur.latex_repository import check
 from moteur.local_db import LocalDb
 from moteur.models import Application
 
@@ -47,7 +48,10 @@ def generate_letters(
     compile_fn: Compiler,
     keys: list[str] | None = None,
 ) -> tuple[int, list[str]]:
-    """Letters of the given keys, or otherwise of every folder where it is missing."""
+    """Letters of the given keys, or otherwise of every folder where it is missing.
+
+    Raises `LatexRepositoryError` before any letter if a required file is missing (LTX-10).
+    """
     if keys:
         applications, failures = [], []
         for key in keys:
@@ -58,6 +62,8 @@ def generate_letters(
                 applications.append(found_it)
     else:
         applications, failures = base.missing_letters(), []
+    if applications:
+        check(paths.latex)
     successes = 0
     for application in applications:
         ad = application.ad

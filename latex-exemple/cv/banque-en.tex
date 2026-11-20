@@ -1,0 +1,72 @@
+% =====================================================================
+%  BLOCK BANK — ENGLISH CV (fictional person: Jane Doe)
+%  Same macro names as banque-fr.tex.
+% =====================================================================
+
+% ---------- Job titles ----------
+\newcommand{\titreDataScientist}{Data Scientist}
+\newcommand{\titreMLEngineer}{Machine Learning Engineer}
+\newcommand{\titreDataAnalyst}{Data Analyst / Data Scientist}
+
+% ---------- Headlines ----------
+% Choose ONE headline: the one whose "Usage" comment best matches the ad.
+% Usage : general, data scientist, no marked focus
+\newcommand{\profilStandard}{Data Scientist with \xpEN\ of industry experience, I build forecasting and classification models, from data exploration to production, working closely with business teams.}
+% Usage : ML engineering, MLOps, production focus
+\newcommand{\profilMLOps}{Machine Learning Engineer with \xpEN\ of experience, I take models to production: reproducible pipelines, continuous deployment, monitoring. I like making models reliable and maintainable.}
+% Usage : analytics, decision support, dashboards
+\newcommand{\profilAnalyse}{Data Scientist with \xpEN\ of experience in decision support: I turn heterogeneous data into reliable indicators and clear recommendations for business leaders.}
+
+% ---------- Skills (\createskill rows) ----------
+\newcommand{\compLangages}{\createskill{Languages}{Python \cpshalf\ SQL \cpshalf\ R \cpshalf\ Git}}
+\newcommand{\compML}{\createskill{Machine learning}{scikit-learn \cpshalf\ PyTorch \cpshalf\ XGBoost \cpshalf\ time series}}
+\newcommand{\compDonnees}{\createskill{Data}{pandas \cpshalf\ Spark \cpshalf\ dbt \cpshalf\ Power BI}}
+\newcommand{\compMLOps}{\createskill{MLOps}{Docker \cpshalf\ MLflow \cpshalf\ GitHub Actions \cpshalf\ AWS}}
+\newcommand{\compLangues}{\createskill{Languages spoken}{French: native \cpshalf\ English: fluent}}
+
+% ---------- Main experience ----------
+\newcommand{\posteEntreprise}{Exemplar Industries}
+\newcommand{\posteDates}{September 2022 -- Present}
+\newcommand{\posteIntitule}{Data Scientist (Lyon, France)}
+\newcommand{\pPrevision}{\coloredbullet\ Designed a demand forecasting model for 2,000 products, cutting forecast error and stock-outs by 18\%.}
+\newcommand{\pChurn}{\coloredbullet\ Built a customer churn risk model used every week by the sales team to prioritise follow-ups.}
+\newcommand{\pPipeline}{\coloredbullet\ Set up a daily data pipeline (Spark, dbt) feeding the models and dashboards of three departments.}
+\newcommand{\pTableauBord}{\coloredbullet\ Created production monitoring dashboards used by 40 workshop managers.}
+\newcommand{\pNLP}{\coloredbullet\ Automated the classification of customer complaints with NLP, cutting sorting time by three.}
+\newcommand{\pMLOps}{\coloredbullet\ Industrialised the models: Docker containers, experiment tracking with MLflow, continuous deployment.}
+\newcommand{\pFormation}{\coloredbullet\ Ran data literacy workshops for business teams.}
+\newcommand{\pMentorat}{\coloredbullet\ Mentored two data science interns.}
+
+% ---------- Other experience ----------
+\newcommand{\stageEntreprise}{Example Laboratory}
+\newcommand{\stageDates}{2022}
+\newcommand{\stageIntitule}{Final-year internship -- Data Scientist}
+\newcommand{\stageDetail}{\coloredbullet\ Statistical analysis of sensor data and anomaly detection.}
+
+% ---------- Projects ----------
+\newcommand{\projMemoire}{%
+  \datedexperience{Example University}{2022}
+  \explanation{Master's thesis: learning on time series}
+  \explanationdetail{\coloredbullet\ Compared forecasting models on public energy data.}}
+\newcommand{\projKaggle}{%
+  \datedexperience{Online competition}{2021}
+  \explanation{Project: computer vision}
+  \explanationdetail{\coloredbullet\ Medical image classification in a team of three, ranked in the top 10\%.}}
+
+% ---------- Education ----------
+\newcommand{\formation}{%
+  \datedexperience{Master's degree: Example University}{2020--2022}
+  \explanation{Applied mathematics and data science}}
+
+% ---------- Interests ----------
+\newcommand{\extraCourse}{\textbf{Running} -- half marathons}
+\newcommand{\extraLecture}{\textbf{Reading} -- novels and popular science}
+\newcommand{\extraBenevolat}{\textbf{Volunteering} -- maths tutoring}
+
+% ---------- Labels ----------
+\newcommand{\secCompetences}{Skills}
+\newcommand{\secExperience}{Professional experience}
+\newcommand{\secProjets}{Projects}
+\newcommand{\secFormation}{Education}
+\newcommand{\secInterets}{Interests}
+\newcommand{\mobilite}{Mobility: Lyon, remote}

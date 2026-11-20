@@ -62,6 +62,7 @@ code, at 0 tokens.
 | [local-database.md](local-database.md) | `BASE` | what engine B keeps and its transitions |
 | [scoring.md](scoring.md) | `NOT`, `CLA` | scoring by Claude, `claude -p` calls |
 | [generation.md](generation.md) | `CV`, `LET`, `GEN` | LaTeX CV and cover letter |
+| [latex-repository.md](latex-repository.md) | `LTX` | format of the `latex/` folder, example shipped |
 | [exchange.md](exchange.md) | `ECH` | files exchanged with the page |
 | [interview-prep.md](interview-prep.md) | `PREP` | interview preparation sheet |
 | [company-links.md](company-links.md) | `LNK` | company website and LinkedIn links |

@@ -159,7 +159,7 @@ def test_only_allowed_sections_are_sent_never_the_floor() -> None:
 
 @pytest.mark.spec("PREP-10", "PREP-11", "PREP-12")
 def test_claude_receives_everything_sent(base: LocalDb, paths: Paths) -> None:
-    (paths.latex / "commun").mkdir()
+    (paths.latex / "commun").mkdir(exist_ok=True)
     (paths.latex / "commun" / "infos-candidature.md").write_text(DETAILS, encoding="utf-8")
     folder = paths.applications / folder_name(AD)
     folder.mkdir(parents=True)

@@ -20,6 +20,7 @@ from moteur.detection import report as detection_report
 from moteur.env import load_env
 from moteur.generation import generate, latex_compiler
 from moteur.interview_prep import launch_in_background, prepare_alone
+from moteur.latex_repository import LatexRepositoryError, init_latex
 from moteur.local_db import LocalDb
 from moteur.mcp_link import launch as run_mcp_link
 from moteur.pdf_server import DEFAULT_PORT, serve
@@ -161,6 +162,16 @@ def command_letter(config: Config, base: LocalDb, keys: list[str]) -> None:
         print(f"  - {failure}")
 
 
+def command_init_latex(config: Config) -> None:
+    """LTX-03: copies the example to latex/ and says what to adapt."""
+    target = config.paths.latex
+    to_adapt = init_latex(target)
+    print(f"Example copied to {target}. Adapt these files to your own profile:")
+    for name in to_adapt:
+        print(f"  - {name}")
+    print("Optional: put your photo in cv/images/ and set it with \\setphoto in cv/modele-cv.tex")
+
+
 def command_prepare(config: Config, base: LocalDb, keys: list[str]) -> None:
     """Interview preparation sheets: the given identifiers, or every pending request."""
     result = prepare_alone(
@@ -204,6 +215,7 @@ def build_parser() -> argparse.ArgumentParser:
     command("links", "look up the website and LinkedIn page of companies that lack them")
     command("daily", "collect, score, links, then export")
     command("decisions", "read the page's export").add_argument("file", type=Path)
+    command("init-latex", "copy the LaTeX example to latex/, to adapt to your profile")
     command("generate", "prepare the CV and letter of accepted ads")
     command(
         "letter", "add the letter to folders already generated (all the missing ones)"
@@ -257,6 +269,9 @@ def main(arguments: Sequence[str] | None = None) -> int:
             config_file = options.config.resolve()
             run_mcp_link(config.paths, lambda: launch_in_background(config_file, config.paths))
             return 0
+        if options.command == "init-latex":
+            command_init_latex(config)
+            return 0
         with LocalDb(config.paths.base) as base:
             if options.command in ("collect", "daily"):
                 command_collect(config, base)
@@ -279,7 +294,7 @@ def main(arguments: Sequence[str] | None = None) -> int:
                 command_export(config, base)
             if options.command == "serve":
                 serve(config.paths.applications, options.port)
-    except (ConfigError, exchange.ExchangeError, OSError) as error:
+    except (ConfigError, exchange.ExchangeError, LatexRepositoryError, OSError) as error:
         print(f"Error: {error}", file=sys.stderr)
         return 1
     return 0

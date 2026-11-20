@@ -1,0 +1,64 @@
+% =====================================================================
+%  CV TEMPLATE — the engine copies it into each application folder.
+%  - \latexroot: path to the latex/ folder (rewritten by the engine).
+%  - Bank: cv/banque-fr or cv/banque-en (rewritten by the engine).
+%  - Main experience: the FIRST \explanationdetail of the Experience
+%    section; its bullets are \p... macros separated by \\.
+%  - Projects: \proj... macros, between \section{\secProjets} and the
+%    next \section.
+%  The engine removes the last projects, then the last bullets, until
+%  the CV fits on one page.
+% =====================================================================
+\def\latexroot{../}
+\documentclass{jobcv}
+\input{\latexroot commun/coordonnees}
+\input{\latexroot cv/banque-fr}
+
+\setname{\textbf{\coPrenom}}{\textbf{\coNom}}
+\setjob{\titreDataScientist}
+\setmail{\coMail}
+\setmobile{\coTel}
+\setlinkedinaccount{\coLinkedin}
+\setmobility{\mobilite}
+\setthemecolor{NavyBlue}
+\setjobsearch{\profilStandard}
+% Optional photo:
+% \setphoto{\latexroot cv/images/photo.jpg}
+
+\begin{document}
+\headerview
+\vspace{0.5cm}
+
+\section{\secCompetences} \vspace{0.2cm}
+\createskills{\compLangages, \compML, \compDonnees, \compLangues}
+\vspace{-.5cm}
+
+\section{\secExperience} \vspace{0.2cm}
+\datedexperience{\posteEntreprise}{\posteDates}
+\explanation{\posteIntitule}
+\explanationdetail{%
+\pPrevision \\
+\pChurn \\
+\pPipeline \\
+\pTableauBord \\
+\pNLP \\
+\pMLOps \\
+\pFormation \\
+\pMentorat
+}
+\datedexperience{\stageEntreprise}{\stageDates}
+\explanation{\stageIntitule}
+\explanationdetail{\stageDetail}
+
+\section{\secProjets} \vspace{0.2cm}
+\projMemoire
+\projKaggle
+
+\section{\secFormation} \vspace{0.2cm}
+\formation
+
+\section{\secInterets} \vspace{0.2cm}
+\newcommand{\listofextras}{\extraCourse,\extraLecture}
+\createbullets{\listofextras}
+
+\end{document}
