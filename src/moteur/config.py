@@ -58,6 +58,16 @@ class PublicService:
 
 
 @dataclass(frozen=True, slots=True)
+class StationF:
+    """Search on the Station F job board (SRC-70 to SRC-74)."""
+
+    enabled: bool = False
+    searches: tuple[str, ...] = ()
+    pages_max: int = 3
+    published_since: int = 21
+
+
+@dataclass(frozen=True, slots=True)
 class TargetCompany:
     name: str
     ats: AtsType = ""
@@ -102,6 +112,7 @@ class Config:
     companies: tuple[TargetCompany, ...]
     paths: Paths
     preparation_model: str = "sonnet"
+    station_f: StationF = StationF()
 
 
 def _table(data: Mapping[str, Any], key: str) -> Mapping[str, Any]:
@@ -173,6 +184,21 @@ def _public_service(table: Mapping[str, Any]) -> PublicService:
     )
 
 
+def _station_f(table: Mapping[str, Any]) -> StationF:
+    pages_max = _integer(table, "pages_max", 3)
+    if pages_max < 1:
+        raise ConfigError('"pages_max" must be at least 1')
+    published_since = _integer(table, "publiee_depuis", 21)
+    if published_since < 1:
+        raise ConfigError('"publiee_depuis" must be at least 1')
+    return StationF(
+        enabled=_boolean(table, "actif", False),
+        searches=_strings(table, "recherches"),
+        pages_max=pages_max,
+        published_since=published_since,
+    )
+
+
 def _company(table: Mapping[str, Any]) -> TargetCompany:
     name = _string(table, "nom")
     if not name:
@@ -236,6 +262,7 @@ def parse(data: Mapping[str, Any], folder: Path) -> Config:
             exchange=folder / "echange",
         ),
         preparation_model=_string(models, "preparation", "sonnet"),
+        station_f=_station_f(_table(data, "station_f")),
     )
 
 

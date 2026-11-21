@@ -30,6 +30,7 @@ from moteur.sources.base import HttpClient, HttpxClient, Source
 from moteur.sources.france_travail import SourceFranceTravail
 from moteur.sources.radancy import SourceRadancy
 from moteur.sources.service_public import SourceServicePublic
+from moteur.sources.station_f import SourceStationF
 from moteur.sources.welcomekit import SourceWelcomeKit
 from moteur.sources.workday import SourceWorkday
 
@@ -66,6 +67,13 @@ def build_sources(config: Config, client: HttpClient) -> list[Source]:
                 service_public.domains,
                 service_public.employers,
                 service_public.pages_max,
+            )
+        )
+    station_f = config.station_f
+    if station_f.enabled:
+        sources.append(
+            SourceStationF(
+                client, station_f.searches, station_f.pages_max, station_f.published_since
             )
         )
     for target in config.companies:

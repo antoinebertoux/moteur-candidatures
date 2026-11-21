@@ -122,3 +122,33 @@ refuses automated requests (HTTP 403) and is not used.
   title, its location and the text of its "about", "description", "profile" and "more"
   blocks (plain, SRC-02) replace the provisional values. A page without those blocks
   leaves the ad unchanged.
+
+## Station F
+
+The Station F job board (`jobs.stationf.co`) gathers the ads of the start-ups hosted at
+Station F. It is a Welcome Kit site: its search page queries Algolia with a public
+search key that the page itself publishes, restricted to the board's ads. `robots.txt`
+allows everything.
+
+- **SRC-70** · Active only if `[station_f] actif = true`. No credentials: at each run the
+  source reads the search key from `https://jobs.stationf.co/search` (hidden field
+  `algolia_api_key`), since it may change. A page without that key: source error.
+- **SRC-71** · One search per keyword of `recherches` on the index
+  `wk_cms_jobs_production_careers` (application `CSEKHVMS53`), 50 ads per page, at most
+  `pages_max` pages; it stops after the last page announced by the site. Searches run as
+  in SRC-05. An ad found by several keywords (same Algolia identifier) is kept once.
+- **SRC-72** · Kept only: ads published in the last `publiee_depuis` days, and whose
+  contract is neither an internship (`INTERNSHIP`) nor an apprenticeship
+  (`APPRENTICESHIP`). An ad without a readable publication date is kept.
+- **SRC-73** · From each result: company = the organisation's name; title = the ad's
+  name; location = the office city, followed by « télétravail total », « télétravail
+  partiel » or « télétravail ponctuel » (`remote` = `fulltime`, `partial`, `punctual`);
+  link = `https://jobs.stationf.co/companies/<organisation slug>/jobs/<ad slug>`; date =
+  the day of `published_at` (YYYY-MM-DD); salary, from the yearly bounds, written like
+  France Travail's so that the salary floor applies: « Annuel de <min> Euros à <max>
+  Euros », « Annuel jusqu'à <max> Euros », or « À partir de <min> Euros par an » (a lower
+  bound alone never rejects an ad); provisional text = the profile (plain, SRC-02), preceded by
+  « Expérience demandée : N ans. » when the site gives a minimum.
+- **SRC-74** · The page of each **retained** ad is opened and read as in SRC-61; its text
+  replaces the provisional one, preceded by the same experience sentence. A page without
+  text blocks leaves the ad unchanged.

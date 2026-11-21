@@ -23,6 +23,8 @@ def test_default_values(tmp_path: Path) -> None:
     config = parse({}, tmp_path)
     assert (config.batch_size, config.generation_model) == (8, "sonnet")
     assert not config.france_travail.enabled
+    assert not config.station_f.enabled
+    assert (config.station_f.pages_max, config.station_f.published_since) == (3, 21)
     assert config.paths.applications == tmp_path.parent / "Candidatures"
 
 
@@ -76,6 +78,9 @@ def test_workday_company_with_searches() -> None:
         {"criteres": {"salaire_plancher": "55000"}},
         {"taille_lot": 0},
         {"france_travail": {"actif": "oui"}},
+        {"station_f": {"pages_max": 0}},
+        {"station_f": {"publiee_depuis": 0}},
+        {"station_f": {"recherches": "ia"}},
         {"entreprises": [{"nom": "Acme", "ats": "taleo", "identifiant": "x"}]},
         {"entreprises": [{"nom": "Acme", "ats": "lever"}]},
         {"entreprises": [{"ats": "lever", "identifiant": "x"}]},

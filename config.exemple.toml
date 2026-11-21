@@ -60,6 +60,17 @@ employeurs = ["DINUM", "INSEE"]
 # Pages read per search (20 ads per page).
 pages_max = 3
 
+[station_f]
+# Station F job board (jobs.stationf.co): ads of the start-ups hosted at Station F,
+# searched through the site's public search. No credentials. Internships and
+# apprenticeships are left out.
+actif = false
+recherches = ["head of ai", "lead ai", "ai engineer", "data scientist", "machine learning"]
+# Pages read per search (50 ads per page).
+pages_max = 3
+# Ads published in the last N days.
+publiee_depuis = 21
+
 # Tracked companies. "ats" and "identifiant" depend on the career page's tool
 # (`uv run moteur detect <address>` finds them):
 #   greenhouse, lever, ashby: job-boards.greenhouse.io/<id>, jobs.lever.co/<id>, jobs.ashbyhq.com/<id>
