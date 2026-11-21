@@ -23,7 +23,7 @@ Checked by hand.
   ad (never an aggregator).
 - **TACHE-03** · Sources. Emploi 2: Choisir le service public, the organisations' own
   sites, beta.gouv, large companies' career sites, Welcome to the Jungle, LinkedIn alerts
-  received in Gmail. Emploi 4: Welcome to the Jungle, Station F, career pages on ATSs,
+  received in Gmail. Emploi 4: Welcome to the Jungle, career pages on ATSs,
   Licorne Society, Cyberjobs, LinkedIn alerts, and a light look at LinkedIn Jobs in the
   PC's browser when reachable (no clicking around, no applying, no messages).
 - **TACHE-04** · Calibration: keep senior applied-AI or GenAI roles, lead, head, technical

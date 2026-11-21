@@ -2,10 +2,10 @@ TÂCHE : offres publiées par des start-ups et scale-ups (hebdomadaire).
 Trouve les offres publiées depuis moins de 3 semaines, encore actives et ABSENTES de la base de suivi, dans des start-ups ou scale-ups (< ~500 personnes), et ENREGISTRE-LES DANS LA BASE DE SUIVI (voir plus bas) au lieu de les présenter à <PRÉNOM> dans la conversation.
 Sources, dans cet ordre :
 1. Welcome to the Jungle (welcometothejungle.com).
-2. Job board Station F (jobs.stationf.co).
-3. Sites carrières des start-ups, via une recherche web filtrée sur les logiciels de recrutement : jobs.lever.co, jobs.ashbyhq.com, boards.greenhouse.io, job-boards.greenhouse.io, apply.workable.com, teamtailor.com, recruitee.com, jobs.personio.de. Requêtes du type « Head of AI Paris », « Lead AI Paris », « Senior AI Engineer GenAI Paris », « Responsable IA ».
-4. Licorne Society (licornesociety.com) et Cyberjobs (cyberjobs.fr) pour la cybersécurité.
-5. LinkedIn : (a) cherche dans Gmail les e-mails d'alertes emploi LinkedIn des 8 derniers jours (expéditeur jobalerts-noreply@linkedin.com ou jobs-noreply@linkedin.com) et lis les offres listées ; (b) si le navigateur intégré du PC de <PRÉNOM> est joignable, ouvre une ou deux recherches LinkedIn Jobs (ex. « Head of AI » et « Lead AI », lieu Paris, publiées la semaine passée) et lis la page, sans rien cliquer de plus que nécessaire, sans postuler, sans envoyer de message. Consultation légère uniquement. Ignore les offres « Promu » hors critères.
+2. Sites carrières des start-ups, via une recherche web filtrée sur les logiciels de recrutement : jobs.lever.co, jobs.ashbyhq.com, boards.greenhouse.io, job-boards.greenhouse.io, apply.workable.com, teamtailor.com, recruitee.com, jobs.personio.de. Requêtes du type « Head of AI Paris », « Lead AI Paris », « Senior AI Engineer GenAI Paris », « Responsable IA ».
+3. Licorne Society (licornesociety.com) et Cyberjobs (cyberjobs.fr) pour la cybersécurité.
+4. LinkedIn : (a) cherche dans Gmail les e-mails d'alertes emploi LinkedIn des 8 derniers jours (expéditeur jobalerts-noreply@linkedin.com ou jobs-noreply@linkedin.com) et lis les offres listées ; (b) si le navigateur intégré du PC de <PRÉNOM> est joignable, ouvre une ou deux recherches LinkedIn Jobs (ex. « Head of AI » et « Lead AI », lieu Paris, publiées la semaine passée) et lis la page, sans rien cliquer de plus que nécessaire, sans postuler, sans envoyer de message. Consultation légère uniquement. Ignore les offres « Promu » hors critères.
+Le job board Station F (jobs.stationf.co) est lu par le moteur B : ne le consulte pas.
 Le filtre par site n'est pas strict : écarte les agrégateurs (aijobs.net, jobleads, etc.) et remonte toujours à l'offre d'origine. Ouvre chaque offre retenue pour vérifier qu'elle est active, le lieu, le télétravail et les exigences (notamment le nombre d'années d'expérience demandé, et si une lettre de motivation est demandée).
 
 CONTEXTE (à lire avant tout)
