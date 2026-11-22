@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import tomllib
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -26,6 +27,9 @@ AtsType = Literal[
 ]
 
 
+_COUNTRY_CODE = re.compile(r"[a-z]{2}")
+
+
 class ConfigError(ValueError):
     """The configuration file is missing or malformed."""
 
@@ -36,6 +40,8 @@ class Criteria:
     exclusions: tuple[str, ...]
     locations: tuple[str, ...]
     salary_floor: int
+    # ISO 3166-1 alpha-2 codes, lower case; empty = every country (CONF-10).
+    countries: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -76,7 +82,7 @@ class TargetCompany:
     unsolicited: bool = False
     linkedin: str = ""
     """LinkedIn page of the company (CONF-09)."""
-    # Keywords sent to the ATS search (Workday); empty = defaults.
+    # Keywords sent to the ATS search (Workday: empty = defaults; SmartRecruiters, SRC-35).
     searches: tuple[str, ...] = ()
 
 
@@ -171,6 +177,15 @@ def _identifiers(table: Mapping[str, Any], key: str, known: dict[str, int]) -> t
     return tuple(result)
 
 
+def _countries(table: Mapping[str, Any]) -> tuple[str, ...]:
+    """Two-letter country codes of `pays`, in lower case (CONF-10)."""
+    codes = tuple(code.strip().lower() for code in _strings(table, "pays"))
+    for code in codes:
+        if not _COUNTRY_CODE.fullmatch(code):
+            raise ConfigError(f'"pays": {code!r} is not a two-letter ISO 3166-1 code')
+    return codes
+
+
 def _public_service(table: Mapping[str, Any]) -> PublicService:
     pages_max = _integer(table, "pages_max", 3)
     if pages_max < 1:
@@ -247,6 +262,7 @@ def parse(data: Mapping[str, Any], folder: Path) -> Config:
             exclusions=_strings(criteria, "exclusions"),
             locations=_strings(criteria, "lieux"),
             salary_floor=_integer(criteria, "salaire_plancher", 0),
+            countries=_countries(criteria),
         ),
         france_travail=FranceTravail(
             enabled=_boolean(france_travail, "actif", False),

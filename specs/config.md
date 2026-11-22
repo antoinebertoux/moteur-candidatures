@@ -14,14 +14,19 @@ profile sent to Claude, the sorting criteria, the sources and the tracked compan
 - **CONF-04** · Every tracked company has a name. Its recruiting tool (`ats`) is empty
   or one of: greenhouse, lever, ashby, workday, smartrecruiters, recruitee, teamtailor,
   workable, radancy, welcomekit;
-  when set, `identifiant` is required. A Workday company may have its own search
-  keywords. It may have a website (`site`) and a LinkedIn page (`linkedin`).
+  when set, `identifiant` is required. A Workday or SmartRecruiters company may
+  have its own search keywords (`recherches`, SRC-41 and SRC-35). It may have a website (`site`) and a LinkedIn page (`linkedin`).
 - **CONF-05** · Choisir le service public domains and employers are given by name
   ("Ministère des Armées", "Numérique", accents and case ignored) or by their numeric id on the site; an
   unknown name is rejected with the list of known names.
 - **CONF-09** · A tracked company's `site` and `linkedin` must be http(s) addresses,
   otherwise they are rejected with a message naming the company. They are the company's
   links of LNK-02.
+- **CONF-10** · `[criteres] pays` lists the countries where ads are searched, as
+  two-letter ISO 3166-1 codes (`"fr"`, `"gb"`…, case ignored); empty or missing = every
+  country. Any other value is rejected with a message quoting it. The engine holds no
+  list of countries of its own: only sources that can search by country use it
+  (SmartRecruiters, SRC-35); the others rely on `lieux`.
 - **CONF-06** · `config.exemple.toml` is always a valid configuration.
 - **CONF-07** · Paths derive from the location of `config.toml`: the `moteur.sqlite3`
   database and the `echange/` folder next to it; `latex/`, `Candidatures/` and
