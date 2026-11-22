@@ -30,6 +30,7 @@ from moteur.sources.oracle import SourceOracle
 from moteur.sources.phenom import SourcePhenom
 from moteur.sources.radancy import SourceRadancy
 from moteur.sources.sitemap import SourceSitemap
+from moteur.sources.sncf import SourceSncf
 from moteur.sources.successfactors import SourceSuccessFactors
 from moteur.sources.talentsoft import SourceTalentsoft
 from moteur.sources.welcomekit import SourceWelcomeKit
@@ -78,6 +79,8 @@ def source_for(
         return SourceMcKinsey(client, target)
     if target.ats == "gestmax":
         return SourceGestmax(client, target)
+    if target.ats == "sncf":
+        return SourceSncf(client, target)
     if target.ats:
         return SourceAts(client, target, countries)
     return None

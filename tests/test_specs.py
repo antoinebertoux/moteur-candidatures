@@ -14,7 +14,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 SPECS = ROOT / "specs"
 OUTSIDE_REPO = {"tracking-page.md", "scheduled-tasks.md"}
-_RULE = re.compile(r"^- \*\*([A-Z]+-\d{2})\*\*")
+_RULE = re.compile(r"^- \*\*([A-Z]+-\d{2,})\*\*")
 
 
 def blocks(text: str) -> list[tuple[str, str]]:

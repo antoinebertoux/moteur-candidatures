@@ -14,7 +14,12 @@ from moteur.models import JobAd
 from moteur.own_companies import source_for
 from moteur.sources.avature import SourceAvature, ads_avature, complete_avature, portal_of
 from moteur.sources.base import SourceError
-from moteur.sources.gestmax import SourceGestmax, ads_gestmax, complete_gestmax
+from moteur.sources.gestmax import (
+    SourceGestmax,
+    ads_gestmax,
+    ads_gestmax_table,
+    complete_gestmax,
+)
 from moteur.sources.magnet import SourceMagnet, ads_magnet, login_body, public_key
 from moteur.sources.mckinsey import SourceMcKinsey, ads_mckinsey
 from moteur.sources.oracle import (
@@ -25,6 +30,8 @@ from moteur.sources.oracle import (
 )
 from moteur.sources.phenom import SourcePhenom, ads_phenom, split_phenom_address
 from moteur.sources.sitemap import SourceSitemap, complete_sitemap, provisional_title
+from moteur.sources.sncf import SEARCH as SNCF_SEARCH
+from moteur.sources.sncf import SourceSncf, ads_sncf, complete_sncf
 from moteur.sources.successfactors import (
     SourceSuccessFactors,
     ads_successfactors,
@@ -696,3 +703,134 @@ def test_gestmax_page_gives_the_text() -> None:
     (ad,) = add_details([JobAd("B", "Responsable", url=url, source="gestmax")], [source])
     assert ad.description == "Pilotez le magasin & l'équipe."
     assert complete_gestmax(ad, "<html></html>") == ad
+
+
+def _gestmax_row(number: int, title: str = "PMO F/H") -> str:
+    link = f"https://mbda.exemple.gestmax.fr/{number}/1/pmo-f-h?backlink=search"
+    cells = (
+        ("vacancy_title", title),
+        ("vacancy_activation_date", "19/11/2026"),
+        ("vac_sector", "Gestion de projet"),
+        ("vac_localisation", "Le Plessis Robinson (92)"),
+    )
+    tds = "".join(
+        f'<td headers="{h}" class="col_{h}">\n\t\t<a href="{link}" >\t\t{v}\n\t</a></td>'
+        for h, v in cells
+    )
+    return f'<tr class="cell1 vacancy-id-{number}">{tds}</tr>'
+
+
+@pytest.mark.spec("SRC-99", "SRC-01", "SRC-02")
+def test_gestmax_table_rows_become_ads() -> None:
+    page = "<table>" + _gestmax_row(1, "Ing&eacute;nieur F/H") + _gestmax_row(2, " ") + "</table>"
+    (ad,) = ads_gestmax_table("MBDA", page)
+    assert (ad.title, ad.location, ad.published_on, ad.source) == (
+        "Ingénieur F/H",
+        "Le Plessis Robinson (92)",
+        "2026-11-19",
+        "gestmax",
+    )
+    assert ad.url == "https://mbda.exemple.gestmax.fr/1/1/pmo-f-h"
+    assert ads_gestmax("MBDA", page) == []
+
+
+@pytest.mark.spec("SRC-99", "SRC-82")
+def test_gestmax_reads_a_table_list_page_by_page() -> None:
+    address = "https://mbda.exemple.gestmax.fr/search/index"
+    links = '<a href="/search/index/page/1">1</a><a href="/search/index/page/2">2</a>'
+    client = FakeClient(
+        {
+            f"{address}/page/1": "".join(_gestmax_row(n) for n in range(20)) + links,
+            f"{address}/page/2": _gestmax_row(19) + _gestmax_row(20) + links,
+        }
+    )
+    target = TargetCompany(
+        name="MBDA", ats="gestmax", identifier="mbda.exemple.gestmax.fr/search/index"
+    )
+    assert len(SourceGestmax(client, target).collect()) == 21
+    assert len(client.calls) == 2
+
+
+@pytest.mark.spec("SRC-84")
+def test_gestmax_page_without_content_area_starts_at_its_first_text() -> None:
+    page = (
+        '<div class="container"><h1>PMO F/H</h1><div class="text"><h2>Votre quotidien</h2>'
+        '<p>Piloter.</p></div><div class="text"><p>Profil.</p></div>'
+        '<div class="apply"><a>Postuler</a></div>'
+    )
+    ad = JobAd("MBDA", "PMO", url="https://mbda.exemple.gestmax.fr/1/1/pmo", source="gestmax")
+    assert complete_gestmax(ad, page).description == "Votre quotidien Piloter. Profil."
+
+
+# --- SNCF -------------------------------------------------------------------------------
+
+
+def _sncf_offer(number: int, **fields: Any) -> dict[str, Any]:
+    offer: dict[str, Any] = {
+        "id": str(number),
+        "company": "SNCF RESEAU",
+        "title": f"Electricien {number} (F/H)",
+        "location": "Lille, Nord (59)",
+        "publicationDate": "2026-11-20T12:43:52+0000",
+        "description": "",
+        "inactive": False,
+    }
+    return offer | fields
+
+
+def _sncf_answer(offers: list[dict[str, Any]], total: int) -> dict[str, Any]:
+    return {"jobIds": [o["id"] for o in offers], "jobs": {"offers": offers, "totalCount": total}}
+
+
+@pytest.mark.spec("SRC-101", "SRC-01")
+def test_sncf_offers_become_ads() -> None:
+    answer = _sncf_answer(
+        [_sncf_offer(1), _sncf_offer(2, inactive=True), _sncf_offer(3, title=""), {"id": 4}],
+        4,
+    )
+    (ad,) = ads_sncf("SNCF Réseau", answer)
+    assert (ad.company, ad.title, ad.location, ad.published_on, ad.source) == (
+        "SNCF Réseau",
+        "Electricien 1 (F/H)",
+        "Lille, Nord (59)",
+        "2026-11-20",
+        "sncf",
+    )
+    assert ad.url == "https://emploi.sncf.com/nos-offres/1"
+    assert ads_sncf("SNCF Réseau", None) == []
+
+
+@pytest.mark.spec("SRC-100")
+def test_sncf_reads_every_ad_of_one_company_page_by_page() -> None:
+    pages = [
+        _sncf_answer([_sncf_offer(n) for n in range(20)], 25),
+        _sncf_answer([_sncf_offer(n) for n in range(15, 25)], 25),
+    ]
+    client = FakeClient({SNCF_SEARCH: pages})
+    target = TargetCompany(name="SNCF Réseau", ats="sncf", identifier=" 6684 ")
+    source = source_for(target, client, ())
+    assert isinstance(source, SourceSncf)
+    assert len(source.collect()) == 25  # ads 15 to 19, listed twice, are kept once
+    assert [body for _, body in client.calls] == [
+        {"facets": {"company": ["6684"]}, "currentPage": 1, "loadOffers": True},
+        {"facets": {"company": ["6684"]}, "currentPage": 2, "loadOffers": True},
+    ]
+    # The announced total ends the reading even after a full page.
+    full = FakeClient({SNCF_SEARCH: [_sncf_answer([_sncf_offer(n) for n in range(20)], 20)]})
+    assert len(SourceSncf(full, target).collect()) == 20
+    assert len(full.calls) == 1
+
+
+@pytest.mark.spec("SRC-102", "SRC-02")
+def test_sncf_page_gives_the_text() -> None:
+    url = "https://emploi.sncf.com/nos-offres/1"
+    posting = {
+        "@type": "JobPosting",
+        "title": "Electricien",
+        "description": "Publiée le 20/11/2026&lt;br /&gt;&lt;b&gt;Description du poste&lt;/b&gt;",
+    }
+    page = f'<script type="application/ld+json">{json.dumps(posting)}</script>'
+    source = SourceSncf(FakeClient({url: page}), TargetCompany(name="S", identifier="6684"))
+    (ad,) = add_details([JobAd("S", "Electricien", url=url, source="sncf")], [source])
+    assert ad.description == "Publiée le 20/11/2026 Description du poste"
+    assert complete_sncf(ad, "<html></html>") == ad

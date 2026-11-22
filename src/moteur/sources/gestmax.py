@@ -1,7 +1,8 @@
 """Gestmax career sites, e.g. ``groupe-beaumanoir.gestmax.fr``.
 
-Their search lists are plain pages of 10 ads (title, date, city, country); the page of
-each retained ad gives its text (SRC-82 to SRC-84).
+Their search lists are plain pages of 10 ads (title, date, city, country), or a table of
+20 rows on some sites; the page of each retained ad gives its text (SRC-82 to SRC-84,
+SRC-99).
 """
 
 from __future__ import annotations
@@ -25,7 +26,17 @@ _DATE = re.compile(
 )
 _CITY = re.compile(r'listdiv-dept_ville">.*?<span class="listdiv-value">(.*?)</span>', re.DOTALL)
 _COUNTRY = re.compile(r'listdiv-dept_pays">\s*-?\s*(.*?)</span>', re.DOTALL)
-_CONTENT = re.compile(r'<div id="content-wrapper">(.*?)<div class="apply">', re.DOTALL)
+_ROW = re.compile(r'<tr class="cell\d[^"]*">(.*?)</tr>', re.DOTALL)
+_CELL = r'<td headers="{column}"[^>]*>\s*<a href="([^"]*)"[^>]*>(.*?)</a>'
+_ROW_TITLE = re.compile(_CELL.format(column="vacancy_title"), re.DOTALL)
+_ROW_DATE = re.compile(_CELL.format(column="vacancy_activation_date"), re.DOTALL)
+_ROW_LOCATION = re.compile(_CELL.format(column="vac_localisation"), re.DOTALL)
+_AD_LINK = re.compile(r"https?://[^/?\s]+/\d+/\d+/[^?\s]*")
+_DAY = re.compile(r"(\d{2})/(\d{2})/(\d{4})")
+_CONTENT = (
+    re.compile(r'<div id="content-wrapper">(.*?)<div class="apply">', re.DOTALL),
+    re.compile(r'(<div class="text">.*?)<div class="apply">', re.DOTALL),
+)
 
 
 def list_address(identifier: str) -> str:
@@ -61,6 +72,34 @@ def ads_gestmax(company: str, page: str) -> list[JobAd]:
     return ads
 
 
+def _row_cell(pattern: re.Pattern[str], row: str) -> str:
+    match = pattern.search(row)
+    return plain_text(match.group(2)) if match else ""
+
+
+def ads_gestmax_table(company: str, page: str) -> list[JobAd]:
+    """The rows of a list shown as a table (SRC-99)."""
+    ads: list[JobAd] = []
+    for row in _ROW.findall(page):
+        title = _ROW_TITLE.search(row)
+        link = _AD_LINK.match(title.group(1)) if title else None
+        name = plain_text(title.group(2)) if title else ""
+        if not link or not name:
+            continue
+        day = _DAY.search(_row_cell(_ROW_DATE, row))
+        ads.append(
+            JobAd(
+                company=company,
+                title=name,
+                location=_row_cell(_ROW_LOCATION, row),
+                url=link.group(0),
+                source="gestmax",
+                published_on=f"{day.group(3)}-{day.group(2)}-{day.group(1)}" if day else "",
+            )
+        )
+    return ads
+
+
 def last_page(page: str, path: str) -> int:
     """The highest page number the list links to (0 if none)."""
     numbers = re.findall(re.escape(path) + r"/page/(\d+)", page)
@@ -69,9 +108,12 @@ def last_page(page: str, path: str) -> int:
 
 def complete_gestmax(ad: JobAd, page: str) -> JobAd:
     """The ad with its content, up to the « Postuler » button; unchanged without it."""
-    found = _CONTENT.search(page)
-    text = plain_text(found.group(1)) if found else ""
-    return replace(ad, description=text) if text else ad
+    for pattern in _CONTENT:
+        found = pattern.search(page)
+        text = plain_text(found.group(1)) if found else ""
+        if text:
+            return replace(ad, description=text)
+    return ad
 
 
 class SourceGestmax:
@@ -90,6 +132,7 @@ class SourceGestmax:
         for number in range(1, PAGES_MAX + 1):
             page = self._client.get_text(f"{self._list}/page/{number}")
             ads = ads_gestmax(self._company.name, page)
+            ads += ads_gestmax_table(self._company.name, page)
             for ad in ads:
                 seen.setdefault(ad.url, ad)
             if not ads or number >= last_page(page, path):

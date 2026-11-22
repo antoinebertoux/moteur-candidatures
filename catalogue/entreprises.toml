@@ -41,7 +41,10 @@
 #            (e.g. careers.societegenerale.com/offres-d-emploi/)
 #   mckinsey: McKinsey's own career site; identifiant www.mckinsey.com (not used)
 #   gestmax: the address of a Gestmax search list
-#            (e.g. groupe-beaumanoir.gestmax.fr/search/index/frontsearchtab_id/7)
+#            (e.g. groupe-beaumanoir.gestmax.fr/search/index/frontsearchtab_id/7,
+#            or mbda.gestmax.fr/search/index)
+#   sncf: emploi.sncf.com; the group company's number in the site's « company »
+#         filter (6684 SNCF Réseau, 6685 SNCF Voyageurs)
 
 [[entreprises]]
 nom = "Thales"
@@ -334,6 +337,15 @@ taille = "grand-groupe"
 pays = ["it"]
 
 [[entreprises]]
+nom = "MBDA France"
+ats = "gestmax"
+identifiant = "mbda.gestmax.fr/search/index"
+site = "https://www.mbda-systems.com"
+secteur = "defense"
+taille = "grand-groupe"
+pays = ["fr"]
+
+[[entreprises]]
 nom = "Crédit Agricole CIB"
 ats = "talentsoft"
 identifiant = "casa-cacib-recrute.talent-soft.com"
@@ -476,3 +488,21 @@ site = "https://www.edf.fr"
 secteur = "energie"
 taille = "grand-groupe"
 pays = []
+
+[[entreprises]]
+nom = "SNCF Réseau"
+ats = "sncf"
+identifiant = "6684"
+site = "https://www.sncf-reseau.com"
+secteur = "transport-logistique"
+taille = "grand-groupe"
+pays = ["fr"]
+
+[[entreprises]]
+nom = "SNCF Voyageurs"
+ats = "sncf"
+identifiant = "6685"
+site = "https://www.sncf-voyageurs.com"
+secteur = "transport-logistique"
+taille = "grand-groupe"
+pays = ["fr"]

@@ -69,7 +69,7 @@ stays empty.
   | workable | `apply.workable.com/api/v1/widget/accounts/<id>?details=true` |
 
   Workday, Radancy, Welcome Kit, Talentsoft, Oracle, SuccessFactors, Phenom, Avature,
-  Magnet, Gestmax, the sitemap of offers and McKinsey have sections of their own below. A company without a supported ATS cannot become a
+  Magnet, Gestmax, the sitemap of offers, McKinsey and SNCF have sections of their own below. A company without a supported ATS cannot become a
   source.
 - **SRC-33** · Greenhouse boards hosted in Europe: an identifier written `eu:<id>` is
   queried at `boards-api.eu.greenhouse.io/v1/boards/<id>/jobs?content=true`.
@@ -249,8 +249,9 @@ with their full text, in one public RSS feed.
 
 ## Gestmax
 
-Career sites built on Gestmax (for instance `groupe-beaumanoir.gestmax.fr`). Their
-search lists are plain pages of 10 ads; their RSS feed holds only the 20 newest ads.
+Career sites built on Gestmax (for instance `groupe-beaumanoir.gestmax.fr`,
+`mbda.gestmax.fr`). Their search lists are plain pages of 10 or 20 ads; their RSS feed
+holds only the 20 newest ads.
 
 - **SRC-82** · The identifier is the address of a search list
   (`groupe-beaumanoir.gestmax.fr/search/index/frontsearchtab_id/7`, the list of every
@@ -260,9 +261,15 @@ search lists are plain pages of 10 ads; their RSS feed holds only the 20 newest 
 - **SRC-83** · From each entry: title and link (`https://<host>/<number>/1/<slug>`); date
   « 20/11/2026 » → `2026-11-20`; location = the city followed by the country
   (« ROUFFIAC TOLOSAN, France »). An entry without a title is skipped (SRC-01).
+- **SRC-99** · Some sites show their list as a table (MBDA, `mbda.gestmax.fr/search/index`):
+  one row per ad, with a title, date, sector and location column. From each row: title
+  and link as in SRC-83, without what follows `?` in the link (`?backlink=search`); date
+  as in SRC-83; location = the location column as shown (« Bourges (18) »). Both layouts
+  are looked for on every page.
 - **SRC-84** · The page of each **retained** ad is opened (as in SRC-24): its content,
-  from the first text block to the « Postuler » button (plain, SRC-02), becomes the ad
-  text. A page without that content leaves the ad unchanged.
+  from the first text block (the page's content area, or else its first text section)
+  to the « Postuler » button (plain, SRC-02), becomes the ad text. A page without that
+  content leaves the ad unchanged.
 
 ## Oracle Recruiting Cloud
 
@@ -339,3 +346,23 @@ RSS feed gives the first 20 ads of a search.
   (label, value) give the location, « City, Country » (fields `City` and `Country`), and
   the text: the values of 100 characters or more (plain, SRC-02), one after the other. A
   page without fields leaves the ad unchanged.
+
+## SNCF
+
+The SNCF group's career site, `emploi.sncf.com`, holds the ads of every company of the
+group (SNCF Réseau, SNCF Voyageurs, Gares & Connexions, Hexafret…). Its page queries a
+public search address, `emploi.sncf.com/internal-gw/search`, without any key; the
+`?page=` of the page's own address is ignored by the site.
+
+- **SRC-100** · The identifier is the number of a group company in the site's
+  « company » filter (`6684` SNCF Réseau, `6685` SNCF Voyageurs). Every ad of that
+  company is read, without search terms: the source sends
+  `{"facets": {"company": ["<number>"]}, "currentPage": <n>, "loadOffers": true}`, `n`
+  from 1, 20 ads per page, at most 40 pages; it stops at an incomplete page or once the
+  announced total (`totalCount`) is reached. The same ad (same `id`) is kept once.
+- **SRC-101** · From each offer: title; location as shown (« Lille, Nord (59) »);
+  date = the day of `publicationDate`; link = `https://emploi.sncf.com/nos-offres/<id>`.
+  An offer marked `inactive` is skipped.
+- **SRC-102** · The page of each **retained** ad is opened (as in SRC-24): the
+  `description` of its job posting (the page's structured data, plain SRC-02) becomes
+  the ad text. A page without it leaves the ad unchanged.
