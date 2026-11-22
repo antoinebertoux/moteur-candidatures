@@ -40,7 +40,8 @@ ask Claude to find or add others. Engine B keeps these choices and companies;
   economy). The page shows them with a translated label (PAGE-66).
 - **CAT-05** · The catalogue shipped is always valid: every entry follows CAT-02 to
   CAT-04, and two entries never have the same normalised name (ID-01). An invalid entry
-  is rejected with a message naming the company, like CONF-03.
+  is skipped with a warning naming the company, like CONF-03, and the other entries
+  still load: one invalid entry never empties the catalogue.
 - **CAT-08** · A company's recruiting tool (`ats`) is empty or one of: greenhouse, lever,
   ashby, workday, smartrecruiters, recruitee, teamtailor, workable, radancy, welcomekit,
   talentsoft, oracle, successfactors, phenom, avature, magnet, sitemap, mckinsey,

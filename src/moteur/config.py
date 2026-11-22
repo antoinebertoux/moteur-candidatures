@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import re
 import tomllib
 from collections.abc import Mapping
@@ -12,6 +13,8 @@ from typing import Any, Literal, cast, get_args
 from moteur.company_links import is_web_address
 from moteur.models import normalise
 from moteur.sources.service_public import DOMAINS, EMPLOYERS, identifier
+
+log = logging.getLogger("moteur")
 
 AtsType = Literal[
     "greenhouse",
@@ -379,12 +382,26 @@ def own_company(table: Mapping[str, Any]) -> TargetCompany:
     return replace(company, origin="perso")
 
 
-def parse_catalogue(data: Mapping[str, Any]) -> tuple[TargetCompany, ...]:
-    """Builds the catalogue (CAT-02 to CAT-05)."""
+def parse_catalogue(
+    data: Mapping[str, Any], *, skip_invalid: bool = False
+) -> tuple[TargetCompany, ...]:
+    """Builds the catalogue (CAT-02 to CAT-05).
+
+    With `skip_invalid` (CAT-05), an invalid entry is logged and left out instead of
+    failing the whole catalogue.
+    """
     entries = data.get("entreprises", [])
     if not isinstance(entries, list) or not all(isinstance(e, dict) for e in entries):
         raise ConfigError("[[entreprises]] of the catalogue must be a list of tables")
-    companies = tuple(_catalogue_company(entry) for entry in entries)
+    kept: list[TargetCompany] = []
+    for entry in entries:
+        try:
+            kept.append(_catalogue_company(entry))
+        except ConfigError as error:
+            if not skip_invalid:
+                raise
+            log.warning("catalogue entry skipped: %s", error)
+    companies = tuple(kept)
     seen: set[str] = set()
     for company in companies:
         key = normalise(company.name)
@@ -403,7 +420,7 @@ def load_catalogue(path: Path = CATALOGUE) -> tuple[TargetCompany, ...]:
         return ()
     except tomllib.TOMLDecodeError as error:
         raise ConfigError(f"{path} unreadable: {error}") from error
-    return parse_catalogue(data)
+    return parse_catalogue(data, skip_invalid=True)
 
 
 NO_COMPANIES_IN_CONFIG = (

@@ -129,6 +129,25 @@ def test_sectors_are_a_fixed_list() -> None:
 
 
 @pytest.mark.spec("CAT-05")
+def test_an_invalid_catalogue_entry_is_skipped_with_a_warning(
+    caplog: pytest.LogCaptureFixture, tmp_path: Path
+) -> None:
+    bad = THALES | {"nom": "Broken", "ats": "not-a-tool"}
+    kept = parse_catalogue({"entreprises": [THALES, bad]}, skip_invalid=True)
+    assert [company.name for company in kept] == ["Thales"]
+    assert "Broken" in caplog.text and "skipped" in caplog.text
+    # The shipped file goes through the same skipping path at load time.
+    path = tmp_path / "entreprises.toml"
+    path.write_text(
+        '[[entreprises]]\nnom = "Broken"\nats = "not-a-tool"\nsecteur = "defense"\n'
+        'taille = "public"\n\n[[entreprises]]\nnom = "Thales"\nats = "lever"\n'
+        'identifiant = "thales"\nsecteur = "defense"\ntaille = "grand-groupe"\n',
+        encoding="utf-8",
+    )
+    assert [company.name for company in load_catalogue(path)] == ["Thales"]
+
+
+@pytest.mark.spec("CAT-05")
 def test_a_company_is_never_listed_twice() -> None:
     with pytest.raises(ConfigError, match="twice"):
         parse_catalogue({"entreprises": [THALES, THALES | {"nom": "THALÈS"}]})
