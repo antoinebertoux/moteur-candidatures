@@ -214,25 +214,34 @@ def test_unsolicited_application_is_off_unless_chosen() -> None:
 
 
 @pytest.mark.spec("CAT-15")
-def test_keyword_sources_need_the_config_and_no_veto() -> None:
-    settings = config(service_public={"actif": True}, station_f={"actif": True})
+def test_keyword_sources_follow_the_choice_then_the_config(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("FRANCE_TRAVAIL_ID", raising=False)
+    monkeypatch.delenv("FRANCE_TRAVAIL_SECRET", raising=False)
+    settings = config(service_public={"actif": True})
     assert source_searched(settings, NO_CHOICE, "service_public")
-    assert not source_searched(settings, NO_CHOICE, "france_travail")
-    # Turning on a source that is off in config.toml changes nothing.
+    assert not source_searched(settings, NO_CHOICE, "station_f")
+    # User's choice wins over `actif` in config.toml, both ways.
+    assert source_searched(settings, choices(("source", "station_f", "actif", True)), "station_f")
     assert not source_searched(
-        settings, choices(("source", "france_travail", "actif", True)), "france_travail"
-    )
-    assert not source_searched(
-        settings, choices(("source", "station_f", "actif", False)), "station_f"
+        settings, choices(("source", "service_public", "actif", False)), "service_public"
     )
     assert not source_searched(
         settings, choices(("taille", "public", "actif", False)), "service_public"
     )
-    assert not source_searched(
-        settings, choices(("taille", "startup", "actif", False)), "station_f"
-    )
+    on = choices(("source", "station_f", "actif", True), ("taille", "startup", "actif", False))
+    assert not source_searched(settings, on, "station_f")
     sources = build_sources(settings, FakeClient({}), choices(("taille", "public", "actif", False)))
     assert "service_public" not in {source.name for source in sources}
+    # France Travail turned on without its credentials is still not queried (SRC-10).
+    chosen = choices(("source", "france_travail", "actif", True))
+    names_ = {source.name for source in build_sources(settings, FakeClient({}), chosen)}
+    assert "france_travail" not in names_
+    monkeypatch.setenv("FRANCE_TRAVAIL_ID", "id")
+    monkeypatch.setenv("FRANCE_TRAVAIL_SECRET", "secret")
+    names_ = {source.name for source in build_sources(settings, FakeClient({}), chosen)}
+    assert "france_travail" in names_
 
 
 @pytest.mark.spec("CAT-16", "BASE-15")

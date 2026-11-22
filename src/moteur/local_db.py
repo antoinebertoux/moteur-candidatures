@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import sqlite3
 from collections.abc import Iterable, Mapping
 from datetime import date
@@ -77,6 +78,13 @@ CREATE TABLE IF NOT EXISTS choix (
     champ TEXT NOT NULL,
     valeur INTEGER NOT NULL,
     PRIMARY KEY (objet, cle, champ)
+)
+""",
+    # The search criteria User replaced in the page (BASE-17); `valeurs` is a JSON list.
+    """
+CREATE TABLE IF NOT EXISTS criteres (
+    cle TEXT PRIMARY KEY,
+    valeurs TEXT NOT NULL
 )
 """,
     # User's own companies (BASE-16); `pays` holds the codes separated by commas.
@@ -558,6 +566,24 @@ class LocalDb:
                         "INSERT INTO choix (objet, cle, champ, valeur) VALUES (?, ?, ?, ?)"
                         " ON CONFLICT (objet, cle, champ) DO UPDATE SET valeur = excluded.valeur",
                         (choice.subject, choice.key, choice.field, int(choice.value)),
+                    )
+
+    def criteria(self) -> dict[str, tuple[str, ...]]:
+        """The search criteria User replaced in the page (BASE-17), by list name."""
+        rows = self._connection.execute("SELECT cle, valeurs FROM criteres")
+        return {row["cle"]: tuple(json.loads(row["valeurs"])) for row in rows}
+
+    def record_criteria(self, criteria: Mapping[str, tuple[str, ...] | None]) -> None:
+        """Records the lists at once; None goes back to `config.toml` (BASE-17)."""
+        with self._connection:
+            for key, values in criteria.items():
+                if values is None:
+                    self._connection.execute("DELETE FROM criteres WHERE cle = ?", (key,))
+                else:
+                    self._connection.execute(
+                        "INSERT INTO criteres (cle, valeurs) VALUES (?, ?)"
+                        " ON CONFLICT (cle) DO UPDATE SET valeurs = excluded.valeurs",
+                        (key, json.dumps(list(values), ensure_ascii=False)),
                     )
 
     def own_companies(self) -> tuple[TargetCompany, ...]:

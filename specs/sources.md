@@ -28,8 +28,9 @@ stays empty.
 
 ## France Travail
 
-- **SRC-10** · Active only if `[france_travail] actif = true` **and**
-  `FRANCE_TRAVAIL_ID` and `FRANCE_TRAVAIL_SECRET` are set; otherwise it is skipped with a
+- **SRC-10** · Active only if turned on (CAT-15: User's choice, otherwise
+  `[france_travail] actif = true`) **and** `FRANCE_TRAVAIL_ID` and
+  `FRANCE_TRAVAIL_SECRET` are set; otherwise it is skipped with a
   warning. *(untested)*
 - **SRC-11** · Gets an OAuth token, then runs one search per keyword (CONF-11) and per département
   (or one per keyword if no département), limited to ads published in the last
@@ -187,7 +188,8 @@ Station F. It is a Welcome Kit site: its search page queries Algolia with a publ
 search key that the page itself publishes, restricted to the board's ads. `robots.txt`
 allows everything.
 
-- **SRC-70** · Active only if `[station_f] actif = true`. No credentials: at each run the
+- **SRC-70** · Active only if turned on (CAT-15: User's choice, otherwise
+  `[station_f] actif = true`). No credentials: at each run the
   source reads the search key from `https://jobs.stationf.co/search` (hidden field
   `algolia_api_key`), since it may change. A page without that key: source error.
 - **SRC-71** · One search per keyword (CONF-11) on the index

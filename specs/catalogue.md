@@ -74,10 +74,10 @@ ask Claude to find or add others. Engine B keeps these choices and companies;
 - **CAT-14** · An unsolicited application is proposed only for a searched company whose
   unsolicited application is on: User's choice, otherwise off (COL-03).
 - **CAT-15** · Sources searched by keyword: France Travail, Choisir le service public and
-  Station F are queried only if `actif = true` in `config.toml` (SRC-10…) **and** User
-  has not turned them off. Turning a source on in the page never enables one that is off
-  in `config.toml` (credentials may be missing). Choisir le service public belongs to
-  the size `public` and Station F to the size `startup`: turning the size off turns the
+  Station F. User's choice turns a source on or off; without a choice, it follows
+  `actif` in `config.toml` (SRC-10, SRC-20, SRC-70). France Travail is queried only when
+  its credentials are set (SRC-10), whatever the choice. Choisir le service public belongs
+  to the size `public` and Station F to the size `startup`: turning the size off turns the
   source off too.
 - **CAT-16** · A choice about a company or sector that no longer exists (removed from the
   catalogue or from User's own companies) is kept and ignored; it applies again if the company

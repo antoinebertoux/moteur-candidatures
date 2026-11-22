@@ -153,13 +153,13 @@ missing = `manuel`), `statut`, `score`, `resume`, `lettre_demandee`, `lettre`
   prepare, To validate, To send or Applied), rejected, applied, and the acceptance rate
   = accepted / (accepted + rejected).
 
-## Companies searched
+## Search options
 
-- **PAGE-70** · An "Options" button in the header opens the "Companies searched" panel.
+- **PAGE-70** · An "Options" button in the header opens the "Search options" panel.
   It reads the tool `entreprises` (ECH-27) when it opens. When engine B is not connected
   (PAGE-35), the panel says the choices need engine B running and shows nothing else.
-- **PAGE-71** · The panel shows, from top to bottom: the keyword sources (a source off
-  in `config.toml` is shown greyed out, "not configured"); the sizes; the sectors, each
+- **PAGE-71** · The panel shows, from top to bottom: the search criteria (PAGE-75); the
+  keyword sources (PAGE-76); the sizes; the sectors, each
   with its number of companies (a sector with none is not shown); then the companies, grouped by sector, with a search
   field. Each company shows its name, a "catalogue" or "mine" badge, a "searched" box
   and an "unsolicited" box. A company ticked but left out by its sector or size is shown
@@ -167,11 +167,29 @@ missing = `manuel`), `statut`, `score`, `resume`, `lettre_demandee`, `lettre`
   scheduled tasks.
 - **PAGE-72** · Each tick calls `selection` (ECH-28) at once and redraws the panel from
   its answer. A failed call puts the box back and says why, as PAGE-38.
-- **PAGE-73** · A company or a group whose state differs from the default shows a
-  "default" link that sends `null` for it. A "Back to defaults" button, after a
-  confirmation, does it for every choice.
+- **PAGE-73** · A company, a group, a source or a criterion whose state differs from the
+  default shows a "default" link that sends `null` for it. A "Back to defaults" button,
+  after a confirmation, does it for every choice, criteria included.
 - **PAGE-74** · The page keeps none of these choices in its own database: engine B holds
-  them (BASE-15), on the PC.
+  them (BASE-15, BASE-17), on the PC.
+- **PAGE-75** · Search criteria (CONF-13), in this order: keywords, exclusions,
+  locations, countries, search terms. Each list shows its values as chips with a ×, and a
+  field where Enter or a comma adds what is typed. Each addition or removal calls
+  `selection` at once (PAGE-72); a value refused (CONF-14) is left in the field with the
+  reason. A line under each list says how it is used:
+  - keywords: the title must contain at least one; empty = no filter;
+  - exclusions: a title containing one is rejected;
+  - locations: an ad's location must contain one of them (e.g. "lyon", "69", "remote");
+    empty = anywhere; an ad without location always passes;
+  - countries: two-letter codes (fr, gb, be…); used by the sites that search by country
+    and to pick the catalogue companies by default; empty = every country;
+  - search terms: typed in the search box of the sites that cannot list all their ads;
+    each term costs one search per company on those sites, so keep a few broad terms.
+  A line says that the changes apply from the next collection, and that the ads already
+  in the list stay.
+- **PAGE-76** · Each keyword source shows a box: ticked if it is turned on (CAT-15).
+  France Travail without its credentials is greyed out, "credentials missing (.env)". A
+  source with its own search terms in `config.toml` says so (CONF-15).
 
 ## Robustness and display
 
