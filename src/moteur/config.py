@@ -30,6 +30,8 @@ AtsType = Literal[
     "phenom",
     "avature",
     "magnet",
+    "sitemap",
+    "mckinsey",
     "",
 ]
 

@@ -15,6 +15,7 @@ from moteur.own_companies import source_for
 from moteur.sources.avature import SourceAvature, ads_avature, complete_avature, portal_of
 from moteur.sources.base import SourceError
 from moteur.sources.magnet import SourceMagnet, ads_magnet, login_body, public_key
+from moteur.sources.mckinsey import SourceMcKinsey, ads_mckinsey
 from moteur.sources.oracle import (
     SourceOracle,
     ads_oracle,
@@ -22,6 +23,7 @@ from moteur.sources.oracle import (
     split_oracle_address,
 )
 from moteur.sources.phenom import SourcePhenom, ads_phenom, split_phenom_address
+from moteur.sources.sitemap import SourceSitemap, complete_sitemap, provisional_title
 from moteur.sources.successfactors import (
     SourceSuccessFactors,
     ads_successfactors,
@@ -467,3 +469,156 @@ def test_magnet_offers_become_ads() -> None:
     assert first.url == "https://jobs.exemple.com/fr/offer/9452-0"
     assert (second.location, second.url) == ("", "https://jobs.exemple.com/fr/offer/9")
     assert ads_magnet("Fives", "jobs.exemple.com", None) == []
+
+
+# --- Sitemap of offers ----------------------------------------------------------------
+
+ROBOTS = (
+    "User-agent: *\nDisallow: /search/\nSitemap: https://careers.exemple.com/sitemap-index.xml\n"
+)
+SITEMAP_INDEX = """<?xml version="1.0"?>
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<sitemap><loc>https://careers.exemple.com/sitemap-jobs.xml</loc></sitemap>
+</sitemapindex>"""
+SITEMAP_JOBS = """<?xml version="1.0"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<url><loc>https://careers.exemple.com/offres-d-emploi/</loc></url>
+<url><loc>https://careers.exemple.com/offres-d-emploi/algo-developer-260002H8-en</loc></url>
+<url><loc>https://careers.exemple.com/offres-d-emploi/algo-developer-260002H8-en</loc></url>
+<url><loc>https://careers.exemple.com/offres-d-emploi/2600032A</loc></url>
+<url><loc>https://careers.exemple.com/metiers/data</loc></url>
+</urlset>"""
+
+
+@pytest.mark.spec("SRC-52", "SRC-53")
+def test_sitemap_offers_come_from_the_robots_sitemaps() -> None:
+    client = FakeClient(
+        {
+            "https://careers.exemple.com/robots.txt": ROBOTS,
+            "https://careers.exemple.com/sitemap-index.xml": SITEMAP_INDEX,
+            "https://careers.exemple.com/sitemap-jobs.xml": SITEMAP_JOBS,
+        }
+    )
+    target = TargetCompany(
+        name="SG", ats="sitemap", identifier="careers.exemple.com/offres-d-emploi"
+    )
+    source = source_for(target, client, ())
+    assert isinstance(source, SourceSitemap)
+    (ad,) = source.collect()
+    assert (ad.title, ad.location, ad.description, ad.source) == (
+        "Algo Developer",
+        "",
+        "",
+        "sitemap",
+    )
+    assert ad.url == "https://careers.exemple.com/offres-d-emploi/algo-developer-260002H8-en"
+    assert provisional_title("https://x.com/jobs/junior-software-engineer-550851") == (
+        "Junior Software Engineer"
+    )
+    # Without a Sitemap line, /sitemap.xml is read; an unreadable one gives nothing.
+    fallback = FakeClient({"https://careers.exemple.com/sitemap.xml": SITEMAP_JOBS})
+    assert len(SourceSitemap(fallback, target).collect()) == 1
+    assert SourceSitemap(FakeClient({}), target).collect() == []
+
+
+@pytest.mark.spec("SRC-54", "SRC-51")
+def test_sitemap_page_gives_title_text_date_and_location() -> None:
+    url = "https://careers.exemple.com/offres-d-emploi/algo-developer-260002H8-en"
+    data = {
+        "@context": "https://schema.org",
+        "@graph": [
+            {
+                "@type": "JobPosting",
+                "title": "Algo Developer H/F",
+                "description": "<p>Coder des algorithmes</p>",
+                "datePosted": "2026/02/20",
+                "jobLocation": {
+                    "@type": "Place",
+                    "address": {"addressLocality": "Montréal", "addressCountry": "Canada"},
+                },
+            }
+        ],
+    }
+    page = f'<script type="application/ld+json">{json.dumps(data)}</script>'
+    source = SourceSitemap(
+        FakeClient({url: page}),
+        TargetCompany(name="SG", identifier="careers.exemple.com/offres-d-emploi/"),
+    )
+    (ad,) = add_details([JobAd("SG", "Algo Developer", url=url, source="sitemap")], [source])
+    assert (ad.title, ad.description, ad.published_on, ad.location) == (
+        "Algo Developer H/F",
+        "Coder des algorithmes",
+        "2026-02-20",
+        "Montréal, Canada",
+    )
+    plain = JobAd("SG", "Algo Developer", url=url, source="sitemap")
+    assert complete_sitemap(plain, "<html></html>") == plain
+
+
+# --- McKinsey -------------------------------------------------------------------------
+
+
+def _mckinsey_answer(ids: range, total: int) -> dict[str, object]:
+    docs = [
+        {
+            "jobID": str(i),
+            "title": f"Data Scientist {i}",
+            "friendlyURL": f"datascientist-{i}",
+            "cities": ["Paris", "London"],
+            "whoYouWillWorkWith": "<div>QuantumBlack</div>",
+            "whatYouWillDo": "<p>Build models</p>",
+            "yourBackground": "",
+            "postedToLinkedInDate": "2026-10-27",
+        }
+        for i in ids
+    ]
+    return {"numFound": total, "docs": docs}
+
+
+@pytest.mark.spec("SRC-63", "SRC-01", "SRC-02")
+def test_mckinsey_results_become_ads() -> None:
+    answer = _mckinsey_answer(range(1), 1)
+    answer["docs"].append({"title": "Sans lien"})  # type: ignore[attr-defined]
+    (ad,) = ads_mckinsey("McKinsey", answer)
+    assert (ad.title, ad.location, ad.description, ad.published_on, ad.source) == (
+        "Data Scientist 0",
+        "Paris, London",
+        "QuantumBlack Build models",
+        "2026-10-27",
+        "mckinsey",
+    )
+    assert ad.url == "https://www.mckinsey.com/careers/search-jobs/jobs/datascientist-0"
+    assert ads_mckinsey("McKinsey", {"docs": None}) == []
+
+
+@pytest.mark.spec("SRC-62", "SRC-05")
+def test_mckinsey_searches_each_keyword_page_by_page() -> None:
+    class PagedClient(FakeClient):
+        def get_json(
+            self,
+            url: str,
+            *,
+            params: Mapping[str, str] | None = None,
+            headers: Mapping[str, str] | None = None,
+        ) -> Any:
+            self.calls.append((url, dict(params or {})))
+            page = int((params or {})["start"])
+            return (
+                _mckinsey_answer(range(100), 150)
+                if page == 1
+                else _mckinsey_answer(range(100, 150), 150)
+            )
+
+    client = PagedClient({})
+    target = TargetCompany(
+        name="McKinsey", ats="mckinsey", identifier="www.mckinsey.com", searches=("data", "ia")
+    )
+    source = source_for(target, client, ())
+    assert isinstance(source, SourceMcKinsey)
+    assert len(source.collect()) == 150  # the same ads for both keywords are kept once
+    assert sorted((p["q"], p["start"], p["pageSize"]) for _, p in client.calls) == [
+        ("data", "1", "100"),
+        ("data", "2", "100"),
+        ("ia", "1", "100"),
+        ("ia", "2", "100"),
+    ]

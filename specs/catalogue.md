@@ -43,14 +43,15 @@ ask Claude to find or add others. Engine B keeps these choices and companies;
   is rejected with a message naming the company, like CONF-03.
 - **CAT-08** · A company's recruiting tool (`ats`) is empty or one of: greenhouse, lever,
   ashby, workday, smartrecruiters, recruitee, teamtailor, workable, radancy, welcomekit,
-  talentsoft, oracle, successfactors, phenom, avature, magnet;
+  talentsoft, oracle, successfactors, phenom, avature, magnet, sitemap, mckinsey;
   when set, `identifiant` is required. Its `site` and `linkedin`, when given, are http(s)
   addresses: they are the company's links of LNK-02. Any other value is rejected with a
   message naming the company and the field, and listing the accepted values.
 - **CAT-06** · The companies followed are the catalogue's plus User's own. An own company
   with the same normalised name as a catalogue entry replaces it entirely.
 - **CAT-07** · Every company whose tool is searched by keyword (Workday, SmartRecruiters,
-  Oracle, SuccessFactors, Phenom, Avature), from the catalogue or User's own, is searched with the same terms, `[criteres] recherches` (CONF-11), since the
+  Oracle, SuccessFactors, Phenom, Avature, McKinsey), from the catalogue or User's own, is
+  searched with the same terms, `[criteres] recherches` (CONF-11), since the
   catalogue cannot know the job sought. No company has search terms of its own.
 
 ## Default selection

@@ -27,7 +27,7 @@ catalogue is shipped with the tool and User's own companies are in the local dat
 - **CONF-11** · `[criteres] recherches` is the one list of search terms, shared by every
   company and source: the words typed in the search box of the sites that cannot list
   all their ads (Workday SRC-41, SmartRecruiters SRC-35, Oracle SRC-86, SuccessFactors
-  SRC-90, Phenom SRC-95, Avature SRC-97, France Travail SRC-11, Choisir le service public
+  SRC-90, Phenom SRC-95, Avature SRC-97, McKinsey SRC-62, France Travail SRC-11, Choisir le service public
   SRC-20, Station F SRC-71). Broad terms ("machine learning") rather
   than titles: every ad found still has to pass `mots_cles` (FILT-01), and each term
   costs one search per company, so a short list keeps the number of requests low.

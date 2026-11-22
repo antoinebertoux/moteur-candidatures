@@ -36,6 +36,10 @@
 #   avature: the portal's address (e.g. jobs.orano.group/fr_FR/jobs), searched with
 #            [criteres] recherches (20 ads per term)
 #   magnet: the career site's host (e.g. jobs.fivesgroup.com), Magnet by Hellowork
+#   sitemap: an in-house site listing its offers in its sitemap, with JobPosting data
+#            in each page; the address the offers sit under
+#            (e.g. careers.societegenerale.com/offres-d-emploi/)
+#   mckinsey: McKinsey's own career site; identifiant www.mckinsey.com (not used)
 
 [[entreprises]]
 nom = "Thales"
@@ -407,3 +411,48 @@ site = "https://www.fivesgroup.com"
 secteur = "industrie"
 taille = "grand-groupe"
 pays = []
+
+[[entreprises]]
+nom = "Société Générale"
+ats = "sitemap"
+identifiant = "careers.societegenerale.com/offres-d-emploi/"
+site = "https://www.societegenerale.com"
+secteur = "banque"
+taille = "grand-groupe"
+pays = []
+
+[[entreprises]]
+nom = "Dassault Systèmes"
+ats = "sitemap"
+identifiant = "www.3ds.com/careers/jobs/"
+site = "https://www.3ds.com"
+secteur = "numerique"
+taille = "grand-groupe"
+pays = []
+
+[[entreprises]]
+nom = "McKinsey & Company"
+ats = "mckinsey"
+identifiant = "www.mckinsey.com"
+site = "https://www.mckinsey.com"
+secteur = "conseil"
+taille = "grand-groupe"
+pays = []
+
+[[entreprises]]
+nom = "Banque de France"
+ats = "workday"
+identifiant = "https://bdf.wd103.myworkdayjobs.com/fr-FR/recrutement-banque-de-france"
+site = "https://www.banque-france.fr"
+secteur = "banque"
+taille = "public"
+pays = ["fr"]
+
+[[entreprises]]
+nom = "AFNOR"
+ats = "teamtailor"
+identifiant = "afnorgroupe"
+site = "https://www.afnor.org"
+secteur = "industrie"
+taille = "grand-groupe"
+pays = ["fr"]

@@ -17,7 +17,7 @@ from urllib.parse import urlsplit
 
 from moteur.config import TargetCompany
 from moteur.models import JobAd
-from moteur.sources.base import HttpClient, plain_text, string, table
+from moteur.sources.base import HttpClient, items, plain_text, string, table
 
 _DATA = re.compile(
     r'<script[^>]*type="application/ld\+json"[^>]*>(.*?)</script>', re.DOTALL | re.IGNORECASE
@@ -66,7 +66,10 @@ def _job_posting(page: str) -> dict[str, Any]:
             data = json.loads(block)
         except ValueError:
             continue
-        for candidate in data if isinstance(data, list) else [data]:
+        candidates = data if isinstance(data, list) else [data]
+        # Some sites wrap their data in an "@graph" list.
+        candidates += [g for c in list(candidates) for g in items(table(c).get("@graph"))]
+        for candidate in candidates:
             if table(candidate).get("@type") == "JobPosting":
                 return table(candidate)
     return {}

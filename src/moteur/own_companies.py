@@ -24,9 +24,11 @@ from moteur.sources.ats import SourceAts
 from moteur.sources.avature import SourceAvature
 from moteur.sources.base import HttpClient, Source, SourceError
 from moteur.sources.magnet import SourceMagnet
+from moteur.sources.mckinsey import SourceMcKinsey
 from moteur.sources.oracle import SourceOracle
 from moteur.sources.phenom import SourcePhenom
 from moteur.sources.radancy import SourceRadancy
+from moteur.sources.sitemap import SourceSitemap
 from moteur.sources.successfactors import SourceSuccessFactors
 from moteur.sources.talentsoft import SourceTalentsoft
 from moteur.sources.welcomekit import SourceWelcomeKit
@@ -69,6 +71,10 @@ def source_for(
         return SourceAvature(client, target)
     if target.ats == "magnet":
         return SourceMagnet(client, target)
+    if target.ats == "sitemap":
+        return SourceSitemap(client, target)
+    if target.ats == "mckinsey":
+        return SourceMcKinsey(client, target)
     if target.ats:
         return SourceAts(client, target, countries)
     return None

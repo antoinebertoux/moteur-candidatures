@@ -20,7 +20,8 @@ stays empty.
 - **SRC-06** · A server error (HTTP 500 to 599) is retried once, after 2 s. Still an
   error after that: source error (SRC-03).
 - **SRC-05** · A source running several searches (Choisir le service public: one per
-  keyword and pass; Workday, Oracle, SuccessFactors, Phenom, Avature: one per keyword)
+  keyword and pass; Workday, Oracle, SuccessFactors, Phenom, Avature, McKinsey: one per
+  keyword)
   runs them in parallel, at most 4 at a time.
   The pages of one search are read in order. The result does not depend on which search
   answers first: ads are merged in the order of the searches, then deduplicated.
@@ -67,8 +68,8 @@ stays empty.
   | teamtailor | `<id>.teamtailor.com/jobs.rss` (RSS feed) |
   | workable | `apply.workable.com/api/v1/widget/accounts/<id>?details=true` |
 
-  Workday, Radancy, Welcome Kit, Talentsoft, Oracle, SuccessFactors, Phenom and Avature
-  have sections of their own below. A company without a supported ATS cannot become a
+  Workday, Radancy, Welcome Kit, Talentsoft, Oracle, SuccessFactors, Phenom, Avature,
+  Magnet, the sitemap of offers and McKinsey have sections of their own below. A company without a supported ATS cannot become a
   source.
 - **SRC-33** · Greenhouse boards hosted in Europe: an identifier written `eu:<id>` is
   queried at `boards-api.eu.greenhouse.io/v1/boards/<id>/jobs?content=true`.
@@ -125,6 +126,43 @@ robots by `robots.txt`; the sitemap and the ad pages are allowed.
   `JobPosting` data gives the exact title, the text (plain, SRC-02) and the publication
   date. A page without that data leaves the ad unchanged.
 
+## Sitemap of offers
+
+In-house career sites that list each offer in their sitemap and describe it with
+`JobPosting` data in its page (for instance Société Générale, Dassault Systèmes).
+
+- **SRC-52** · The identifier is the address under which the site publishes its offers
+  (`careers.societegenerale.com/offres-d-emploi/`). The source reads the `Sitemap:`
+  lines of `https://<host>/robots.txt` (`https://<host>/sitemap.xml` when there are
+  none), follows the sitemap indexes they list (one level), and keeps the addresses that
+  start with the identifier and go further. An unreadable sitemap is skipped; the same
+  address is kept once.
+- **SRC-53** · The provisional title comes from the last segment of the address: the
+  words before the first word that holds a digit (the offer's reference), hyphens
+  becoming spaces and each word capitalised (`algo-developer-260002H8-en` → « Algo
+  Developer »). An address whose title would be empty is ignored. No location nor text
+  yet.
+- **SRC-54** · The page of each **retained** ad is opened and read as in SRC-51 (title,
+  text, date; the data may sit in an `@graph` list), plus the location: city and
+  country of its first `jobLocation` (« Montréal, Canada »). A date written
+  `2026/02/20` becomes `2026-02-20`. A page without `JobPosting` data leaves the ad
+  unchanged.
+
+## McKinsey
+
+The McKinsey career site (QuantumBlack included) queries a public search address,
+`gateway.mckinsey.com/apigw-x0cceuow60/v1/api/jobs/search`, without any key.
+
+- **SRC-62** · The identifier is not used (the catalogue gives `www.mckinsey.com`, since
+  CAT-08 requires one). Each term of `[criteres] recherches` (CONF-11)
+  is searched (`q=<term>`), 100 ads per page (`start` = page number, from 1), at most 5
+  pages; a search stops at an incomplete page or once the announced total
+  (`numFound`) is reached. Searches run as in SRC-05. An ad found by several keywords
+  (same `jobID`) is kept once.
+- **SRC-63** · From each result: title; location = its cities, separated by commas;
+  text = its « who you will work with », « what you will do » and « your background »
+  parts (plain, SRC-02), one after the other; date = `postedToLinkedInDate`; link =
+  `https://www.mckinsey.com/careers/search-jobs/jobs/<friendlyURL>`.
 
 ## Welcome Kit
 
