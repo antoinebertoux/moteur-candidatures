@@ -8,3 +8,4 @@ echange/
 config.toml
 .env
 prive/
+.claude/
