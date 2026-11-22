@@ -116,3 +116,35 @@ def test_refusal_reason_is_read_from_the_page() -> None:
     assert (a.refusal_reason, a.reason_detail) == ("salaire", "45 K€")
     assert (b.refusal_reason, len(b.reason_detail)) == ("autre", 200)
     assert (c.refusal_reason, c.reason_detail) == ("", "")
+
+
+@pytest.mark.spec("ECH-05")
+def test_ad_text_sent_with_folders_and_sheets_only() -> None:
+    long_text = "x" * 25_000
+    scored = Application(JobAd("Acme", "Data Scientist", description="Texte"), "notee")
+    generated = Application(
+        JobAd("Orano", "Lead AI", description=long_text), "generee", cv_ref="c/cv.pdf"
+    )
+    sheet = Application(
+        JobAd("Ilo", "Head of AI", description="Offre"), "close", preparation="# Fiche"
+    )
+    first_one, second_one, third_one = for_the_page([scored, generated, sheet])
+    assert "texte_offre" not in first_one
+    assert second_one["texte_offre"] == "x" * 20_000
+    assert third_one["texte_offre"] == "Offre"
+
+
+@pytest.mark.spec("ECH-06")
+def test_applied_ones_sent_for_their_text_only() -> None:
+    applied = Application(JobAd("Ilo", "Head of AI", url="https://i", description="Offre"), "close")
+    without_text = Application(JobAd("Zed", "Lead AI"), "close")
+    (row,) = for_the_page([], archived=[applied, without_text])
+    assert row == {
+        "type": "offre",
+        "entreprise": "Ilo",
+        "poste": "Head of AI",
+        "moteur": "B",
+        "texte_offre": "Offre",
+        "archive": True,
+    }
+    assert json.loads(serialise([], archived=[applied])) == [row]

@@ -35,5 +35,10 @@
   company's website and LinkedIn page as User's correction (LNK-02), an empty field
   meaning "no correction" for that link. A document whose `liens_manuels` is false or
   missing removes a correction previously sent from that same application.
+- **BASE-14** · The ad text is kept for every application, whatever its state, so that
+  it can still be read once the employer has taken the ad down. A text is never erased
+  nor replaced by an empty one. A text sent by the page (`texte_offre`, ECH-11) fills in
+  a missing text of a known application whatever its status (not only an accepted one,
+  BASE-07).
 - **BASE-10** · A database created by an older version gets the columns added since, if
   needed, without data loss.

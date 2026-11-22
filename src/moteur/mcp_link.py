@@ -27,7 +27,9 @@ def propositions(paths: Paths) -> dict[str, Any]:
     with LocalDb(paths.base) as base:
         applications = base.for_the_page()
         links = base.company_links()
-    return {"candidatures": exchange.for_the_page(applications, paths.root, links)}
+        archived = base.archived_ad_texts()
+    rows = exchange.for_the_page(applications, paths.root, links, archived)
+    return {"candidatures": rows}
 
 
 Launcher = Callable[[], None]

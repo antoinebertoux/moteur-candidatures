@@ -74,6 +74,12 @@ def apply(base: LocalDb, decisions: list[exchange.Decision], root: Path) -> Outc
         for d in decisions
         if d.status == "acceptee" and d.ad is not None
     )
+    # BASE-14: the page's ad text fills in a missing one, whatever the status.
+    completed += sum(
+        base.complete_ad_text(d.key, d.ad.description)
+        for d in decisions
+        if d.status != "acceptee" and d.ad is not None
+    )
     letters = sum(
         base.set_letter(d.key, d.with_letter)
         for d in decisions

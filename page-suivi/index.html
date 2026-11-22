@@ -114,6 +114,14 @@ body.depot .wrap{outline:3px dashed var(--accent);outline-offset:-6px}
 .lang-menu li{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;font-size:14px}
 .lang-menu li:hover,.lang-menu li:focus{background:var(--sunken);outline:none}
 .lang-menu li[aria-selected=true]{background:var(--accent-soft);color:var(--accent)}
+/* Ad text (PAGE-12): a discreet link and a read-only window. */
+button.mini{border:0;background:transparent;padding:0;font-size:12px;font-weight:400;color:var(--muted);text-decoration:underline;text-underline-offset:2px}
+button.mini:hover{color:var(--accent)}
+dialog.texte{width:min(760px,calc(100vw - 32px));max-height:calc(100vh - 48px);padding:0;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink)}
+dialog.texte::backdrop{background:rgba(0,0,0,.45)}
+dialog.texte .head{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--surface)}
+dialog.texte .head h2{font-family:var(--display);font-size:17px;margin:0}
+dialog.texte .fiche{border-top:0}
 @media (prefers-reduced-motion:no-preference){button{transition:border-color .15s,background .15s}}
 </style>
 </head>
@@ -174,6 +182,11 @@ body.depot .wrap{outline:3px dashed var(--accent);outline-offset:-6px}
     <div class="row" style="margin-top:8px"><button id="export-copy" data-i18n="copy">Copy</button><button id="export-close" class="ghost" data-i18n="close">Close</button></div>
   </section>
 
+  <dialog class="texte" id="ad-dialog" aria-labelledby="ad-dialog-title">
+    <div class="head"><h2 id="ad-dialog-title"></h2><div class="row"><span id="ad-dialog-link"></span><button id="ad-dialog-copy" data-i18n="copy">Copy</button><button id="ad-dialog-close" class="ghost" data-i18n="close">Close</button></div></div>
+    <div class="fiche" id="ad-dialog-body"></div>
+  </dialog>
+
   <nav class="pipeline" id="pipeline" data-i18n-aria="steps_aria" aria-label="Steps"></nav>
 
   <div class="row filters">
@@ -218,7 +231,7 @@ en:{
   reason_competences:"Skills mismatch",reason_trop_senior:"Too senior",reason_trop_junior:"Too junior",reason_salaire:"Salary",reason_lieu:"Location / remote",
   reason_secteur:"Sector or mission",reason_conseil:"Consulting firm",reason_ml_pur:"Too pure ML",reason_entreprise:"Company",reason_doublon:"Duplicate",reason_autre:"Other",
   link_open:"Open the link",link_site:"Company website",link_linkedin:"Company LinkedIn",err_link:"The link “{v}” must start with http:// or https://.",
-  doc_cv:"CV",doc_letter:"Letter",prep:"Preparation",prep_of:"Preparation of {d}",
+  doc_cv:"CV",doc_letter:"Letter",prep:"Preparation",ad_text_view:"View ad text",ad_text_copied:"Ad text copied.",prep_of:"Preparation of {d}",
   letter_toggle:"Letter: {v}",yes:"yes",no:"no",letter_asked_tip:"The ad asks for a letter. ",click_change:"Click to change",
   save_failed:"Saving failed ({code}). Try again in a moment.",error:"error",
   act_yes:"Yes",act_no:"No",chip_cv_letter:"CV and letter to generate",chip_cv:"CV to generate",act_validate:"Validate",act_applied:"Mark as applied",act_reopen:"Back to review",
@@ -269,7 +282,7 @@ fr:{
   reason_competences:"Compétences inadaptées",reason_trop_senior:"Trop senior",reason_trop_junior:"Trop junior",reason_salaire:"Salaire",reason_lieu:"Lieu / télétravail",
   reason_secteur:"Secteur ou mission",reason_conseil:"Conseil / ESN",reason_ml_pur:"Trop ML pur",reason_entreprise:"Entreprise",reason_doublon:"Doublon",reason_autre:"Autre",
   link_open:"Ouvrir le lien",link_site:"Site de l'entreprise",link_linkedin:"LinkedIn de l'entreprise",err_link:"Le lien « {v} » doit commencer par http:// ou https://.",
-  doc_cv:"CV",doc_letter:"Lettre",prep:"Préparation",prep_of:"Préparation du {d}",
+  doc_cv:"CV",doc_letter:"Lettre",prep:"Préparation",ad_text_view:"Voir le texte de l'offre",ad_text_copied:"Texte de l'offre copié.",prep_of:"Préparation du {d}",
   letter_toggle:"Lettre : {v}",yes:"oui",no:"non",letter_asked_tip:"L'offre demande une lettre. ",click_change:"Clique pour changer",
   save_failed:"L'enregistrement a échoué ({code}). Réessaie dans un instant.",error:"erreur",
   act_yes:"Oui",act_no:"Non",chip_cv_letter:"CV et lettre à générer",chip_cv:"CV à générer",act_validate:"Valider",act_applied:"Marquer comme postulée",act_reopen:"Remettre à traiter",
@@ -562,6 +575,7 @@ function renderList(list){
       if(prepEnCours(d))html+='<span class="chip warn">'+esc(t("chip_prep"))+'</span>';
     } else if(d.date_ajout)html+='<span>'+esc(t("added_on",{d:jour(d.date_ajout)}))+'</span>';
     if(d.statut==="refusee"&&d.motif_refus)html+='<span class="chip bad">'+esc(motifLabel(d.motif_refus))+(d.motif_detail?" · "+esc(d.motif_detail):"")+'</span>';
+    if(String(d.texte_offre||"").trim())html+='<button class="mini" data-act="texte-offre">'+esc(t("ad_text_view"))+'</button>';
     html+='</div></div><div class="row">'+docLinks(d)+lettreBouton(d)+actions(d)+'</div></div>';
     if(state.refusing===d.id)html+=motifPicker(d);
     if(state.fiche===d.id&&d.preparation)html+=fiche(d);
@@ -672,6 +686,7 @@ $("list").addEventListener("click",function(e){
   if(act==="toggle"){state.open=state.open===id?null:id;state.confirmDel=null;render();return;}
   if(act==="del"){state.confirmDel=id;render();return;}
   if(act==="fiche"){state.fiche=state.fiche===id?null:id;render();return;}
+  if(act==="texte-offre"){ouvrirTexteOffre(id);return;}
   // "No" and "Drop" first ask for the reason (PAGE-10).
   if(act==="non"){state.refusing=state.refusing===id?null:id;render();return;}
   if(act==="motif-annuler"){state.refusing=null;render();return;}
@@ -758,6 +773,14 @@ function importRows(arr,auto){
     if(raw.contact)d.contact=String(raw.contact);
     LIENS.forEach(function(k){var v=safeUrl(raw[k]);if(v)d[k]=v;});
     var id=raw.id?norm(raw.id).slice(0,150):keyOf(d),ex=known[id];
+    var texte=typeof raw.texte_offre==="string"?raw.texte_offre.trim().slice(0,20000):"";
+    // An archived application (ECH-06) only fills in a missing ad text, never creates one.
+    if(raw.archive){
+      if(ex&&texte&&!String(ex.texte_offre||"").trim()){chain=chain.then(function(){return col.doc(id).update({texte_offre:texte}).then(function(){updated++;});});}
+      else skipped++;
+      return;
+    }
+    if(texte)d.texte_offre=texte;
     if(!ex){
       known[id]=d;
       chain=chain.then(function(){return col.doc(id).set(d).then(function(){added++;});});
@@ -766,13 +789,16 @@ function importRows(arr,auto){
     var up={};
     GEN.forEach(function(k){if(raw[k]!=null&&raw[k]!==""&&raw[k]!==ex[k])up[k]=k==="score"?Number(raw[k]):raw[k];});
     // The engine's company links never replace User's correction (PAGE-31, PAGE-42).
+    // The ad text is kept: the engine's only fills in a missing one (PAGE-31, BASE-14).
+    if(texte&&!String(ex.texte_offre||"").trim())up.texte_offre=texte;
     if(!ex.liens_manuels)LIENS.forEach(function(k){var v=safeUrl(raw[k]);if(v&&v!==ex[k])up[k]=v;});
     // A folder being edited only goes back to validation if the engine regenerated it since.
     var regenere=!ex.retouche_le||(raw.genere_le&&String(raw.genere_le)>String(ex.retouche_le));
     if(raw.cv_ref&&ex.statut==="acceptee"&&regenere){up.statut="prete";up.consigne="";}
     // A letter regeneration request is served as soon as a more recent PDF arrives.
     if(ex.lettre_refaire_le&&raw.lettre_generee_le&&String(raw.lettre_generee_le)>String(ex.lettre_refaire_le)){up.lettre_refaire_le="";up.lettre_consigne="";}
-    if(Object.keys(up).length){up.date_maj=today();chain=chain.then(function(){return col.doc(id).update(up).then(function(){updated++;});});}
+    // Filling in the ad text alone is not a change of User's: the order of the lists stays.
+    if(Object.keys(up).length){if(Object.keys(up).some(function(k){return k!=="texte_offre";}))up.date_maj=today();chain=chain.then(function(){return col.doc(id).update(up).then(function(){updated++;});});}
     else skipped++;
   });
   return chain.then(function(){
@@ -807,6 +833,22 @@ $("btn-export").addEventListener("click",function(){
   downloads.save({filename:"candidatures-export.json",data:data}).then(function(){say("export_saved","ok");})
     .catch(function(e){if(e&&e.code==="declined")return;fallback();});
 });
+// Ad text window (PAGE-12): read-only, the stored text shown as Markdown.
+var texteOuvert="";
+function ouvrirTexteOffre(id){
+  var d=state.docs.filter(function(x){return x.id===id;})[0];if(!d||!d.texte_offre)return;
+  texteOuvert=String(d.texte_offre);
+  $("ad-dialog-title").textContent=(d.entreprise||t("unknown_company"))+(d.poste?" · "+d.poste:"");
+  var u=safeUrl(d.url);$("ad-dialog-link").innerHTML=u?lienExterne(u,t("link_open")):"";
+  $("ad-dialog-body").innerHTML=md(texteOuvert);
+  var dlg=$("ad-dialog");if(dlg.showModal){if(!dlg.open)dlg.showModal();}else dlg.setAttribute("open","");
+  $("ad-dialog-body").scrollTop=0;
+}
+$("ad-dialog-close").addEventListener("click",function(){var dlg=$("ad-dialog");if(dlg.close)dlg.close();else dlg.removeAttribute("open");});
+$("ad-dialog").addEventListener("click",function(e){if(e.target===this&&this.close)this.close();});
+$("ad-dialog-copy").addEventListener("click",function(){
+  navigator.clipboard.writeText(texteOuvert).then(function(){say("ad_text_copied","ok");}).catch(function(){say("copy_failed","bad");});
+});
 $("export-close").addEventListener("click",function(){$("export-panel").hidden=true;});
 $("export-copy").addEventListener("click",function(){
   navigator.clipboard.writeText($("export-text").value).then(function(){say("export_copied","ok");})
@@ -829,13 +871,13 @@ function echecMoteur(e){
   else moteur.erreur={key:"eng_err_other",code:c};
   afficherMoteur();
 }
-// Only the fields the engine reads (ECH-11); the ad text only matters for accepted ones.
+// Only the fields the engine reads (ECH-11); the ad text is sent whatever the status (BASE-14).
 var CHAMPS_MOTEUR=["id","statut","consigne","lettre_demandee","lettre","lettre_refaire_le","lettre_consigne","type","entreprise","poste","lieu","url","source","motif_refus","motif_detail","site_entreprise","linkedin_entreprise","liens_manuels"];
 // A preparation request also carries what the page knows of the follow-up (PREP-10).
 var CHAMPS_PREPARATION=["preparation_demandee_le","pretentions","entretien_infos","preparation_consigne","date_postulee","suite","contact","notes","texte_offre"];
 function pourLeMoteur(d){
   var o={};CHAMPS_MOTEUR.forEach(function(k){if(d[k]!=null&&d[k]!=="")o[k]=d[k];});
-  if(d.statut==="acceptee"&&d.texte_offre)o.texte_offre=d.texte_offre;
+  if(d.texte_offre)o.texte_offre=d.texte_offre;
   if(d.preparation_demandee_le)CHAMPS_PREPARATION.forEach(function(k){if(d[k]!=null&&d[k]!=="")o[k]=d[k];});
   return o;
 }

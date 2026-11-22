@@ -117,10 +117,28 @@ def file_date(file: Path) -> str | None:
     return moment.isoformat(timespec="milliseconds").replace("+00:00", "Z")
 
 
+MAX_AD_TEXT = 20_000
+"""Longest ad text sent to the page (ECH-05), the limit of its manual entry."""
+
+
+def _archive_entry(application: Application) -> dict[str, Any]:
+    """An Applied application sent only for its ad text (ECH-06)."""
+    ad = application.ad
+    return {
+        "type": ad.type,
+        "entreprise": ad.company,
+        "poste": ad.title,
+        "moteur": "B",
+        "texte_offre": ad.description[:MAX_AD_TEXT],
+        "archive": True,
+    }
+
+
 def for_the_page(
     applications: Iterable[Application],
     root: Path | None = None,
     links: Mapping[str, CompanyLinks] | None = None,
+    archived: Iterable[Application] = (),
 ) -> list[dict[str, Any]]:
     """Format read by the page's "Import" button.
 
@@ -165,7 +183,11 @@ def for_the_page(
         if application.preparation:
             row["preparation"] = application.preparation
             row["preparation_le"] = application.preparation_le
+        # ECH-05: the ad text of the folders and sheets, so that the page keeps it.
+        if ad.description and (application.cv_ref or application.preparation):
+            row["texte_offre"] = ad.description[:MAX_AD_TEXT]
         rows.append(row)
+    rows.extend(_archive_entry(a) for a in archived if a.ad.description)
     return rows
 
 
@@ -173,8 +195,10 @@ def serialise(
     applications: Iterable[Application],
     root: Path | None = None,
     links: Mapping[str, CompanyLinks] | None = None,
+    archived: Iterable[Application] = (),
 ) -> str:
-    return json.dumps(for_the_page(applications, root, links), ensure_ascii=False, indent=2)
+    rows = for_the_page(applications, root, links, archived)
+    return json.dumps(rows, ensure_ascii=False, indent=2)
 
 
 def _letter_choice(value: object) -> bool | None:

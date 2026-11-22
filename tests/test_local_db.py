@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from moteur.local_db import ACCEPTED, GENERATED, SCORED, LocalDb
+from moteur.local_db import ACCEPTED, CLOSE, GENERATED, SCORED, LocalDb
 from moteur.models import JobAd, Rating
 
 AD = JobAd("Acme", "Data Scientist", location="Paris", description="Texte")
@@ -156,3 +156,18 @@ def test_older_database_gets_the_refusal_columns(tmp_path: Path) -> None:
         old.add([AD])
         old.apply_decision(AD.key, "refusee")
         assert old.set_refusal_reason(AD.key, "secteur", "")
+
+
+@pytest.mark.spec("BASE-14")
+def test_ad_text_kept_whatever_the_status(base: LocalDb) -> None:
+    without_text = JobAd("Orano", "Lead AI")
+    base.complete_from_the_page(without_text.key, without_text, False, status=CLOSE)
+    assert not base.complete_ad_text(without_text.key, "")
+    assert base.complete_ad_text(without_text.key, "Missions : ...")
+    assert not base.complete_ad_text(without_text.key, "Autre texte")
+    (archived,) = base.archived_ad_texts()
+    assert archived.ad.description == "Missions : ..."
+    base.add([AD])
+    base.apply_decision(AD.key, "refusee")
+    assert not base.complete_ad_text(AD.key, "Neuf")
+    assert base.find(AD.key).ad.description == "Texte"  # type: ignore[union-attr]

@@ -128,7 +128,9 @@ def command_export(config: Config, base: LocalDb) -> None:
     config.paths.exchange.mkdir(parents=True, exist_ok=True)
     file = config.paths.exchange / FILE_FOR_THE_PAGE
     file.write_text(
-        exchange.serialise(applications, config.paths.root, base.company_links()),
+        exchange.serialise(
+            applications, config.paths.root, base.company_links(), base.archived_ad_texts()
+        ),
         encoding="utf-8",
     )
     print(f"{len(applications)} entries in {file}: to import into the tracking page")

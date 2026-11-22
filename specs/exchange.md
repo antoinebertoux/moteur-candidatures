@@ -25,6 +25,15 @@ capability). Engine B therefore offers two channels carrying the same content:
 - **ECH-04** · Every entry adds `site_entreprise` and `linkedin_entreprise` when its
   company has them (LNK-02), whatever the source.
 
+- **ECH-05** · Ad text (BASE-14): a generated folder (ECH-02) and an application sent for
+  its preparation sheet (ECH-03) add `texte_offre`, the stored ad text, cut to 20,000
+  characters, when they have one. Proposals (`notee`) do not
+  carry it, to keep the exchange light.
+- **ECH-06** · Every other `close` application (Applied) with an ad text is also sent, with
+  only `type`, `entreprise`, `poste`, `moteur` = `B`, `texte_offre` (cut as in ECH-05)
+  and `archive` = true. Such an entry only fills in a missing text in the page
+  (PAGE-31); it never creates a document.
+
 ## Page → engine B: `candidatures-export.json`
 
 - **ECH-10** · Accepted as `{"candidatures": [...]}` or directly as the array. A file that
@@ -35,7 +44,8 @@ capability). Engine B therefore offers two channels carrying the same content:
   `lettre_consigne`, `motif_refus`, `motif_detail`, `preparation_demandee_le`,
   `pretentions`, `entretien_infos`, `preparation_consigne`, `site_entreprise`,
   `linkedin_entreprise` and `liens_manuels` (PAGE-42), and enough to rebuild the ad if `entreprise` and `poste` are
-  present (`type`, `lieu`, `url`, `source`, `texte_offre`).
+  present (`type`, `lieu`, `url`, `source`, `texte_offre`). The page sends `texte_offre` whenever it has one, whatever the
+  status (BASE-14).
 - **ECH-12** · `moteur decisions <file>` applies, in this order: adding unknown accepted
   applications (BASE-07); letter choice of accepted, ready or approved applications
   (BASE-08); status decisions (BASE-05, BASE-06); letter regenerations (LET-07); preparation

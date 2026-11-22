@@ -218,6 +218,28 @@ class LocalDb:
         ).fetchall()
         return [_application(row) for row in rows]
 
+    def archived_ad_texts(self) -> list[Application]:
+        """Applied applications with an ad text that `for_the_page` does not already send:
+        their text goes to the page so that it can still be read (ECH-06)."""
+        rows = self._connection.execute(
+            "SELECT * FROM candidatures WHERE statut = ? AND description != ''"
+            " AND preparation = '' ORDER BY date_ajout, cle",
+            (CLOSE,),
+        ).fetchall()
+        return [_application(row) for row in rows]
+
+    def complete_ad_text(self, key: str, text: str) -> bool:
+        """Fills in a missing ad text, whatever the status (BASE-14). Returns true if the
+        database changed; an existing text is never replaced."""
+        if not text:
+            return False
+        with self._connection:
+            cursor = self._connection.execute(
+                "UPDATE candidatures SET description = ? WHERE cle = ? AND description = ''",
+                (text, key),
+            )
+        return cursor.rowcount > 0
+
     def to_generate(self) -> list[Application]:
         return self._by_status(ACCEPTED)
 
@@ -314,13 +336,7 @@ class LocalDb:
             )
             if cursor.rowcount:
                 return True
-            if not ad.description:
-                return False
-            cursor = self._connection.execute(
-                "UPDATE candidatures SET description = ? WHERE cle = ? AND description = ''",
-                (ad.description, key),
-            )
-        return cursor.rowcount > 0
+        return self.complete_ad_text(key, ad.description)
 
     def set_letter(self, key: str, with_letter: bool) -> bool:
         """Records the page's "letter yes / no" choice. Returns true if the database changed."""

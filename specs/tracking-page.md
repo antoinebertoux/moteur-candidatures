@@ -67,6 +67,13 @@ missing = `manuel`), `statut`, `score`, `resume`, `lettre_demandee`, `lettre`
   "Preparation in progress" chip shows. Once `preparation` has arrived, a "Preparation"
   button opens the sheet (Markdown shown formatted, readable on mobile) with its date,
   and the request button becomes "Redo the preparation".
+- **PAGE-12** · Ad text: every application whose `texte_offre` is not empty shows a
+  small, discreet "View ad text" link (French: "Voir le texte de l'offre"), smaller than
+  the action buttons, whatever its step. It is read-only: it opens a window showing the
+  stored text as Markdown (headings, lists, bold; plain text shows as is), readable on
+  mobile, with a "Copy" button and the ad link when it is http(s); nothing can be
+  edited there. The text is kept in
+  the page's database, so it stays readable after the employer removes the ad.
 - **PAGE-09** · Every change sets `date_maj` to today; a failed save shows a message
   without losing the input.
 
@@ -85,8 +92,10 @@ missing = `manuel`), `statut`, `score`, `resume`, `lettre_demandee`, `lettre`
   updated, ignored).
 - **PAGE-31** · A known entry only receives updates to `cv_ref`, `lettre_ref`, `resume`,
   `score`, `lettre_demandee`, `preparation` and `preparation_le`, and to `site_entreprise`
-  and `linkedin_entreprise` unless `liens_manuels` is true. User's decisions are never
-  overwritten.
+  and `linkedin_entreprise` unless `liens_manuels` is true, and to `texte_offre` only when
+  the page has none (ECH-05). User's decisions are never overwritten. An entry marked
+  `archive` (ECH-06) only fills in a missing `texte_offre` of a known document; an
+  unknown one is ignored, never created.
 - **PAGE-32** · When a CV arrives for an application in To prepare, it moves to To validate
   and its instruction is cleared — unless an edit was requested after that CV was
   generated (PDF older than the request).
@@ -105,7 +114,7 @@ missing = `manuel`), `statut`, `score`, `resume`, `lettre_demandee`, `lettre`
 - **PAGE-36** · Engine B → page: at load, then every minute while the page is visible,
   and on the "Sync" button, the page reads `propositions` and imports them with
   the rules PAGE-30 to PAGE-33, without a summary when nothing changed.
-- **PAGE-37** · Page → engine B: after the first successful read, then a few seconds
+- **PAGE-37** · Page → engine B (the ad text is sent whatever the status, BASE-14): after the first successful read, then a few seconds
   after any change in the database (a decision, a letter choice, an edit request, a
   scheduled task adding an entry), the page sends all its documents to `decisions`.
   Changes made in quick succession are sent together, one call at a time.

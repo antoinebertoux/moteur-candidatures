@@ -138,3 +138,20 @@ def test_the_tools_never_call_claude(paths: Paths, monkeypatch: pytest.MonkeyPat
     propositions(paths)
     decisions(paths, {"candidatures": [page("acceptee")]})
     assert status(paths) == "acceptee"
+
+
+@pytest.mark.spec("BASE-14", "ECH-06")
+def test_page_ad_text_reaches_the_database_and_comes_back(paths: Paths) -> None:
+    entry = page("postulee") | {"texte_offre": "Le texte de l'offre"}
+    decisions(paths, {"candidatures": [entry]})
+    rows = propositions(paths)["candidatures"]
+    assert rows == [
+        {
+            "type": "offre",
+            "entreprise": "Acme",
+            "poste": "Data Scientist",
+            "moteur": "B",
+            "texte_offre": "Le texte de l'offre",
+            "archive": True,
+        }
+    ]

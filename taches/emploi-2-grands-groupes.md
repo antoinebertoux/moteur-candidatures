@@ -36,6 +36,7 @@ Les propositions vont dans la base de la page « Suivi des candidatures » de <P
 - resume : 3 à 5 phrases courtes, dans cet ordre : salaire s'il est affiché et expérience demandée ; habilitation requise ou non ; pourquoi ça colle ; point de vigilance
 - lettre_demandee : true ou false (booléen), true seulement si l'offre demande une lettre
 - site_entreprise et linkedin_entreprise : le site officiel de l'organisation et sa page LinkedIn (https://www.linkedin.com/company/…), seulement si tu les as vus sur des pages officielles ; sinon ne mets pas le champ, ne devine jamais une adresse
+- texte_offre : le texte complet de l'offre tel que lu sur la page d'origine (missions, profil, conditions), recopié et non résumé, au plus 20 000 caractères ; il reste lisible si l'entreprise retire l'offre
 - date_ajout et date_maj : date du jour au format AAAA-MM-JJ
 6. Si les outils de base sont indisponibles ou si l'écriture est refusée : n'insiste pas. Dis-le en première ligne du rapport et donne les offres sous forme d'un tableau JSON avec ces mêmes champs, que <PRÉNOM> pourra importer dans la page avec le bouton « Importer ».
 
