@@ -144,3 +144,26 @@ def test_add_details_opens_pages_in_parallel_keeping_order() -> None:
     ads = [JobAd(x, "Data scientist", url=x, source="service_public") for x in "abcd"]
     result = add_details(ads, [Slow("service_public")])
     assert [o.description for o in result] == [f"Texte de {x}" for x in "abcd"]
+
+
+class LocatingSource(FixedSource):
+    """Its pages reveal each ad's location, taken from the ad's link."""
+
+    def add_details(self, ad: JobAd) -> JobAd:
+        return replace(ad, description="Texte", location=ad.url)
+
+
+@pytest.mark.spec("FILT-06", "COL-02")
+def test_location_found_on_the_page_is_checked_again() -> None:
+    ads = [
+        JobAd("3DS", "Data Scientist", url="Bangalore, India", source="sitemap"),
+        JobAd("3DS", "Lead Data Scientist", url="Paris, France", source="sitemap"),
+        JobAd("3DS", "Data Scientist IA", url="", source="sitemap"),
+    ]
+    source = LocatingSource("sitemap", ads)
+    retained = collect([source], criteria(), [], set(), "")
+    # Bangalore is outside "paris": dropped once its page tells; no location: kept.
+    assert [(o.title, o.location) for o in retained] == [
+        ("Lead Data Scientist", "Paris, France"),
+        ("Data Scientist IA", ""),
+    ]

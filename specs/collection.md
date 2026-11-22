@@ -7,8 +7,9 @@ proposes unsolicited applications. No call to Claude.
 
 - **COL-01** · A failing source is reported and skipped: the others carry on.
 - **COL-02** · Order: query every source → filter → open the page of the retained ads
-  only, when their text is missing (SRC-24, SRC-51) → add unsolicited applications. If a page
-  cannot be opened, the ad is kept without text.
+  only, when their text is missing (SRC-24, SRC-51) → check again the location of the ads
+  that had none (FILT-06) → add unsolicited applications. If a page cannot be opened, the
+  ad is kept without text.
 - **COL-03** · An unsolicited application is proposed for each searched company whose
   unsolicited application is on (CAT-13, CAT-14) that has **no retained ad** in this collection and has **never been
   seen** (neither in the local database nor in `suivi/entreprises_vues.csv`). Its title
@@ -41,4 +42,8 @@ information never gets an ad rejected.**
   below the floor. Understood labels: "Annuel de X Euros à Y Euros…" and "Mensuel de X
   Euros sur N mois" (×12 if N is missing). An unreadable or missing salary passes. Floor
   at 0 = no filter.
+- **FILT-06** · An ad that passed FILT-03 without a location and gets one from its page
+  (COL-02: sitemap of offers, Avature…) is checked again: if locations are configured and
+  its new location contains none of them, it is dropped. An ad still without location
+  after its page is kept, as in FILT-03.
 - **FILT-05** · Two ads with the same identifier (ID-02): only the first is kept.

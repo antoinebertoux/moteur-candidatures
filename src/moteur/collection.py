@@ -8,7 +8,7 @@ from collections.abc import Iterable, Sequence
 from pathlib import Path
 
 from moteur.config import Criteria, TargetCompany
-from moteur.filtering import filter_ads
+from moteur.filtering import filter_ads, located_after_details
 from moteur.models import JobAd, normalise
 from moteur.sources.base import DetailedSource, Source, SourceError, in_parallel
 
@@ -104,5 +104,6 @@ def collect(
     already_seen: set[str],
     unsolicited_role: str,
 ) -> list[JobAd]:
-    retained = add_details(filter_ads(query_sources(sources), criteria), sources)
+    filtered = filter_ads(query_sources(sources), criteria)
+    retained = located_after_details(filtered, add_details(filtered, sources), criteria)
     return retained + unsolicited_ones(targets, retained, already_seen, unsolicited_role)
