@@ -35,6 +35,7 @@
 #           (e.g. careers.bcg.com/global/en), searched with [criteres] recherches
 #   avature: the portal's address (e.g. jobs.orano.group/fr_FR/jobs), searched with
 #            [criteres] recherches (20 ads per term)
+#   magnet: the career site's host (e.g. jobs.fivesgroup.com), Magnet by Hellowork
 
 [[entreprises]]
 nom = "Thales"
@@ -395,5 +396,14 @@ ats = "avature"
 identifiant = "jobs.orano.group/fr_FR/jobs"
 site = "https://www.orano.group"
 secteur = "energie"
+taille = "grand-groupe"
+pays = []
+
+[[entreprises]]
+nom = "Fives"
+ats = "magnet"
+identifiant = "jobs.fivesgroup.com"
+site = "https://www.fivesgroup.com"
+secteur = "industrie"
 taille = "grand-groupe"
 pays = []

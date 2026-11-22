@@ -172,6 +172,28 @@ allows everything.
   replaces the provisional one, preceded by the same experience sentence. A page without
   text blocks leaves the ad unchanged.
 
+## Magnet by Hellowork
+
+Career sites built on Magnet by Hellowork (formerly CVCatcher, for instance
+`jobs.fivesgroup.com`). The page reads its ads from `api.magnet.work` with a short-lived
+anonymous token: every visitor's browser gets one by sending the site's public key,
+published in the page itself, and the current time. No account is involved.
+`robots.txt` allows everything.
+
+- **SRC-75** · The identifier is the career site host. The source reads
+  `https://<host>/` and takes its public key (`"publicKey": "…"`); a page without one
+  is a source error. It then asks `https://api.magnet.work/v2/security/login` for a
+  token, sending the key and the current UTC time (ISO 8601), each in base64, as the
+  page does; an answer without a token is a source error.
+- **SRC-76** · With that token, the source reads every ad of the site from
+  `/v2/job-offers` (no filter: the site lists all its ads with their text), 100 per
+  page, at most 20 pages; it stops at an incomplete page or once the announced total
+  (`total`) is reached.
+- **SRC-77** · From each ad: title; location = city and country of its first place
+  (« Yvetot, France »); text = its description (plain, SRC-02); date = the day of
+  `publication_date`; link = `https://<host>/<language>/offer/<id>` (language of the ad,
+  `fr` when missing). An ad without a title or an id is skipped (SRC-01).
+
 ## Talentsoft (Cegid)
 
 Career sites built on Talentsoft (for instance `casa-cacib-recrute.talent-soft.com` for

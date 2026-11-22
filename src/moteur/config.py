@@ -29,6 +29,7 @@ AtsType = Literal[
     "successfactors",
     "phenom",
     "avature",
+    "magnet",
     "",
 ]
 

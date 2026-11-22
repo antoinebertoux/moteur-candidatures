@@ -1,7 +1,10 @@
 """Talentsoft, Oracle Recruiting Cloud, SuccessFactors, Phenom and Avature sources."""
 
+import base64
 import json
 from collections.abc import Mapping
+from datetime import UTC, datetime
+from typing import Any
 
 import pytest
 
@@ -10,6 +13,8 @@ from moteur.config import TargetCompany
 from moteur.models import JobAd
 from moteur.own_companies import source_for
 from moteur.sources.avature import SourceAvature, ads_avature, complete_avature, portal_of
+from moteur.sources.base import SourceError
+from moteur.sources.magnet import SourceMagnet, ads_magnet, login_body, public_key
 from moteur.sources.oracle import (
     SourceOracle,
     ads_oracle,
@@ -371,3 +376,94 @@ def test_avature_page_gives_location_and_text() -> None:
     assert ad.location == "Aix, France"
     assert ad.description.startswith("Votre mission : concevoir des équipements.")
     assert complete_avature(ad, "<html></html>") == ad
+
+
+# --- Magnet by Hellowork -------------------------------------------------------------
+
+MAGNET_PAGE = '<script>window.cvc = {"config": {"publicKey": "abc123", "x": 1}}</script>'
+
+
+def _magnet_answer(ids: range, total: int) -> dict[str, object]:
+    offers = [
+        {
+            "id": f"9452-{i}",
+            "title": f"Soudeur {i}",
+            "language": "fr",
+            "localities": [{"city_label": "Yvetot", "country": "France"}],
+            "description": "Souder des <b>tuyauteries</b>",
+            "publication_date": "2026-11-19T14:53:33.000Z",
+        }
+        for i in ids
+    ]
+    return {"code": 200, "data": {"total": total, "list": offers}}
+
+
+class _MagnetClient(FakeClient):
+    """Serves the site page, the login and the search pages in order."""
+
+    def __init__(self, token: str, pages: list[dict[str, object]]) -> None:
+        super().__init__({"https://jobs.exemple.com/": MAGNET_PAGE})
+        self.token, self.pages = token, pages
+        self.headers: list[dict[str, str]] = []
+
+    def post_json(
+        self, url: str, *, body: Mapping[str, Any], headers: Mapping[str, str] | None = None
+    ) -> Any:
+        self.calls.append((url, dict(body)))
+        self.headers.append(dict(headers or {}))
+        if url.endswith("/security/login"):
+            return {"data": {"token": self.token, "expires": "x"}} if self.token else {"data": {}}
+        return self.pages.pop(0) if self.pages else None
+
+
+_NOW = datetime(2026, 11, 22, 18, 2, 48, 475000, tzinfo=UTC)
+
+
+@pytest.mark.spec("SRC-75")
+def test_magnet_gets_an_anonymous_token_from_the_public_key() -> None:
+    assert public_key(MAGNET_PAGE) == "abc123"
+    assert public_key("<html></html>") == ""
+    assert login_body("abc123", _NOW) == {
+        "usr": base64.b64encode(b"abc123").decode(),
+        "pass": base64.b64encode(b"2026-11-22T18:02:48.475Z").decode(),
+    }
+    target = TargetCompany(name="Fives", ats="magnet", identifier="jobs.exemple.com")
+    with pytest.raises(SourceError, match="token"):
+        SourceMagnet(_MagnetClient("", []), target, lambda: _NOW).collect()
+    with pytest.raises(SourceError, match="public key"):
+        SourceMagnet(FakeClient({}), target, lambda: _NOW).collect()
+
+
+@pytest.mark.spec("SRC-76")
+def test_magnet_reads_every_ad_page_by_page() -> None:
+    client = _MagnetClient(
+        "t0k", [_magnet_answer(range(100), 150), _magnet_answer(range(100, 150), 150)]
+    )
+    target = TargetCompany(name="Fives", ats="magnet", identifier="https://jobs.exemple.com/fr")
+    source = source_for(target, client, ())
+    assert isinstance(source, SourceMagnet)
+    assert len(source.collect()) == 150
+    searches = [body for url, body in client.calls if url.endswith("/v2/job-offers")]
+    assert [(b["offset"], b["limit"], b["cities"]) for b in searches] == [
+        (0, 100, []),
+        (100, 100, []),
+    ]
+    assert client.headers[1]["Authorization"] == "Bearer t0k"
+    assert client.headers[1]["x-session-id"] == client.headers[0]["x-session-id"]
+
+
+@pytest.mark.spec("SRC-77", "SRC-01", "SRC-02")
+def test_magnet_offers_become_ads() -> None:
+    answer = _magnet_answer(range(1), 1)
+    answer["data"]["list"] += [{"id": "x"}, {"title": "Sans id"}, {"id": "9", "title": "Sans lieu"}]  # type: ignore[index]
+    first, second = ads_magnet("Fives", "jobs.exemple.com", answer)
+    assert (first.title, first.location, first.published_on, first.source) == (
+        "Soudeur 0",
+        "Yvetot, France",
+        "2026-11-19",
+        "magnet",
+    )
+    assert first.description == "Souder des tuyauteries"
+    assert first.url == "https://jobs.exemple.com/fr/offer/9452-0"
+    assert (second.location, second.url) == ("", "https://jobs.exemple.com/fr/offer/9")
+    assert ads_magnet("Fives", "jobs.exemple.com", None) == []

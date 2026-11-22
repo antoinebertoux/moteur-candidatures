@@ -55,6 +55,7 @@ and the tool behind it. Supported tools and what `identifiant` is:
 | `successfactors` | a SuccessFactors career site (ad links `/job/<City>-<Title>/<number>/`, e.g. `jobsearch.alstom.com`) | the host |
 | `phenom` | a Phenom career site (e.g. `careers.bcg.com/global/en`) | the address with its country and language |
 | `avature` | an Avature portal (e.g. `jobs.orano.group/fr_FR/jobs`) | the portal's address |
+| `magnet` | a Magnet by Hellowork career site (calls `api.magnet.work`, e.g. `jobs.fivesgroup.com`) | the host |
 
 When you are not sure of the identifier, give the career page as `adresse` instead of
 `ats` and `identifiant`: engine B finds the tool in the page. A company whose career page

@@ -47,6 +47,7 @@ _EXCLUDED_DOMAINS = (
     "talent-soft.com",
     "oraclecloud.com",
     "avature.net",
+    "magnet.work",
     "tmp.com",
     "francetravail.fr",
     "pole-emploi.fr",

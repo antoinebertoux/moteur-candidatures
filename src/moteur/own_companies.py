@@ -23,6 +23,7 @@ from moteur.selection import Choice
 from moteur.sources.ats import SourceAts
 from moteur.sources.avature import SourceAvature
 from moteur.sources.base import HttpClient, Source, SourceError
+from moteur.sources.magnet import SourceMagnet
 from moteur.sources.oracle import SourceOracle
 from moteur.sources.phenom import SourcePhenom
 from moteur.sources.radancy import SourceRadancy
@@ -66,6 +67,8 @@ def source_for(
         return SourcePhenom(client, target)
     if target.ats == "avature":
         return SourceAvature(client, target)
+    if target.ats == "magnet":
+        return SourceMagnet(client, target)
     if target.ats:
         return SourceAts(client, target, countries)
     return None
