@@ -7,9 +7,10 @@ from collections.abc import Iterable, Mapping
 from datetime import date
 from pathlib import Path
 from types import TracebackType
-from typing import Self
+from typing import Literal, Self, cast
 
 from moteur.company_links import CompanyLinks, company_key
+from moteur.config import AtsType, TargetCompany
 from moteur.models import Application, JobAd, PrepRequest, Rating, normalise
 from moteur.refusal import DUPLICATE, Refusal
 from moteur.selection import Choice, Choices
@@ -78,6 +79,21 @@ CREATE TABLE IF NOT EXISTS choix (
     PRIMARY KEY (objet, cle, champ)
 )
 """,
+    # User's own companies (BASE-16); `pays` holds the codes separated by commas.
+    """
+CREATE TABLE IF NOT EXISTS entreprises_perso (
+    cle TEXT PRIMARY KEY,
+    nom TEXT NOT NULL,
+    ats TEXT NOT NULL,
+    identifiant TEXT NOT NULL,
+    site TEXT NOT NULL DEFAULT '',
+    linkedin TEXT NOT NULL DEFAULT '',
+    secteur TEXT NOT NULL,
+    taille TEXT NOT NULL,
+    pays TEXT NOT NULL DEFAULT '',
+    modifiee_le TEXT NOT NULL
+)
+""",
 )
 
 # Columns added later: created when missing in existing databases.
@@ -98,6 +114,8 @@ _ADDED_COLUMNS = {
 # A request is pending while it is more recent than the sheet, or there is no sheet
 # (PREP-02). Both times use the `toISOString()` format, so they compare as text.
 _PENDING = "preparation_demandee_le != '' AND preparation_demandee_le > preparation_le"
+
+SaveOutcome = Literal["added", "updated", "unchanged"]
 
 # Tracking page status -> local status. Missing statuses change nothing.
 _DECISIONS = {"acceptee": ACCEPTED, "refusee": REJECTED, "postulee": CLOSE}
@@ -541,3 +559,64 @@ class LocalDb:
                         " ON CONFLICT (objet, cle, champ) DO UPDATE SET valeur = excluded.valeur",
                         (choice.subject, choice.key, choice.field, int(choice.value)),
                     )
+
+    def own_companies(self) -> tuple[TargetCompany, ...]:
+        """User's own companies (BASE-16), in the order they were first added."""
+        rows = self._connection.execute("SELECT * FROM entreprises_perso ORDER BY rowid")
+        return tuple(
+            TargetCompany(
+                name=row["nom"],
+                ats=cast(AtsType, row["ats"]),
+                identifier=row["identifiant"],
+                site=row["site"],
+                linkedin=row["linkedin"],
+                sector=row["secteur"],
+                size=row["taille"],
+                countries=tuple(code for code in row["pays"].split(",") if code),
+                origin="perso",
+            )
+            for row in rows
+        )
+
+    def save_own_company(self, company: TargetCompany, day: str) -> SaveOutcome:
+        """Adds an own company or replaces its fields (CAT-24, BASE-16).
+
+        The same fields saved again change nothing, not even the date (CLI-10).
+        """
+        key = normalise(company.name)
+        values = (
+            company.name,
+            company.ats,
+            company.identifier,
+            company.site,
+            company.linkedin,
+            company.sector,
+            company.size,
+            ",".join(company.countries),
+        )
+        with self._connection:
+            current = self._connection.execute(
+                "SELECT nom, ats, identifiant, site, linkedin, secteur, taille, pays"
+                " FROM entreprises_perso WHERE cle = ?",
+                (key,),
+            ).fetchone()
+            if current is not None and tuple(current) == values:
+                return "unchanged"
+            self._connection.execute(
+                "INSERT INTO entreprises_perso (cle, nom, ats, identifiant, site, linkedin,"
+                " secteur, taille, pays, modifiee_le) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                " ON CONFLICT (cle) DO UPDATE SET nom = excluded.nom, ats = excluded.ats,"
+                " identifiant = excluded.identifiant, site = excluded.site,"
+                " linkedin = excluded.linkedin, secteur = excluded.secteur,"
+                " taille = excluded.taille, pays = excluded.pays,"
+                " modifiee_le = excluded.modifiee_le",
+                (key, *values, day),
+            )
+        return "added" if current is None else "updated"
+
+    def remove_own_companies(self, keys: Iterable[str]) -> None:
+        """Stops following these own companies; User's choices stay (CAT-25)."""
+        with self._connection:
+            self._connection.executemany(
+                "DELETE FROM entreprises_perso WHERE cle = ?", [(key,) for key in keys]
+            )

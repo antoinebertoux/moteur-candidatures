@@ -13,7 +13,7 @@ from moteur import exchange
 from moteur.claude_cli import ClaudeCli, claude_binary
 from moteur.collection import collect, companies_already_seen
 from moteur.company_links import config_links, look_up
-from moteur.config import SECTORS, Config, ConfigError, load_config
+from moteur.config import SECTORS, Config, ConfigError
 from moteur.cover_letter import generate_letters
 from moteur.decisions import apply as apply_decisions
 from moteur.detection import report as detection_report
@@ -24,6 +24,7 @@ from moteur.latex_repository import LatexRepositoryError, init_latex
 from moteur.local_db import LocalDb
 from moteur.mcp_link import launch as run_mcp_link
 from moteur.models import normalise
+from moteur.own_companies import import_companies, load_with_own_companies, source_for
 from moteur.pdf_server import DEFAULT_PORT, serve
 from moteur.scoring import score_ads
 from moteur.selection import (
@@ -36,14 +37,10 @@ from moteur.selection import (
     source_searched,
     states,
 )
-from moteur.sources.ats import SourceAts
 from moteur.sources.base import HttpClient, HttpxClient, Source
 from moteur.sources.france_travail import SourceFranceTravail
-from moteur.sources.radancy import SourceRadancy
 from moteur.sources.service_public import SourceServicePublic
 from moteur.sources.station_f import SourceStationF
-from moteur.sources.welcomekit import SourceWelcomeKit
-from moteur.sources.workday import SourceWorkday
 
 log = logging.getLogger("moteur")
 
@@ -89,14 +86,9 @@ def build_sources(config: Config, client: HttpClient, choices: Choices = NO_CHOI
             )
         )
     for target in searched_companies(config, choices):
-        if target.ats == "workday":
-            sources.append(SourceWorkday(client, target))
-        elif target.ats == "radancy":
-            sources.append(SourceRadancy(client, target))
-        elif target.ats == "welcomekit":
-            sources.append(SourceWelcomeKit(client, target))
-        elif target.ats:
-            sources.append(SourceAts(client, target, config.criteria.countries))
+        source = source_for(target, client, config.criteria.countries)
+        if source is not None:
+            sources.append(source)
     return sources
 
 
@@ -293,7 +285,9 @@ def build_parser() -> argparse.ArgumentParser:
     command("mcp", "direct link with the page, started by the Claude desktop app")
     detect = command("detect", "recognise the recruiting tool of career pages")
     detect.add_argument("addresses", nargs="+", help="career pages or ad addresses")
-    detect.add_argument("--name", default="", help="company name (single address only)")
+    command(
+        "import-companies", "keep the [[entreprises]] of an older config.toml as your own companies"
+    )
     command("serve", "serve the CVs and letters for the page's links").add_argument(
         "--port", type=int, default=DEFAULT_PORT
     )
@@ -319,14 +313,17 @@ def main(arguments: Sequence[str] | None = None) -> int:
         # CLI-06: needs no configuration, writes nothing, never calls Claude.
         client = HttpxClient()
         try:
-            print(detection_report(options.addresses, client, options.name))
+            print(detection_report(options.addresses, client))
         finally:
             client.close()
         return 0
     try:
         load_env(options.config.resolve().parent / ".env")
-        config = load_config(options.config)
-        # CONF-09: the tracked companies' links, refreshed at every start.
+        if options.command == "import-companies":
+            print("\n".join(import_companies(options.config)))
+            return 0
+        config = load_with_own_companies(options.config)
+        # CAT-08: the followed companies' links, refreshed at every start.
         with LocalDb(config.paths.base) as base:
             base.set_config_links(
                 config_links([(e.name, e.site, e.linkedin) for e in config.followed])
@@ -337,7 +334,7 @@ def main(arguments: Sequence[str] | None = None) -> int:
             run_mcp_link(
                 config.paths,
                 lambda: launch_in_background(config_file, config.paths),
-                lambda: load_config(config_file),
+                lambda: load_with_own_companies(config_file),
             )
             return 0
         if options.command == "init-latex":

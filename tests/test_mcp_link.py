@@ -49,13 +49,20 @@ def invoke(paths: Paths, tool: str, entry: dict[str, Any]) -> Any:
 
 
 @pytest.mark.spec("ECH-20")
-def test_the_server_exposes_only_four_tools(paths: Paths) -> None:
+def test_the_server_exposes_only_six_tools(paths: Paths) -> None:
     async def scenario() -> Any:
         async with Client(server(paths)) as client:
             return (await client.list_tools()).tools
 
     tools = {tool.name: tool for tool in anyio.run(scenario)}
-    assert set(tools) == {"propositions", "decisions", "entreprises", "selection"}
+    assert set(tools) == {
+        "propositions",
+        "decisions",
+        "entreprises",
+        "selection",
+        "ajouter_entreprises",
+        "retirer_entreprises",
+    }
     for name in ("propositions", "entreprises"):
         reading = tools[name].annotations
         assert reading is not None

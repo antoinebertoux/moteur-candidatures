@@ -17,6 +17,7 @@ from moteur.config import (
     SECTORS,
     Config,
     ConfigError,
+    company_fields,
     load_catalogue,
     parse_catalogue,
 )
@@ -133,12 +134,21 @@ def test_a_company_is_never_listed_twice() -> None:
         parse_catalogue({"entreprises": [THALES, THALES | {"nom": "THALÈS"}]})
 
 
-@pytest.mark.spec("CONF-04")
-def test_an_own_company_may_have_a_sector_and_a_size() -> None:
-    (own,) = config([{"nom": "Dust", "secteur": "numerique", "taille": "startup"}]).companies
-    assert (own.sector, own.size, own.origin) == ("numerique", "startup", "perso")
+@pytest.mark.spec("CAT-08")
+def test_company_fields_are_checked() -> None:
+    acme = company_fields(
+        {"nom": "Acme", "ats": "workable", "identifiant": "acme", "site": "https://acme.io"}
+    )
+    assert (acme.ats, acme.identifier, acme.site) == ("workable", "acme", "https://acme.io")
+    assert company_fields({"nom": "B", "ats": "welcomekit", "identifiant": "jobs.b.org"}).ats
     with pytest.raises(ConfigError, match=r"Dust.*taille.*accepted"):
-        config([{"nom": "Dust", "taille": "geante"}])
+        company_fields({"nom": "Dust", "taille": "geante"})
+    with pytest.raises(ConfigError, match=r"Acme.*ats.*accepted: greenhouse"):
+        company_fields({"nom": "Acme", "ats": "taleo", "identifiant": "x"})
+    with pytest.raises(ConfigError, match=r"Acme.*identifiant"):
+        company_fields({"nom": "Acme", "ats": "lever"})
+    with pytest.raises(ConfigError, match="nom"):
+        company_fields({"ats": "lever", "identifiant": "x"})
 
 
 @pytest.mark.spec("CAT-06")
@@ -189,22 +199,18 @@ def test_a_company_is_searched_only_if_it_its_sector_and_its_size_are_on() -> No
     assert "Thales" not in names(searched_companies(settings, ticked))
     no_startup = choices(("taille", "startup", "actif", False))
     assert "Dust" not in names(searched_companies(settings, no_startup))
-    # An own company without sector nor size only answers to its own box.
-    bare = config([{"nom": "Libre"}])
-    off = choices(("taille", "startup", "actif", False), ("secteur", "numerique", "actif", False))
-    assert "Libre" in names(searched_companies(bare, off))
 
 
 @pytest.mark.spec("CAT-14")
-def test_unsolicited_application_follows_the_config_then_the_choice() -> None:
-    settings = config([{"nom": "Dust", "spontanee": True}])
+def test_unsolicited_application_is_off_unless_chosen() -> None:
+    settings = config([{"nom": "Dust"}])
     by_name = {c.name: c for c in searched_companies(settings, NO_CHOICE)}
-    assert by_name["Dust"].unsolicited and not by_name["Sanofi"].unsolicited
+    assert not by_name["Dust"].unsolicited and not by_name["Sanofi"].unsolicited
     chosen = choices(
-        ("entreprise", "dust", "spontanee", False), ("entreprise", "sanofi", "spontanee", True)
+        ("entreprise", "dust", "spontanee", True), ("entreprise", "sanofi", "spontanee", True)
     )
     by_name = {c.name: c for c in searched_companies(settings, chosen)}
-    assert not by_name["Dust"].unsolicited and by_name["Sanofi"].unsolicited
+    assert by_name["Dust"].unsolicited and by_name["Sanofi"].unsolicited
 
 
 @pytest.mark.spec("CAT-15")
@@ -296,7 +302,7 @@ def test_companies_report() -> None:
 @pytest.fixture
 def paths_config(tmp_path: Path) -> Config:
     return parsed(
-        {"entreprises": [{"nom": "Dust", "spontanee": True}], "station_f": {"actif": True}},
+        {"entreprises": [{"nom": "Dust"}], "station_f": {"actif": True}},
         tmp_path,
         parse_catalogue({"entreprises": [THALES, INSEE]}),
     )
@@ -318,8 +324,8 @@ def test_the_entreprises_tool_describes_companies_and_groups(paths_config: Confi
         "raison": "",
         "actif": True,
         "actif_par_defaut": True,
-        "spontanee": True,
-        "spontanee_par_defaut": True,
+        "spontanee": False,
+        "spontanee_par_defaut": False,
     }
     assert thales["origine"] == "catalogue" and not thales["spontanee"]
     defense = next(s for s in answer["secteurs"] if s["cle"] == "defense")

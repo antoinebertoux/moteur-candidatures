@@ -219,7 +219,7 @@ def test_a_failed_lookup_does_not_stop_the_daily_run(base: LocalDb) -> None:
     assert look_up(base, Failing(), model="haiku") == (0, 0)
 
 
-@pytest.mark.spec("CONF-09")
+@pytest.mark.spec("CAT-08")
 def test_config_links_must_be_web_addresses() -> None:
     (acme,) = parsed(
         {"entreprises": [{"nom": "Acme", "site": "https://acme.com", "linkedin": LINKEDIN}]},

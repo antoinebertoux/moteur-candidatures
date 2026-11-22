@@ -56,21 +56,17 @@ def test_unrecognised_or_unreachable_page_is_reported_and_others_carry_on() -> N
             return "<p>Pas d'outil</p>"
 
     text = report(["https://panne.fr", "https://rien.fr", "jobs.ashbyhq.com/dust"], Failing({}))
-    assert "# https://panne.fr: https://panne.fr: HTTP 503" in text
-    assert "# https://rien.fr: unrecognised tool" in text
-    assert 'identifiant = "dust"' in text
+    assert text.splitlines() == [
+        "https://panne.fr: https://panne.fr: HTTP 503",
+        "https://rien.fr: unrecognised tool",
+        "jobs.ashbyhq.com/dust: ats = ashby, identifiant = dust",
+    ]
 
 
 @pytest.mark.spec("CLI-06")
-def test_block_to_paste() -> None:
+def test_detect_prints_the_tool_and_identifier_without_downloading_known_addresses() -> None:
     client = FakeClient({})
-    assert report(["https://jobs.ashbyhq.com/comand-ai"], client, "Comand AI") == (
-        "[[entreprises]]\n"
-        'nom = "Comand AI"\n'
-        'ats = "ashby"\n'
-        'identifiant = "comand-ai"\n'
-        'site = "https://jobs.ashbyhq.com/comand-ai"\n'
+    assert report(["https://jobs.ashbyhq.com/comand-ai"], client) == (
+        "https://jobs.ashbyhq.com/comand-ai: ats = ashby, identifiant = comand-ai"
     )
-    two = report(["https://jobs.ashbyhq.com/alta-ares", "https://jobs.lever.co/x"], client, "N")
-    assert 'nom = "Alta Ares"' in two  # --nom only applies to a single address
     assert client.calls == []  # known addresses need no download

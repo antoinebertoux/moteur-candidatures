@@ -1,4 +1,4 @@
-"""`moteur detecter`: recognises the recruiting tool of career pages (CLI-04 to CLI-06)."""
+"""`moteur detect`: recognises the recruiting tool of career pages (CLI-04 to CLI-06)."""
 
 from __future__ import annotations
 
@@ -37,22 +37,9 @@ class Detection:
     identifier: str = ""
     error: str = ""
 
-    def block(self, name: str = "") -> str:
-        """The `[[entreprises]]` block to paste into config.toml (CLI-06)."""
-        source = self.address if self.ats == "workday" else self.identifier.removeprefix("eu:")
-        name = name or _name_from(source)
-        return (
-            "[[entreprises]]\n"
-            f'nom = "{name}"\n'
-            f'ats = "{self.ats}"\n'
-            f'identifiant = "{self.identifier}"\n'
-            f'site = "{self.address}"\n'
-        )
-
-
-def _name_from(identifier: str) -> str:
-    base = re.sub(r"^https?://", "", identifier).split(".")[0]
-    return " ".join(part.capitalize() for part in re.split(r"[-_]+", base) if part)
+    def line(self) -> str:
+        """What `moteur detect` prints for a recognised address (CLI-06)."""
+        return f"{self.address}: ats = {self.ats}, identifiant = {self.identifier}"
 
 
 def find_tool(text: str) -> tuple[str, str] | None:
@@ -89,14 +76,10 @@ def detect(address: str, client: HttpClient) -> Detection:
     return Detection(address, *in_page)
 
 
-def report(addresses: Sequence[str], client: HttpClient, name: str = "") -> str:
-    """Text printed by `moteur detecter`: one block per recognised address."""
-    single_name = name if len(addresses) == 1 else ""
-    parts: list[str] = []
+def report(addresses: Sequence[str], client: HttpClient) -> str:
+    """Text printed by `moteur detect`: one line per address (CLI-05, CLI-06)."""
+    lines: list[str] = []
     for address in addresses:
         detection = detect(address, client)
-        if detection.error:
-            parts.append(f"# {address}: {detection.error}\n")
-        else:
-            parts.append(detection.block(single_name))
-    return "\n".join(parts)
+        lines.append(f"{address}: {detection.error}" if detection.error else detection.line())
+    return "\n".join(lines)

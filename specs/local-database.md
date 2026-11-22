@@ -44,5 +44,8 @@
   kept in the local database, one per company (keyed by the normalised name, ID-01),
   sector, size or source. Going back to the default removes the choice. They are not
   applications: `propositions` and `pour-la-page.json` do not carry them.
+- **BASE-16** · User's own companies (CAT-20) are kept in the local database, one per
+  normalised name, with their fields and the date they were added or last updated.
+  Removing one (CAT-25) deletes it. Like BASE-15, they are not applications.
 - **BASE-10** · A database created by an older version gets the columns added since, if
   needed, without data loss.

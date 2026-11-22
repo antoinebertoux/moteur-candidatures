@@ -56,7 +56,7 @@ capability). Engine B therefore offers two channels carrying the same content:
 
 - **ECH-20** · `moteur mcp` runs an MCP server over stdio, named `moteur`, started by the
   Claude desktop app (`mcpServers` of `claude_desktop_config.json`). It exposes exactly the
-  four tools below and nothing else: no access to files, the configuration or `.env`.
+  six tools below and nothing else: no access to files, the configuration or `.env`.
 - **ECH-21** · Tool `propositions` (annotated read-only, no input): returns
   `{"candidatures": [...]}`, the same entries as `pour-la-page.json` (ECH-01, ECH-02),
   read straight from the local database at call time. No file is written.
@@ -74,11 +74,12 @@ capability). Engine B therefore offers two channels carrying the same content:
   only read and record (generation stays `moteur generate`, which takes minutes).
 - **ECH-26** · Single exception to ECH-25: `decisions` starts `moteur prepare` in the
   background when it records a new preparation request (PREP-41). It does not wait for
-  it, and its answer does not depend on it.
+  it, and its answer does not depend on it. The check of an own company's board
+  (CAT-22) is the only network call a tool makes.
 - **ECH-27** · Tool `entreprises` (annotated read-only, no input): returns the companies
   followed and User's choices (CAT-10 to CAT-15), read at call time:
   - `entreprises`: for each company `cle` (normalised name, ID-01), `nom`, `origine`
-    (`catalogue` or `perso`), `secteur`, `taille`, `pays`, `site`, `recherchee` (searched,
+    (`catalogue` or `perso`, CAT-06), `secteur`, `taille`, `pays`, `site`, `recherchee` (searched,
     CAT-13), `actif` and `actif_par_defaut` (its own state and the default, CAT-10),
     `spontanee` and `spontanee_par_defaut` (CAT-14);
   - `secteurs` and `tailles`: for each value of CAT-04 and CAT-03, `cle`, `actif` and the
@@ -93,3 +94,14 @@ capability). Engine B therefore offers two channels carrying the same content:
   twice change nothing the second time.
 - **ECH-29** · An invalid input to `selection` (unknown `objet`, unknown key, wrong type)
   returns a tool error naming the faulty choice, and records none of them.
+- **ECH-30** · Tool `ajouter_entreprises` (input: `{"entreprises": [...]}`, 1 to 20
+  companies, each with the fields of CAT-20 and either `ats` and `identifiant` or
+  `adresse`, CAT-21): checks and keeps each company (CAT-22 to CAT-24) and returns
+  `{"resultats": [...]}`, one per company in the order given, with `nom`, `cle`, `statut`
+  (`ajoutee`, `mise_a_jour` or `refusee`), and `annonces` (number of ads found) or
+  `raison` (CAT-23).
+- **ECH-31** · An input that is not a list of 1 to 20 objects returns a tool error and
+  checks nothing. A faulty company inside a valid list is only refused (CAT-23).
+- **ECH-32** · Tool `retirer_entreprises` (input: `{"cles": [...]}`, normalised names):
+  removes those own companies (CAT-25) and returns the same answer as `entreprises`.
+  A key that is not an own company returns a tool error naming it, and removes none.

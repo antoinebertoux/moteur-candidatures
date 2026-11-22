@@ -13,8 +13,8 @@ by every application of that company.
   normalised as in ID-01, holding its website, its LinkedIn page, where each comes from,
   and the date of the last lookup (LNK-10).
 - **LNK-02** · Sources, from strongest to weakest: User's correction in the page
-  (PAGE-42) → the company in `config.toml` or in the catalogue (`site`, `linkedin`,
-  CONF-09, CAT-02; the own company wins, CAT-06) → the
+  (PAGE-42) → User's own company or the catalogue entry (`site`, `linkedin`,
+  CAT-08; the own company wins, CAT-06) → the
   lookup by Claude (LNK-10). A weaker source never replaces a link set by a stronger one.
   Each link (website, LinkedIn) is handled on its own.
 - **LNK-03** · A link from the lookup is kept only if it has the expected form, otherwise
@@ -23,7 +23,7 @@ by every application of that company.
     `https://www.linkedin.com/company/<name>/` (query and fragment removed);
   - website: an http(s) address whose host is not a job board, a recruiting tool, a
     social network or an encyclopedia (LinkedIn, Welcome to the Jungle, Indeed,
-    Glassdoor, the tools of CONF-04, Wikipedia…), stored reduced to
+    Glassdoor, the tools of CAT-08, Wikipedia…), stored reduced to
     `https://<host>/`.
 
 ## Lookup by Claude

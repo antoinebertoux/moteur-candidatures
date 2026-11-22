@@ -1,15 +1,29 @@
 # Company catalogue (specs/catalogue.md): public bodies and companies of 500 employees or
 # more, shipped with the tool. Only public facts about companies: nothing about a candidate.
 # Each user ticks or unticks them in the tracking page; their own companies (start-ups,
-# small companies) stay in their config.toml.
+# small companies) are added by Claude and kept in engine B's database (CAT-20).
 #
-# Fields: those of an own company (nom, ats, identifiant, site, linkedin; see
-# config.exemple.toml), plus:
+# Fields (CAT-02, CAT-08):
+#   nom, ats, identifiant, site, linkedin
 #   secteur  one of the sectors of CAT-04 (required)
 #   taille   "public" or "grand-groupe" (required)
 #   pays     two-letter ISO codes of the countries where it hires; empty = everywhere
 # No "spontanee" (a personal choice) and no "recherches": Workday and SmartRecruiters
-# companies are searched with the user's [criteres] mots_cles (CAT-07).
+# companies are searched with the user's [criteres] recherches (CAT-07).
+#
+# "ats" and "identifiant" depend on the career page's tool
+# (`uv run moteur detect <address>` finds them):
+#   greenhouse, lever, ashby: job-boards.greenhouse.io/<id>, jobs.lever.co/<id>, jobs.ashbyhq.com/<id>
+#   smartrecruiters: jobs.smartrecruiters.com/<id>, searched with [criteres] recherches
+#   recruitee, teamtailor: <id>.recruitee.com, <id>.teamtailor.com
+#   greenhouse hosted in Europe (job-boards.eu.greenhouse.io/<id>): identifiant "eu:<id>"
+#   teamtailor on the company's domain: identifiant = the host (e.g. careers.exemple.com)
+#   workday: the full address (https://<tenant>.wd3.myworkdayjobs.com/<site>),
+#            searched with [criteres] recherches
+#   radancy: the career site's address (e.g. careers.moodys.com), read through its sitemap
+#   workable: apply.workable.com/<id>
+#   welcomekit: the address of the career page hosted by Welcome to the Jungle
+#               (e.g. jobs.zama.org); welcometothejungle.com itself blocks robots
 
 [[entreprises]]
 nom = "Thales"

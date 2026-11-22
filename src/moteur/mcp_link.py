@@ -18,7 +18,9 @@ from moteur import exchange
 from moteur.config import Config, ConfigError, Paths
 from moteur.decisions import apply
 from moteur.local_db import LocalDb
+from moteur.own_companies import OwnCompanyError, add_companies, remove_companies
 from moteur.selection import SelectionError, choices_from, summary
+from moteur.sources.base import HttpClient, HttpxClient
 
 NAME = "moteur"
 
@@ -60,7 +62,10 @@ def decisions(
 
 
 ConfigLoader = Callable[[], Config]
-"""Reads `config.toml` again, so that the tools see its current companies."""
+"""Reads `config.toml` and the own companies again, so that the tools see the current ones."""
+
+ClientFactory = Callable[[], HttpClient]
+"""HTTP client for the board check of `ajouter_entreprises` (CAT-22)."""
 
 
 def _no_config() -> Config:
@@ -84,12 +89,32 @@ def record_selection(config: Config, paths: Paths, entry: object) -> dict[str, A
         return summary(config, base.choices())
 
 
+def add_own_companies(
+    config: Config, paths: Paths, entry: object, client: HttpClient
+) -> dict[str, Any]:
+    """ECH-30: checks and keeps the companies; raises `OwnCompanyError` (ECH-31)."""
+    with LocalDb(paths.base) as base:
+        return add_companies(entry, config, base, client)
+
+
+def remove_own_companies(load_config: ConfigLoader, paths: Paths, entry: object) -> dict[str, Any]:
+    """ECH-32: removes own companies, then answers like `entreprises`."""
+    with LocalDb(paths.base) as base:
+        remove_companies(entry, base)
+    return companies(load_config(), paths)
+
+
+def _real_client() -> HttpClient:
+    return HttpxClient()
+
+
 def server(
     paths: Paths,
     launch_preparation: Launcher = _launch_nothing,
     load_config: ConfigLoader = _no_config,
+    new_client: ClientFactory = _real_client,
 ) -> MCPServer:
-    """The four tools of ECH-20, and nothing else."""
+    """The six tools of ECH-20, and nothing else."""
     mcp: MCPServer = MCPServer(NAME, instructions="Local engine B of the tracking page.")
 
     @mcp.tool(
@@ -133,6 +158,38 @@ def server(
         try:
             return record_selection(load_config(), paths, {"choix": choix})
         except (ConfigError, SelectionError) as error:
+            raise ToolError(str(error)) from error
+
+    @mcp.tool(
+        name="ajouter_entreprises",
+        description=(
+            "Adds User's own companies to engine B (1 to 20). Each needs nom, secteur, taille "
+            "and either ats + identifiant or adresse (career page); optional site, linkedin, "
+            "pays. Engine B queries each board before keeping it and says why it refuses one."
+        ),
+        annotations=ToolAnnotations(read_only_hint=False, destructive_hint=False),
+    )
+    # The parameter name is the tool's input key: it stays French, like the others.
+    def add_tool(entreprises: list[Any]) -> dict[str, Any]:
+        client = new_client()
+        try:
+            return add_own_companies(load_config(), paths, {"entreprises": entreprises}, client)
+        except (ConfigError, OwnCompanyError) as error:
+            raise ToolError(str(error)) from error
+        finally:
+            close = getattr(client, "close", None)
+            if callable(close):
+                close()
+
+    @mcp.tool(
+        name="retirer_entreprises",
+        description="Stops following some of User's own companies, given by their key (cle).",
+        annotations=ToolAnnotations(read_only_hint=False, destructive_hint=True),
+    )
+    def remove_tool(cles: list[Any]) -> dict[str, Any]:
+        try:
+            return remove_own_companies(load_config, paths, {"cles": cles})
+        except (ConfigError, OwnCompanyError) as error:
             raise ToolError(str(error)) from error
 
     return mcp

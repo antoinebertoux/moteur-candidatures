@@ -87,13 +87,17 @@ sequenceDiagram
 
 ```bash
 uv sync
-cp config.exemple.toml config.toml   # then adapt criteria and companies
+cp config.exemple.toml config.toml   # then adapt profile and criteria
 ```
 
 Large groups and public bodies come with the tool, in
 [`catalogue/entreprises.toml`](catalogue/entreprises.toml): untick the ones that do not
 interest you in the page's **Options** panel (or check with `uv run moteur companies`).
-`config.toml` only lists your own companies (start-ups, small companies).
+Your own companies (start-ups, small companies) are added by Claude: see
+[Adding companies](#adding-companies). `config.toml` lists no company.
+
+Coming from a version whose `config.toml` listed `[[entreprises]]`: run
+`uv run moteur import-companies` once, then delete them from `config.toml`.
 
 `claude` must be installed and logged in with your subscription:
 
@@ -176,6 +180,8 @@ uv run moteur prepare            # pending interview preparation sheets
 | `prepare [ids…]` | interview preparation sheets (all pending requests by default) | Sonnet |
 | `mcp` | direct link with the page, started by the Claude desktop app | no |
 | `detect <urls…>` | recognises the recruiting tool behind career pages | no |
+| `companies` | lists the companies followed and the sources, with what is searched | no |
+| `import-companies` | keeps the `[[entreprises]]` of an older `config.toml` as your own companies | no |
 | `serve [--port]` | serves CVs and letters for the page's links | no |
 
 Add `-v` to any command for per-source details. The Claude models are the defaults and
@@ -201,6 +207,17 @@ in `~/.config/Claude/claude_desktop_config.json`, then restart the app:
 ```
 
 The "Moteur B" chip in the page header shows whether the link is up.
+
+### Adding companies
+
+Ask Claude in the desktop app: "add Doctolib", "find cybersecurity SMEs hiring in Lyon".
+The skill [`skills/trouver-entreprises`](skills/trouver-entreprises/SKILL.md) tells it how:
+it reads what engine B already follows, searches the web, shows you what it found, then
+hands the companies you keep to the tool `ajouter_entreprises` of `moteur mcp`. Engine B
+queries each company's job board before keeping it, and says why it refuses one
+([`specs/catalogue.md`](specs/catalogue.md), CAT-20 and following). `retirer_entreprises`
+removes one. Install the skill once: zip the `skills/trouver-entreprises` folder and
+upload it in the desktop app's settings (Capabilities, Skills).
 
 ### Interview preparation
 
@@ -238,9 +255,9 @@ the repository:
 
 | File | Content |
 | --- | --- |
-| `config.toml` | profile sent to Claude, criteria, salary floor, your own companies |
+| `config.toml` | profile sent to Claude, criteria, salary floor |
 | `.env` | France Travail credentials |
-| `moteur.sqlite3`, `echange/` | ads seen, scores, decisions |
+| `moteur.sqlite3`, `echange/` | ads seen, scores, decisions, your own companies and choices |
 | `../latex/` | CV, block and paragraph banks, personal instructions, `compiler.sh` |
 | `../Candidatures/`, `../suivi/` | generated folders, companies already approached |
 | `prive/` | export of the page's database, filled-in text of the scheduled tasks |
@@ -279,6 +296,7 @@ checked by a test that cites it (`@pytest.mark.spec("FILT-03")`);
 | `mcp_link.py` | MCP server `moteur mcp`, direct link with the page | no |
 | `pdf_server.py` | serves the PDFs of `Candidatures/` to the page | no |
 | `detection.py` | `moteur detect`: finds a company's recruiting tool | no |
+| `own_companies.py` | your own companies: board check, add, remove, import | no |
 
 Application identifiers (`Offre.cle`) are computed exactly as in the tracking page
 ([`specs/identifiers.md`](specs/identifiers.md)): never change `normaliser` on one side

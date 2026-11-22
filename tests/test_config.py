@@ -29,35 +29,16 @@ def test_default_values(tmp_path: Path) -> None:
     assert config.paths.applications == tmp_path.parent / "Candidatures"
 
 
-@pytest.mark.spec("CONF-04")
-def test_companies() -> None:
-    data = {
-        "entreprises": [
-            {"nom": "Acme", "ats": "lever", "identifiant": "acme", "spontanee": True},
-            {"nom": "Libre", "site": "https://libre.io"},
-        ]
-    }
-    acme, free = parsed(data, Path()).companies
-    assert (acme.ats, acme.identifier, acme.unsolicited) == ("lever", "acme", True)
-    assert (free.ats, free.site, free.unsolicited) == ("", "https://libre.io", False)
-
-
-@pytest.mark.spec("CONF-04")
-def test_workable_and_welcomekit_companies() -> None:
-    data = {
-        "entreprises": [
-            {"nom": "A", "ats": "workable", "identifiant": "a"},
-            {"nom": "B", "ats": "welcomekit", "identifiant": "jobs.b.org"},
-        ]
-    }
-    assert [e.ats for e in parsed(data, Path()).companies] == ["workable", "welcomekit"]
-
-
-@pytest.mark.spec("CONF-04")
-def test_a_company_has_no_search_terms_of_its_own() -> None:
-    data = {"entreprises": [{"nom": "Exemple", "ats": "workday", "recherches": ["IA"]}]}
-    with pytest.raises(ConfigError, match=r"Exemple.*\[criteres\] recherches"):
-        parsed(data, Path())
+@pytest.mark.spec("CONF-12")
+def test_config_lists_no_company(tmp_path: Path) -> None:
+    data = {"criteres": {"recherches": ["ia"]}, "entreprises": [{"nom": "Acme"}]}
+    with pytest.raises(ConfigError, match=r"moteur import-companies.*delete them"):
+        parse(data, Path())
+    file = tmp_path / "config.toml"
+    file.write_text('[criteres]\nrecherches = ["ia"]\n[[entreprises]]\nnom = "Acme"\n')
+    with pytest.raises(ConfigError, match="import-companies"):
+        load_config(file)
+    assert load_config(file, ignore_companies=True).companies == ()
 
 
 @pytest.mark.spec("CONF-11")

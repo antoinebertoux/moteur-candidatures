@@ -17,7 +17,8 @@
 | `moteur serve [--port N]` | serves the PDFs to the page |
 | `moteur mcp` | direct link with the page (ECH-20), started by the Claude desktop app |
 | `moteur companies` | lists the companies followed and the sources, with what is searched (CLI-09) |
-| `moteur detect <address…> [--name N]` | recognises the recruiting tool of career pages and prints the `[[entreprises]]` block to paste |
+| `moteur detect <address…>` | recognises the recruiting tool of career pages and prints it |
+| `moteur import-companies` | turns the `[[entreprises]]` of an older `config.toml` into own companies (CLI-10) |
 
 - **CLI-01** · The commands above exist and chain the steps shown. *(untested)*
 - **CLI-02** · `--config <file>` (default `config.toml` in the current folder) and `-v` /
@@ -33,10 +34,8 @@
 - **CLI-05** · Any other address (the company's own career page) is downloaded once and
   the first link matching CLI-04 found in it is used. None found: the address is reported
   as "unrecognised tool", and the other addresses carry on.
-- **CLI-06** · For each recognised address, the command prints a ready-to-paste
-  `[[entreprises]]` block (`nom` from `--name` when a single address is given, otherwise
-  derived from the identifier; `ats`; `identifiant`; `site` = the address given). It never
-  writes `config.toml` and never calls Claude.
+- **CLI-06** · For each recognised address, the command prints the address, `ats` and
+  `identifiant`. It never writes anything and never calls Claude.
 - **CLI-07** · Everything the command line shows is in English: command and option names,
   help, progress lines, warnings and errors. What is written for the user or a recruiter
   (CV, cover letter, preparation sheet) and the stored data (statuses, field names,
@@ -49,6 +48,13 @@
   its origin (catalogue or own), its size, whether it is searched and, if not, why (User's
   choice, sector, size, country), and whether its unsolicited application is on; then
   every keyword source and whether it is searched. It only reads.
+- **CLI-10** · `moteur import-companies` reads the `[[entreprises]]` of `config.toml`
+  and keeps each one as an own company (BASE-16), checked by CAT-08 and CAT-20 but
+  without querying its board (CAT-22). An entry with `spontanee = true` also records
+  that choice (BASE-15), unless User already made one. An own company of the same
+  normalised name is replaced (CAT-24). Each refused entry is printed with its reason;
+  the others are kept. It never rewrites `config.toml`, and ends by saying to delete the
+  `[[entreprises]]` from it. Running it twice changes nothing the second time.
 
 ## PDF server (`moteur serve`)
 

@@ -125,16 +125,17 @@ class TargetCompany:
     identifier: str = ""
     site: str = ""
     unsolicited: bool = False
+    """Set from User's choice when the companies to search are drawn up (CAT-14)."""
     linkedin: str = ""
-    """LinkedIn page of the company (CONF-09)."""
+    """LinkedIn page of the company (CAT-08)."""
     # Terms sent to the ATS search (SRC-41, SRC-35): always `[criteres] recherches` (CAT-07).
     searches: tuple[str, ...] = ()
     sector: str = ""
-    """One of SECTORS, or empty for an own company that has none (CAT-04)."""
+    """One of SECTORS (CAT-04)."""
     size: str = ""
-    """One of SIZES, or empty for an own company that has none (CAT-03)."""
+    """One of SIZES (CAT-03)."""
     countries: tuple[str, ...] = ()
-    """Countries where a catalogue company hires (CAT-02)."""
+    """Countries where the company hires; empty = everywhere (CAT-02)."""
     origin: Origin = "perso"
 
 
@@ -167,12 +168,13 @@ class Config:
     criteria: Criteria
     france_travail: FranceTravail
     service_public: PublicService
-    companies: tuple[TargetCompany, ...]
     paths: Paths
     preparation_model: str = "sonnet"
     station_f: StationF = StationF()
     catalogue: tuple[TargetCompany, ...] = ()
     """Companies of `catalogue/entreprises.toml` (CAT-01)."""
+    companies: tuple[TargetCompany, ...] = ()
+    """User's own companies, read from the local database (CAT-20, BASE-16)."""
 
     @property
     def followed(self) -> tuple[TargetCompany, ...]:
@@ -286,18 +288,16 @@ def _station_f(table: Mapping[str, Any], searches: tuple[str, ...]) -> StationF:
     )
 
 
-def _company(table: Mapping[str, Any]) -> TargetCompany:
-    name = _string(table, "nom")
+def company_fields(table: Mapping[str, Any]) -> TargetCompany:
+    """The fields every company has, catalogue or own (CAT-02, CAT-08)."""
+    name = _string(table, "nom").strip()
     if not name:
-        raise ConfigError("Every [[entreprises]] must have a nom")
-    if "recherches" in table:
-        raise ConfigError(
-            f'{name}: "recherches" is shared by every company, move it to [criteres] recherches'
-        )
-    ats = _string(table, "ats")
+        raise ConfigError("Every company must have a nom")
+    ats = _string(table, "ats").strip()
+    accepted = [tool for tool in get_args(AtsType) if tool]
     if ats not in get_args(AtsType):
-        raise ConfigError(f"unknown ats for {name}: {ats}")
-    identifier = _string(table, "identifiant")
+        raise ConfigError(f'{name}: unknown "ats" {ats!r} (accepted: {", ".join(accepted)})')
+    identifier = _string(table, "identifiant").strip()
     if ats and not identifier:
         raise ConfigError(f'{name}: "identifiant" is required when "ats" is set')
     links = {key: _string(table, key).strip() for key in ("site", "linkedin")}
@@ -310,25 +310,44 @@ def _company(table: Mapping[str, Any]) -> TargetCompany:
         identifier=identifier,
         site=links["site"],
         linkedin=links["linkedin"],
-        unsolicited=_boolean(table, "spontanee", False),
         sector=_one_of(table, "secteur", name, SECTORS),
         size=_one_of(table, "taille", name, SIZES),
+        countries=_countries(table, name),
     )
 
 
-def _catalogue_company(table: Mapping[str, Any]) -> TargetCompany:
-    """A catalogue entry (CAT-02): an own company's fields, plus sector, size and countries."""
+def _without_personal_fields(table: Mapping[str, Any]) -> None:
+    """No company carries `spontanee` (a choice, CAT-14) nor `recherches` (CAT-07)."""
     for personal in ("spontanee", "recherches"):
         if personal in table:
             name = table.get("nom", "?")
-            raise ConfigError(f'{name}: "{personal}" has no place in the catalogue')
-    company = _company(table)
+            raise ConfigError(f'{name}: a company has no "{personal}"')
+
+
+def _catalogue_company(table: Mapping[str, Any]) -> TargetCompany:
+    """A catalogue entry (CAT-02): sector and size required, size public or large."""
+    _without_personal_fields(table)
+    company = company_fields(table)
     if not company.sector:
         raise ConfigError(f'{company.name}: "secteur" is required in the catalogue')
     if company.size not in CATALOGUE_SIZES:
         accepted = ", ".join(CATALOGUE_SIZES)
         raise ConfigError(f'{company.name}: "taille" must be one of {accepted} in the catalogue')
-    return replace(company, countries=_countries(table, company.name), origin="catalogue")
+    return replace(company, origin="catalogue")
+
+
+def own_company(table: Mapping[str, Any]) -> TargetCompany:
+    """One of User's own companies (CAT-20): tool, sector and size required."""
+    _without_personal_fields(table)
+    company = company_fields(table)
+    for field, value in (
+        ("ats", company.ats),
+        ("secteur", company.sector),
+        ("taille", company.size),
+    ):
+        if not value:
+            raise ConfigError(f'{company.name}: "{field}" is required')
+    return replace(company, origin="perso")
 
 
 def parse_catalogue(data: Mapping[str, Any]) -> tuple[TargetCompany, ...]:
@@ -358,17 +377,25 @@ def load_catalogue(path: Path = CATALOGUE) -> tuple[TargetCompany, ...]:
     return parse_catalogue(data)
 
 
+NO_COMPANIES_IN_CONFIG = (
+    "config.toml lists no company any more: run `moteur import-companies` to keep its "
+    "[[entreprises]] as your own companies, then delete them from config.toml"
+)
+
+
 def parse(
-    data: Mapping[str, Any], folder: Path, catalogue: tuple[TargetCompany, ...] = ()
+    data: Mapping[str, Any],
+    folder: Path,
+    catalogue: tuple[TargetCompany, ...] = (),
+    companies: tuple[TargetCompany, ...] = (),
 ) -> Config:
-    """Builds the configuration; relative paths start from `folder`."""
+    """Builds the configuration; relative paths start from `folder` (CONF-12: no company)."""
     criteria = _table(data, "criteres")
     france_travail = _table(data, "france_travail")
     models = _table(data, "modeles")
     paths = _table(data, "chemins")
-    companies = data.get("entreprises", [])
-    if not isinstance(companies, list) or not all(isinstance(e, dict) for e in companies):
-        raise ConfigError("[[entreprises]] must be a list of tables")
+    if "entreprises" in data:
+        raise ConfigError(NO_COMPANIES_IN_CONFIG)
     batch_size = _integer(data, "taille_lot", 8)
     if batch_size < 1:
         raise ConfigError('"taille_lot" must be at least 1')
@@ -394,7 +421,6 @@ def parse(
             published_since=_integer(france_travail, "publiee_depuis", 7),
         ),
         service_public=_public_service(_table(data, "service_public"), searches),
-        companies=tuple(_company(e) for e in companies),
         paths=Paths(
             root=(folder / _string(paths, "racine", "..")).resolve(),
             base=folder / "moteur.sqlite3",
@@ -403,6 +429,7 @@ def parse(
         preparation_model=_string(models, "preparation", "sonnet"),
         station_f=_station_f(_table(data, "station_f"), searches),
         catalogue=catalogue,
+        companies=companies,
     )
     if not searches:
         # Checked last, so that any other fault of the file is reported first.
@@ -413,13 +440,23 @@ def parse(
     return config
 
 
-def load_config(path: Path) -> Config:
-    """Lit `config.toml`."""
+def read_toml(path: Path) -> dict[str, Any]:
+    """The raw content of `config.toml` (CONF-01)."""
     try:
         with path.open("rb") as file:
-            data = tomllib.load(file)
+            return tomllib.load(file)
     except FileNotFoundError as error:
         raise ConfigError(f"{path} not found: copy config.exemple.toml to config.toml") from error
     except tomllib.TOMLDecodeError as error:
         raise ConfigError(f"{path} unreadable: {error}") from error
+
+
+def load_config(path: Path, *, ignore_companies: bool = False) -> Config:
+    """Reads `config.toml`, without User's own companies (they are in the database).
+
+    `ignore_companies` lets `moteur import-companies` read an older file (CLI-10).
+    """
+    data = read_toml(path)
+    if ignore_companies:
+        data.pop("entreprises", None)
     return parse(data, path.resolve().parent, load_catalogue())

@@ -1,8 +1,9 @@
 # Configuration
 
 `config.toml` (ignored by Git) is created by copying `config.exemple.toml`. It holds the
-profile sent to Claude, the sorting criteria, the sources and User's own companies (the
-catalogue of large groups and public bodies is shipped apart, [catalogue.md](catalogue.md)).
+profile sent to Claude, the sorting criteria and the sources. It lists no company: the
+catalogue is shipped with the tool and User's own companies are in the local database
+([catalogue.md](catalogue.md)).
 
 - **CONF-01** · If `config.toml` is missing, the engine stops and says to copy
   `config.exemple.toml`; if it is malformed, it stops and quotes the TOML error.
@@ -12,20 +13,12 @@ catalogue of large groups and public bodies is shipped apart, [catalogue.md](cat
   published in the last 21 days; no salary floor, root folder `..` (the parent of `moteur/`).
 - **CONF-03** · A value of the wrong type is rejected with a message naming the key;
   `taille_lot`, `pages_max` and Station F's `publiee_depuis` must be at least 1.
-- **CONF-04** · Every own company has a name. Its recruiting tool (`ats`) is empty
-  or one of: greenhouse, lever, ashby, workday, smartrecruiters, recruitee, teamtailor,
-  workable, radancy, welcomekit;
-  when set, `identifiant` is required. It has no search terms of its own: a company
-  with `recherches` is rejected with a message saying to move them to
-  `[criteres] recherches` (CONF-11). It may have a website (`site`) and a LinkedIn page (`linkedin`),
-  and a `secteur` (CAT-04) and a `taille` (CAT-03); any other sector or size is rejected
-  with a message naming the company and listing the accepted values.
+- ~~**CONF-04**~~ · *Removed: `config.toml` lists no company (CONF-12); a company's
+  fields are checked by CAT-08 and CAT-20.*
 - **CONF-05** · Choisir le service public domains and employers are given by name
   ("Ministère des Armées", "Numérique", accents and case ignored) or by their numeric id on the site; an
   unknown name is rejected with the list of known names.
-- **CONF-09** · An own company's `site` and `linkedin` must be http(s) addresses,
-  otherwise they are rejected with a message naming the company. They are the company's
-  links of LNK-02.
+- ~~**CONF-09**~~ · *Removed: moved to CAT-08.*
 - **CONF-10** · `[criteres] pays` lists the countries where ads are searched, as
   two-letter ISO 3166-1 codes (`"fr"`, `"gb"`…, case ignored); empty or missing = every
   country. Any other value is rejected with a message quoting it. The engine holds no
@@ -41,6 +34,9 @@ catalogue of large groups and public bodies is shipped apart, [catalogue.md](cat
   required, and a missing or empty list is rejected with a message saying to fill it
   (`config.exemple.toml` gives an example). A source's own `recherches` (`[france_travail]`, `[service_public]`,
   `[station_f]`), when given, replaces it for that source only.
+- **CONF-12** · `config.toml` lists no company: a `[[entreprises]]` array stops the
+  engine with a message saying to run `moteur import-companies` (CLI-10), then to delete
+  it from `config.toml`.
 - **CONF-06** · `config.exemple.toml` is always a valid configuration.
 - **CONF-07** · Paths derive from the location of `config.toml`: the `moteur.sqlite3`
   database and the `echange/` folder next to it; `latex/`, `Candidatures/` and

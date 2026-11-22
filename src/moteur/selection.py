@@ -88,7 +88,8 @@ def company_state(company: TargetCompany, config: Config, choices: Choices) -> C
     default = active_by_default(company, config.criteria.countries)
     chosen = choices.get("entreprise", key)
     active = default if chosen is None else chosen
-    unsolicited_default = company.unsolicited and company.origin == "perso"
+    # CAT-14: off unless User turned it on.
+    unsolicited_default = False
     chosen_unsolicited = choices.get("entreprise", key, "spontanee")
     reason = ""
     if not active:

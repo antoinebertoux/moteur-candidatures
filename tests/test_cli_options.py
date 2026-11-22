@@ -21,6 +21,7 @@ ENGLISH_COMMANDS = {
     "prepare",
     "mcp",
     "detect",
+    "import-companies",
     "serve",
 }
 
@@ -47,7 +48,7 @@ def test_commands_and_help_are_in_english() -> None:
     assert set(subparsers.choices) == ENGLISH_COMMANDS
     help_text = parser.format_help() + "".join(p.format_help() for p in subparsers.choices.values())
     assert not any(c in help_text for c in "éèàêç")
-    assert read_options(["detect", "https://x.io", "--name", "X"]).name == "X"
+    assert read_options(["detect", "https://x.io"]).addresses == ["https://x.io"]
 
 
 @pytest.mark.spec("CLI-07")

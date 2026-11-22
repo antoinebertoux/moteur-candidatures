@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
-from moteur.config import Config, Criteria, TargetCompany, parse
+from moteur.config import Config, Criteria, TargetCompany, company_fields, parse
 
 SEARCHES = ["ia"]
 
@@ -14,12 +15,19 @@ SEARCHES = ["ia"]
 def parsed(
     data: Mapping[str, Any], folder: Path = Path(), catalogue: tuple[TargetCompany, ...] = ()
 ) -> Config:
-    """`parse`, with the required `[criteres] recherches` (CONF-11) added when missing."""
+    """`parse`, with the required `[criteres] recherches` (CONF-11) added when missing.
+
+    An `entreprises` list stands for User's own companies, which really come from the
+    database (CAT-20): only their fields are checked (CAT-08), to keep the tests short.
+    """
     complete = dict(data)
+    own = tuple(
+        replace(company_fields(entry), origin="perso") for entry in complete.pop("entreprises", [])
+    )
     criteria = complete.get("criteres", {})
     if isinstance(criteria, dict) and "recherches" not in criteria:
         complete["criteres"] = {**criteria, "recherches": SEARCHES}
-    return parse(complete, folder, catalogue)
+    return parse(complete, folder, catalogue, own)
 
 
 class FakeClient:
