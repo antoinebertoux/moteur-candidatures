@@ -14,6 +14,7 @@ from moteur.models import JobAd
 from moteur.own_companies import source_for
 from moteur.sources.avature import SourceAvature, ads_avature, complete_avature, portal_of
 from moteur.sources.base import SourceError
+from moteur.sources.gestmax import SourceGestmax, ads_gestmax, complete_gestmax
 from moteur.sources.magnet import SourceMagnet, ads_magnet, login_body, public_key
 from moteur.sources.mckinsey import SourceMcKinsey, ads_mckinsey
 from moteur.sources.oracle import (
@@ -622,3 +623,76 @@ def test_mckinsey_searches_each_keyword_page_by_page() -> None:
         ("ia", "1", "100"),
         ("ia", "2", "100"),
     ]
+
+
+# --- Gestmax ----------------------------------------------------------------------------
+
+GESTMAX_LIST = "https://jobs.exemple.gestmax.fr/search/index/frontsearchtab_id/7"
+
+
+def _gestmax_entry(number: int, city: str = "ROUFFIAC TOLOSAN") -> str:
+    link = f"https://jobs.exemple.gestmax.fr/{number}/1/responsable-h-f"
+    return f"""<a href="{link}" onclick="x" class="list-group-item cell1" target="_blank" >
+  <h2 class="list-group-item-heading">Responsable {number} (H/F)</h2>
+  <div class="listdiv-item listdiv-vacancy_activation_date">
+    <span class="listdiv-label">Date :</span><span class="listdiv-value">20/11/2026</span></div>
+  <div class="listdiv-item listdiv-dept_ville">
+    <span class="listdiv-label">Ville :</span><span class="listdiv-value">{city}</span></div>
+  <span class="listdiv-item listdiv-dept_pays">- France</span>
+</a>"""
+
+
+def _gestmax_page(numbers: range, last: int) -> str:
+    links = "".join(
+        f'<a href="/search/index/frontsearchtab_id/7/page/{n}">{n}</a>' for n in range(1, last + 1)
+    )
+    return "<div>" + "".join(_gestmax_entry(n) for n in numbers) + links + "</div>"
+
+
+@pytest.mark.spec("SRC-83", "SRC-01")
+def test_gestmax_entries_become_ads() -> None:
+    page = _gestmax_page(range(1, 2), 1) + (
+        '<a href="https://jobs.exemple.gestmax.fr/9/1/x" class="list-group-item cell1">'
+        '<h2 class="list-group-item-heading"> </h2></a>'
+    )
+    (ad,) = ads_gestmax("Beaumanoir", page)
+    assert (ad.title, ad.location, ad.published_on, ad.source) == (
+        "Responsable 1 (H/F)",
+        "ROUFFIAC TOLOSAN, France",
+        "2026-11-20",
+        "gestmax",
+    )
+    assert ad.url == "https://jobs.exemple.gestmax.fr/1/1/responsable-h-f"
+
+
+@pytest.mark.spec("SRC-82")
+def test_gestmax_reads_the_list_page_by_page() -> None:
+    client = FakeClient(
+        {
+            f"{GESTMAX_LIST}/page/1": _gestmax_page(range(10), 2),
+            f"{GESTMAX_LIST}/page/2": _gestmax_page(range(5, 13), 2),
+        }
+    )
+    target = TargetCompany(name="Beaumanoir", ats="gestmax", identifier=GESTMAX_LIST + "/")
+    source = source_for(target, client, ())
+    assert isinstance(source, SourceGestmax)
+    assert len(source.collect()) == 13  # ads 5 to 9, listed twice, are kept once
+    assert [u for u, _ in client.calls] == [f"{GESTMAX_LIST}/page/1", f"{GESTMAX_LIST}/page/2"]
+    # A page without ads ends the list even if more pages are linked.
+    empty = FakeClient({f"{GESTMAX_LIST}/page/1": "<html></html>"})
+    assert SourceGestmax(empty, target).collect() == []
+
+
+@pytest.mark.spec("SRC-84", "SRC-02")
+def test_gestmax_page_gives_the_text() -> None:
+    url = "https://jobs.exemple.gestmax.fr/1/1/responsable-h-f"
+    page = (
+        '<div id="content"><div id="content-wrapper"><div class="text"><p>Pilotez le '
+        'magasin &amp; l\'&eacute;quipe.</p></div><div class="apply"><a>Postuler</a></div>'
+    )
+    source = SourceGestmax(
+        FakeClient({url: page}), TargetCompany(name="B", identifier=GESTMAX_LIST)
+    )
+    (ad,) = add_details([JobAd("B", "Responsable", url=url, source="gestmax")], [source])
+    assert ad.description == "Pilotez le magasin & l'équipe."
+    assert complete_gestmax(ad, "<html></html>") == ad

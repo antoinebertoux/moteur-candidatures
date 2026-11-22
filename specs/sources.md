@@ -69,7 +69,7 @@ stays empty.
   | workable | `apply.workable.com/api/v1/widget/accounts/<id>?details=true` |
 
   Workday, Radancy, Welcome Kit, Talentsoft, Oracle, SuccessFactors, Phenom, Avature,
-  Magnet, the sitemap of offers and McKinsey have sections of their own below. A company without a supported ATS cannot become a
+  Magnet, Gestmax, the sitemap of offers and McKinsey have sections of their own below. A company without a supported ATS cannot become a
   source.
 - **SRC-33** · Greenhouse boards hosted in Europe: an identifier written `eu:<id>` is
   queried at `boards-api.eu.greenhouse.io/v1/boards/<id>/jobs?content=true`.
@@ -246,6 +246,23 @@ with their full text, in one public RSS feed.
   its description (plain, SRC-02); date = the day of `pubDate` (YYYY-MM-DD); location =
   the item's third `category` (the first two are the job family and the contract), empty
   when there are fewer than three.
+
+## Gestmax
+
+Career sites built on Gestmax (for instance `groupe-beaumanoir.gestmax.fr`). Their
+search lists are plain pages of 10 ads; their RSS feed holds only the 20 newest ads.
+
+- **SRC-82** · The identifier is the address of a search list
+  (`groupe-beaumanoir.gestmax.fr/search/index/frontsearchtab_id/7`, the list of every
+  ad). The source reads `<list>/page/1`, `/page/2`… at most 40 pages, and stops at the
+  first page without ads or at the last page the list links to. The same ad (same link)
+  is kept once.
+- **SRC-83** · From each entry: title and link (`https://<host>/<number>/1/<slug>`); date
+  « 20/11/2026 » → `2026-11-20`; location = the city followed by the country
+  (« ROUFFIAC TOLOSAN, France »). An entry without a title is skipped (SRC-01).
+- **SRC-84** · The page of each **retained** ad is opened (as in SRC-24): its content,
+  from the first text block to the « Postuler » button (plain, SRC-02), becomes the ad
+  text. A page without that content leaves the ad unchanged.
 
 ## Oracle Recruiting Cloud
 

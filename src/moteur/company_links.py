@@ -48,6 +48,7 @@ _EXCLUDED_DOMAINS = (
     "oraclecloud.com",
     "avature.net",
     "magnet.work",
+    "gestmax.fr",
     "tmp.com",
     "francetravail.fr",
     "pole-emploi.fr",

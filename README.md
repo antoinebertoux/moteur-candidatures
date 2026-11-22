@@ -21,7 +21,7 @@ flowchart LR
     subgraph sources["Job sources"]
         FT["France Travail API"]
         SP["Choisir le service public"]
-        ATS["Career pages<br/>Greenhouse, Lever, Ashby,<br/>SmartRecruiters, Recruitee,<br/>Teamtailor, Workable,<br/>Workday, Radancy, Welcome Kit,<br/>Talentsoft, Oracle, SuccessFactors,<br/>Phenom, Avature, Magnet,<br/>sitemaps of offers, McKinsey"]
+        ATS["Career pages<br/>Greenhouse, Lever, Ashby,<br/>SmartRecruiters, Recruitee,<br/>Teamtailor, Workable,<br/>Workday, Radancy, Welcome Kit,<br/>Talentsoft, Oracle, SuccessFactors,<br/>Phenom, Avature, Magnet, Gestmax,<br/>sitemaps of offers, McKinsey"]
     end
 
     subgraph B["Engine B (this repo, on the PC)"]
@@ -280,7 +280,7 @@ checked by a test that cites it (`@pytest.mark.spec("FILT-03")`);
 
 | Module | Role | Claude |
 | --- | --- | --- |
-| `sources/` | France Travail, Choisir le service public, ATS career pages (`ats.py`), Workday, Radancy, Welcome Kit, Talentsoft, Oracle, SuccessFactors, Phenom, Avature, Magnet, sitemaps of offers, McKinsey | no |
+| `sources/` | France Travail, Choisir le service public, ATS career pages (`ats.py`), Workday, Radancy, Welcome Kit, Talentsoft, Oracle, SuccessFactors, Phenom, Avature, Magnet, Gestmax, sitemaps of offers, McKinsey | no |
 | `filtering.py` | keywords, exclusions, places, salary | no |
 | `collection.py` | gathers the sources, suggests unsolicited applications | no |
 | `local_db.py` | SQLite: seen, scored, to generate | no |

@@ -23,6 +23,7 @@ from moteur.selection import Choice
 from moteur.sources.ats import SourceAts
 from moteur.sources.avature import SourceAvature
 from moteur.sources.base import HttpClient, Source, SourceError
+from moteur.sources.gestmax import SourceGestmax
 from moteur.sources.magnet import SourceMagnet
 from moteur.sources.mckinsey import SourceMcKinsey
 from moteur.sources.oracle import SourceOracle
@@ -75,6 +76,8 @@ def source_for(
         return SourceSitemap(client, target)
     if target.ats == "mckinsey":
         return SourceMcKinsey(client, target)
+    if target.ats == "gestmax":
+        return SourceGestmax(client, target)
     if target.ats:
         return SourceAts(client, target, countries)
     return None

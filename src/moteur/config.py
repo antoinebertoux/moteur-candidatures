@@ -32,6 +32,7 @@ AtsType = Literal[
     "magnet",
     "sitemap",
     "mckinsey",
+    "gestmax",
     "",
 ]
 

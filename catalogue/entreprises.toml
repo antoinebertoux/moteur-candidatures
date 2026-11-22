@@ -40,6 +40,8 @@
 #            in each page; the address the offers sit under
 #            (e.g. careers.societegenerale.com/offres-d-emploi/)
 #   mckinsey: McKinsey's own career site; identifiant www.mckinsey.com (not used)
+#   gestmax: the address of a Gestmax search list
+#            (e.g. groupe-beaumanoir.gestmax.fr/search/index/frontsearchtab_id/7)
 
 [[entreprises]]
 nom = "Thales"
@@ -456,3 +458,21 @@ site = "https://www.afnor.org"
 secteur = "industrie"
 taille = "grand-groupe"
 pays = ["fr"]
+
+[[entreprises]]
+nom = "Groupe Beaumanoir"
+ats = "gestmax"
+identifiant = "groupe-beaumanoir.gestmax.fr/search/index/frontsearchtab_id/7"
+site = "https://www.groupe-beaumanoir.com"
+secteur = "luxe-mode"
+taille = "grand-groupe"
+pays = ["fr"]
+
+[[entreprises]]
+nom = "EDF"
+ats = "talentsoft"
+identifiant = "edf-recrute.talent-soft.com"
+site = "https://www.edf.fr"
+secteur = "energie"
+taille = "grand-groupe"
+pays = []

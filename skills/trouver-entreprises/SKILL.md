@@ -56,6 +56,7 @@ and the tool behind it. Supported tools and what `identifiant` is:
 | `phenom` | a Phenom career site (e.g. `careers.bcg.com/global/en`) | the address with its country and language |
 | `avature` | an Avature portal (e.g. `jobs.orano.group/fr_FR/jobs`) | the portal's address |
 | `magnet` | a Magnet by Hellowork career site (calls `api.magnet.work`, e.g. `jobs.fivesgroup.com`) | the host |
+| `gestmax` | a Gestmax career site (`<x>.gestmax.fr`) | the address of its search list of every ad (`<x>.gestmax.fr/search/index/frontsearchtab_id/<n>`) |
 | `sitemap` | an in-house career site whose `robots.txt` sitemap lists every offer, each page holding `JobPosting` data | the address the offers sit under (e.g. `careers.societegenerale.com/offres-d-emploi/`) |
 
 When you are not sure of the identifier, give the career page as `adresse` instead of
