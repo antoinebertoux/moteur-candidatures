@@ -15,9 +15,10 @@ from mcp.server.mcpserver.exceptions import ToolError
 from mcp.types import ToolAnnotations
 
 from moteur import exchange
-from moteur.config import Paths
+from moteur.config import Config, ConfigError, Paths
 from moteur.decisions import apply
 from moteur.local_db import LocalDb
+from moteur.selection import SelectionError, choices_from, summary
 
 NAME = "moteur"
 
@@ -58,8 +59,37 @@ def decisions(
     return outcome.as_dict()
 
 
-def server(paths: Paths, launch_preparation: Launcher = _launch_nothing) -> MCPServer:
-    """The two tools of ECH-20, and nothing else."""
+ConfigLoader = Callable[[], Config]
+"""Reads `config.toml` again, so that the tools see its current companies."""
+
+
+def _no_config() -> Config:
+    raise ConfigError("no configuration given to the server")
+
+
+def companies(config: Config, paths: Paths) -> dict[str, Any]:
+    """ECH-27: the companies followed and User's choices, read right now."""
+    with LocalDb(paths.base) as base:
+        return summary(config, base.choices())
+
+
+def record_selection(config: Config, paths: Paths, entry: object) -> dict[str, Any]:
+    """ECH-28: records the choices and answers like `entreprises`.
+
+    Raises `SelectionError` (ECH-29) before touching the database if one choice is invalid.
+    """
+    choices = choices_from(entry, config)
+    with LocalDb(paths.base) as base:
+        base.record_choices(choices)
+        return summary(config, base.choices())
+
+
+def server(
+    paths: Paths,
+    launch_preparation: Launcher = _launch_nothing,
+    load_config: ConfigLoader = _no_config,
+) -> MCPServer:
+    """The four tools of ECH-20, and nothing else."""
     mcp: MCPServer = MCPServer(NAME, instructions="Local engine B of the tracking page.")
 
     @mcp.tool(
@@ -82,9 +112,36 @@ def server(paths: Paths, launch_preparation: Launcher = _launch_nothing) -> MCPS
         except exchange.ExchangeError as error:
             raise ToolError(str(error)) from error
 
+    @mcp.tool(
+        name="entreprises",
+        description="Companies followed by engine B and User's choice of what is searched.",
+        annotations=ToolAnnotations(read_only_hint=True),
+    )
+    def companies_tool() -> dict[str, Any]:
+        try:
+            return companies(load_config(), paths)
+        except ConfigError as error:
+            raise ToolError(str(error)) from error
+
+    @mcp.tool(
+        name="selection",
+        description="Turns companies, sectors, sizes or sources on or off for engine B.",
+        annotations=ToolAnnotations(read_only_hint=False, destructive_hint=False),
+    )
+    # The parameter name is the tool's input key, sent by the page: it stays French.
+    def selection_tool(choix: list[Any]) -> dict[str, Any]:
+        try:
+            return record_selection(load_config(), paths, {"choix": choix})
+        except (ConfigError, SelectionError) as error:
+            raise ToolError(str(error)) from error
+
     return mcp
 
 
-def launch(paths: Paths, launch_preparation: Launcher = _launch_nothing) -> None:
+def launch(
+    paths: Paths,
+    launch_preparation: Launcher = _launch_nothing,
+    load_config: ConfigLoader = _no_config,
+) -> None:
     """Serves over stdio: stdout belongs to the protocol, nothing else may print there."""
-    server(paths, launch_preparation).run("stdio")
+    server(paths, launch_preparation, load_config).run("stdio")

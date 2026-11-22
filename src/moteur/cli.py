@@ -13,7 +13,7 @@ from moteur import exchange
 from moteur.claude_cli import ClaudeCli, claude_binary
 from moteur.collection import collect, companies_already_seen
 from moteur.company_links import config_links, look_up
-from moteur.config import Config, ConfigError, load_config
+from moteur.config import SECTORS, Config, ConfigError, load_config
 from moteur.cover_letter import generate_letters
 from moteur.decisions import apply as apply_decisions
 from moteur.detection import report as detection_report
@@ -23,8 +23,19 @@ from moteur.interview_prep import launch_in_background, prepare_alone
 from moteur.latex_repository import LatexRepositoryError, init_latex
 from moteur.local_db import LocalDb
 from moteur.mcp_link import launch as run_mcp_link
+from moteur.models import normalise
 from moteur.pdf_server import DEFAULT_PORT, serve
 from moteur.scoring import score_ads
+from moteur.selection import (
+    NO_CHOICE,
+    SOURCES,
+    Choices,
+    CompanyState,
+    configured,
+    searched_companies,
+    source_searched,
+    states,
+)
 from moteur.sources.ats import SourceAts
 from moteur.sources.base import HttpClient, HttpxClient, Source
 from moteur.sources.france_travail import SourceFranceTravail
@@ -39,10 +50,11 @@ log = logging.getLogger("moteur")
 FILE_FOR_THE_PAGE = "pour-la-page.json"
 
 
-def build_sources(config: Config, client: HttpClient) -> list[Source]:
+def build_sources(config: Config, client: HttpClient, choices: Choices = NO_CHOICE) -> list[Source]:
+    """The sources searched: User's choices apply (COL-09, CAT-13, CAT-15)."""
     sources: list[Source] = []
     france_travail = config.france_travail
-    if france_travail.enabled:
+    if source_searched(config, choices, "france_travail"):
         identifier = os.environ.get("FRANCE_TRAVAIL_ID", "")
         secret = os.environ.get("FRANCE_TRAVAIL_SECRET", "")
         if identifier and secret:
@@ -59,7 +71,7 @@ def build_sources(config: Config, client: HttpClient) -> list[Source]:
         else:
             log.warning("France Travail skipped: set FRANCE_TRAVAIL_ID and FRANCE_TRAVAIL_SECRET")
     service_public = config.service_public
-    if service_public.enabled:
+    if source_searched(config, choices, "service_public"):
         sources.append(
             SourceServicePublic(
                 client,
@@ -70,13 +82,13 @@ def build_sources(config: Config, client: HttpClient) -> list[Source]:
             )
         )
     station_f = config.station_f
-    if station_f.enabled:
+    if source_searched(config, choices, "station_f"):
         sources.append(
             SourceStationF(
                 client, station_f.searches, station_f.pages_max, station_f.published_since
             )
         )
-    for target in config.companies:
+    for target in searched_companies(config, choices):
         if target.ats == "workday":
             sources.append(SourceWorkday(client, target))
         elif target.ats == "radancy":
@@ -92,16 +104,60 @@ def command_collect(config: Config, base: LocalDb) -> None:
     client = HttpxClient()
     try:
         already_seen = companies_already_seen(config.paths.seen_companies) | base.known_companies()
+        choices = base.choices()
+        targets = searched_companies(config, choices)
         ads = collect(
-            build_sources(config, client),
+            build_sources(config, client, choices),
             config.criteria,
-            config.companies,
+            targets,
             already_seen,
             config.unsolicited_role,
         )
     finally:
         client.close()
     print(f"{len(ads)} kept after filtering, {base.add(ads)} of them new")
+    left_out = len(config.followed) - len(targets)
+    if left_out:
+        print(f"{left_out} companies left out by your choices (moteur companies)")
+
+
+_REASONS = {
+    "choix": "your choice",
+    "pays": "country",
+    "secteur": "sector off",
+    "taille": "size off",
+}
+
+
+def companies_report(config: Config, choices: Choices) -> str:
+    """CLI-09: the companies by sector, then the keyword sources."""
+    lines: list[str] = []
+    by_sector: dict[str, list[CompanyState]] = {}
+    for state in states(config, choices):
+        by_sector.setdefault(state.company.sector, []).append(state)
+    for sector in [*SECTORS, ""]:
+        group = by_sector.get(sector)
+        if not group:
+            continue
+        off = "" if not sector or choices.is_on("secteur", sector) else " (off)"
+        lines.append(f"{sector or 'no sector'}{off}")
+        for state in sorted(group, key=lambda s: normalise(s.company.name)):
+            searched = "searched" if state.searched else f"not searched: {_REASONS[state.reason]}"
+            unsolicited = ", unsolicited" if state.unsolicited else ""
+            size = state.company.size or "no size"
+            lines.append(
+                f"  {state.company.name} [{state.company.origin}, {size}] {searched}{unsolicited}"
+            )
+    lines.append("sources")
+    for key, (name, _size) in SOURCES.items():
+        if source_searched(config, choices, key):
+            searched = "searched"
+        elif not configured(config, key):
+            searched = "not searched: off in config.toml"
+        else:
+            searched = "not searched: your choice"
+        lines.append(f"  {name} {searched}")
+    return "\n".join(lines)
 
 
 def command_score(config: Config, base: LocalDb) -> None:
@@ -233,6 +289,7 @@ def build_parser() -> argparse.ArgumentParser:
     command("prepare", "interview preparation sheets (all pending requests)").add_argument(
         "keys", nargs="*", help="specific identifiers (same format as the page)"
     )
+    command("companies", "list the companies followed and the sources, with what is searched")
     command("mcp", "direct link with the page, started by the Claude desktop app")
     detect = command("detect", "recognise the recruiting tool of career pages")
     detect.add_argument("addresses", nargs="+", help="career pages or ad addresses")
@@ -272,12 +329,16 @@ def main(arguments: Sequence[str] | None = None) -> int:
         # CONF-09: the tracked companies' links, refreshed at every start.
         with LocalDb(config.paths.base) as base:
             base.set_config_links(
-                config_links([(e.name, e.site, e.linkedin) for e in config.companies])
+                config_links([(e.name, e.site, e.linkedin) for e in config.followed])
             )
         if options.command == "mcp":
             # ECH-24: the server opens the database for each call, never for its whole life.
             config_file = options.config.resolve()
-            run_mcp_link(config.paths, lambda: launch_in_background(config_file, config.paths))
+            run_mcp_link(
+                config.paths,
+                lambda: launch_in_background(config_file, config.paths),
+                lambda: load_config(config_file),
+            )
             return 0
         if options.command == "init-latex":
             command_init_latex(config)
@@ -291,6 +352,8 @@ def main(arguments: Sequence[str] | None = None) -> int:
                 command_links(config, base)
             if options.command in ("export", "daily"):
                 command_export(config, base)
+            if options.command == "companies":
+                print(companies_report(config, base.choices()))
             if options.command == "decisions":
                 command_decisions(base, options.file, config.paths.root)
             if options.command == "generate":

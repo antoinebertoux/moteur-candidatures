@@ -13,7 +13,8 @@ by every application of that company.
   normalised as in ID-01, holding its website, its LinkedIn page, where each comes from,
   and the date of the last lookup (LNK-10).
 - **LNK-02** · Sources, from strongest to weakest: User's correction in the page
-  (PAGE-42) → the tracked company in `config.toml` (`site`, `linkedin`, CONF-09) → the
+  (PAGE-42) → the company in `config.toml` or in the catalogue (`site`, `linkedin`,
+  CONF-09, CAT-02; the own company wins, CAT-06) → the
   lookup by Claude (LNK-10). A weaker source never replaces a link set by a stronger one.
   Each link (website, LinkedIn) is handled on its own.
 - **LNK-03** · A link from the lookup is kept only if it has the expected form, otherwise

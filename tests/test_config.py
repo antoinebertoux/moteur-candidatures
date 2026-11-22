@@ -3,6 +3,7 @@ from pathlib import Path
 import pytest
 
 from moteur.config import ConfigError, load_config, parse
+from tests.conftest import parsed
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -20,7 +21,7 @@ def test_the_example_config_is_valid() -> None:
 
 @pytest.mark.spec("CONF-02", "CONF-07")
 def test_default_values(tmp_path: Path) -> None:
-    config = parse({}, tmp_path)
+    config = parsed({}, tmp_path)
     assert (config.batch_size, config.generation_model) == (8, "sonnet")
     assert not config.france_travail.enabled
     assert not config.station_f.enabled
@@ -36,7 +37,7 @@ def test_companies() -> None:
             {"nom": "Libre", "site": "https://libre.io"},
         ]
     }
-    acme, free = parse(data, Path()).companies
+    acme, free = parsed(data, Path()).companies
     assert (acme.ats, acme.identifier, acme.unsolicited) == ("lever", "acme", True)
     assert (free.ats, free.site, free.unsolicited) == ("", "https://libre.io", False)
 
@@ -49,46 +50,52 @@ def test_workable_and_welcomekit_companies() -> None:
             {"nom": "B", "ats": "welcomekit", "identifiant": "jobs.b.org"},
         ]
     }
-    assert [e.ats for e in parse(data, Path()).companies] == ["workable", "welcomekit"]
+    assert [e.ats for e in parsed(data, Path()).companies] == ["workable", "welcomekit"]
 
 
 @pytest.mark.spec("CONF-04")
-def test_workday_company_with_searches() -> None:
+def test_a_company_has_no_search_terms_of_its_own() -> None:
+    data = {"entreprises": [{"nom": "Exemple", "ats": "workday", "recherches": ["IA"]}]}
+    with pytest.raises(ConfigError, match=r"Exemple.*\[criteres\] recherches"):
+        parsed(data, Path())
+
+
+@pytest.mark.spec("CONF-11")
+def test_one_search_list_shared_by_companies_and_sources() -> None:
     data = {
+        "criteres": {"recherches": ["machine learning", "data"]},
+        "service_public": {"recherches": ["science des données"]},
         "entreprises": [
-            {
-                "nom": "Exemple",
-                "ats": "workday",
-                "identifiant": "https://exemple.wd3.myworkdayjobs.com/Careers",
-                "recherches": ["IA", "data"],
-            }
-        ]
+            {"nom": "A", "ats": "workday", "identifiant": "https://a.wd3.myworkdayjobs.com/C"},
+            {"nom": "B", "ats": "smartrecruiters", "identifiant": "b"},
+        ],
     }
-    (example,) = parse(data, Path()).companies
-    assert (example.ats, example.searches) == ("workday", ("IA", "data"))
-    with pytest.raises(ConfigError):
-        parse({"entreprises": [{"nom": "X", "recherches": "IA"}]}, Path())
+    config = parsed(data, Path())
+    shared = ("machine learning", "data")
+    assert [c.searches for c in config.followed] == [shared, shared]
+    assert config.france_travail.searches == shared
+    assert config.station_f.searches == shared
+    assert config.service_public.searches == ("science des données",)
+
+
+@pytest.mark.spec("CONF-11")
+def test_the_search_list_is_required() -> None:
+    empty: tuple[dict[str, list[str]], ...] = ({}, {"recherches": []})
+    for criteria in empty:
+        with pytest.raises(ConfigError, match=r"\[criteres\] recherches is required"):
+            parse({"criteres": criteria}, Path())
+    with pytest.raises(ConfigError, match="recherches"):
+        parse({"criteres": {"recherches": "ia"}}, Path())
 
 
 @pytest.mark.spec("CONF-10")
 def test_countries() -> None:
-    assert parse({}, Path()).criteria.countries == ()
+    assert parsed({}, Path()).criteria.countries == ()
     data = {"criteres": {"pays": ["FR", " gb "]}}
-    assert parse(data, Path()).criteria.countries == ("fr", "gb")
+    assert parsed(data, Path()).criteria.countries == ("fr", "gb")
     for wrong in (["france"], ["f"], ["F1"], "fr"):
         with pytest.raises(ConfigError, match="pays"):
-            parse({"criteres": {"pays": wrong}}, Path())
-
-
-@pytest.mark.spec("CONF-04")
-def test_smartrecruiters_company_with_searches() -> None:
-    data = {
-        "entreprises": [
-            {"nom": "Acme", "ats": "smartrecruiters", "identifiant": "acme", "recherches": ["IA"]}
-        ]
-    }
-    (acme,) = parse(data, Path()).companies
-    assert (acme.ats, acme.searches) == ("smartrecruiters", ("IA",))
+            parsed({"criteres": {"pays": wrong}}, Path())
 
 
 @pytest.mark.parametrize(
@@ -110,7 +117,7 @@ def test_smartrecruiters_company_with_searches() -> None:
 @pytest.mark.spec("CONF-03")
 def test_invalid_config(data: dict[str, object]) -> None:
     with pytest.raises(ConfigError):
-        parse(data, Path())
+        parsed(data, Path())
 
 
 @pytest.mark.spec("CONF-01")

@@ -12,6 +12,7 @@ from typing import Self
 from moteur.company_links import CompanyLinks, company_key
 from moteur.models import Application, JobAd, PrepRequest, Rating, normalise
 from moteur.refusal import DUPLICATE, Refusal
+from moteur.selection import Choice, Choices
 
 TO_SCORE = "a_noter"
 SCORED = "notee"
@@ -65,6 +66,16 @@ CREATE TABLE IF NOT EXISTS liens_corriges (
     site TEXT NOT NULL DEFAULT '',
     linkedin TEXT NOT NULL DEFAULT '',
     ordre INTEGER NOT NULL
+)
+""",
+    # User's choices of companies, sectors, sizes and sources (BASE-15).
+    """
+CREATE TABLE IF NOT EXISTS choix (
+    objet TEXT NOT NULL,
+    cle TEXT NOT NULL,
+    champ TEXT NOT NULL,
+    valeur INTEGER NOT NULL,
+    PRIMARY KEY (objet, cle, champ)
 )
 """,
 )
@@ -507,3 +518,26 @@ class LocalDb:
         for key, correction in corrections.items():
             result[key] = correction.over(result.get(key, CompanyLinks()))
         return {key: links for key, links in result.items() if links.site or links.linkedin}
+
+    def choices(self) -> Choices:
+        """User's choices (BASE-15), those about vanished companies included (CAT-16)."""
+        rows = self._connection.execute("SELECT objet, cle, champ, valeur FROM choix")
+        return Choices.of(
+            Choice(row["objet"], row["cle"], row["champ"], bool(row["valeur"])) for row in rows
+        )
+
+    def record_choices(self, choices: Iterable[Choice]) -> None:
+        """Records the choices at once; a None value goes back to the default (BASE-15)."""
+        with self._connection:
+            for choice in choices:
+                if choice.value is None:
+                    self._connection.execute(
+                        "DELETE FROM choix WHERE objet = ? AND cle = ? AND champ = ?",
+                        (choice.subject, choice.key, choice.field),
+                    )
+                else:
+                    self._connection.execute(
+                        "INSERT INTO choix (objet, cle, champ, valeur) VALUES (?, ?, ?, ?)"
+                        " ON CONFLICT (objet, cle, champ) DO UPDATE SET valeur = excluded.valeur",
+                        (choice.subject, choice.key, choice.field, int(choice.value)),
+                    )

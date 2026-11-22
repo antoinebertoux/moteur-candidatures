@@ -1,0 +1,257 @@
+# Company catalogue (specs/catalogue.md): public bodies and companies of 500 employees or
+# more, shipped with the tool. Only public facts about companies: nothing about a candidate.
+# Each user ticks or unticks them in the tracking page; their own companies (start-ups,
+# small companies) stay in their config.toml.
+#
+# Fields: those of an own company (nom, ats, identifiant, site, linkedin; see
+# config.exemple.toml), plus:
+#   secteur  one of the sectors of CAT-04 (required)
+#   taille   "public" or "grand-groupe" (required)
+#   pays     two-letter ISO codes of the countries where it hires; empty = everywhere
+# No "spontanee" (a personal choice) and no "recherches": Workday and SmartRecruiters
+# companies are searched with the user's [criteres] mots_cles (CAT-07).
+
+[[entreprises]]
+nom = "Thales"
+ats = "workday"
+identifiant = "https://thales.wd3.myworkdayjobs.com/fr-FR/Careers"
+site = "https://careers.thalesgroup.com"
+secteur = "defense"
+taille = "grand-groupe"
+pays = []
+
+[[entreprises]]
+nom = "Helsing"
+ats = "greenhouse"
+identifiant = "helsing"
+site = "https://helsing.ai/careers"
+secteur = "defense"
+taille = "grand-groupe"
+pays = ["de", "fr", "gb"]
+
+[[entreprises]]
+nom = "Airbus"
+ats = "workday"
+identifiant = "https://ag.wd3.myworkdayjobs.com/Airbus"
+site = "https://www.airbus.com/en/careers"
+secteur = "aeronautique-spatial"
+taille = "grand-groupe"
+pays = []
+
+[[entreprises]]
+nom = "Moody's"
+ats = "radancy"
+identifiant = "careers.moodys.com"
+site = "https://careers.moodys.com"
+secteur = "banque"
+taille = "grand-groupe"
+pays = []
+
+[[entreprises]]
+nom = "Alan"
+ats = "ashby"
+identifiant = "alan"
+site = "https://alan.com/careers"
+secteur = "assurance"
+taille = "grand-groupe"
+pays = ["fr", "es", "be"]
+
+[[entreprises]]
+nom = "Doctolib"
+ats = "ashby"
+identifiant = "doctolib"
+site = "https://careers.doctolib.fr"
+secteur = "sante"
+taille = "grand-groupe"
+pays = ["fr", "de", "it", "nl"]
+
+[[entreprises]]
+nom = "Sanofi"
+ats = "workday"
+identifiant = "https://sanofi.wd3.myworkdayjobs.com/SanofiCareers"
+secteur = "pharmacie-biotech"
+taille = "grand-groupe"
+pays = []
+
+[[entreprises]]
+nom = "Ipsen"
+ats = "workday"
+identifiant = "https://ipsen.wd103.myworkdayjobs.com/Ipsen_Careers"
+secteur = "pharmacie-biotech"
+taille = "grand-groupe"
+pays = []
+
+[[entreprises]]
+nom = "Novartis"
+ats = "workday"
+identifiant = "https://novartis.wd3.myworkdayjobs.com/Novartis_Careers"
+secteur = "pharmacie-biotech"
+taille = "grand-groupe"
+pays = []
+
+[[entreprises]]
+nom = "Roche"
+ats = "workday"
+identifiant = "https://roche.wd3.myworkdayjobs.com/roche-ext"
+secteur = "pharmacie-biotech"
+taille = "grand-groupe"
+pays = []
+
+[[entreprises]]
+nom = "AstraZeneca"
+ats = "workday"
+identifiant = "https://astrazeneca.wd3.myworkdayjobs.com/Careers"
+secteur = "pharmacie-biotech"
+taille = "grand-groupe"
+pays = []
+
+[[entreprises]]
+nom = "GSK"
+ats = "workday"
+identifiant = "https://gsk.wd5.myworkdayjobs.com/GSKCareers"
+secteur = "pharmacie-biotech"
+taille = "grand-groupe"
+pays = []
+
+[[entreprises]]
+nom = "Pfizer"
+ats = "workday"
+identifiant = "https://pfizer.wd1.myworkdayjobs.com/PfizerCareers"
+secteur = "pharmacie-biotech"
+taille = "grand-groupe"
+pays = []
+
+[[entreprises]]
+nom = "MSD"
+ats = "workday"
+identifiant = "https://msd.wd5.myworkdayjobs.com/SearchJobs"
+secteur = "pharmacie-biotech"
+taille = "grand-groupe"
+pays = []
+
+[[entreprises]]
+nom = "Siemens Healthineers"
+ats = "workday"
+identifiant = "https://onehealthineers.wd3.myworkdayjobs.com/SHSJB"
+secteur = "pharmacie-biotech"
+taille = "grand-groupe"
+pays = []
+
+[[entreprises]]
+nom = "Philips"
+ats = "workday"
+identifiant = "https://philips.wd3.myworkdayjobs.com/jobs-and-careers"
+secteur = "pharmacie-biotech"
+taille = "grand-groupe"
+pays = []
+
+[[entreprises]]
+nom = "GE HealthCare"
+ats = "workday"
+identifiant = "https://gehc.wd5.myworkdayjobs.com/GEHC_ExternalSite"
+secteur = "pharmacie-biotech"
+taille = "grand-groupe"
+pays = []
+
+[[entreprises]]
+nom = "Medtronic"
+ats = "workday"
+identifiant = "https://medtronic.wd1.myworkdayjobs.com/MedtronicCareers"
+secteur = "pharmacie-biotech"
+taille = "grand-groupe"
+pays = []
+
+[[entreprises]]
+nom = "Abbott"
+ats = "workday"
+identifiant = "https://abbott.wd5.myworkdayjobs.com/abbottcareers"
+secteur = "pharmacie-biotech"
+taille = "grand-groupe"
+pays = []
+
+[[entreprises]]
+nom = "SGS"
+ats = "smartrecruiters"
+identifiant = "sgs"
+secteur = "industrie"
+taille = "grand-groupe"
+pays = []
+
+[[entreprises]]
+nom = "Intertek"
+ats = "workable"
+identifiant = "intertek"
+secteur = "industrie"
+taille = "grand-groupe"
+pays = []
+
+[[entreprises]]
+nom = "SOCOTEC"
+ats = "smartrecruiters"
+identifiant = "socotec"
+secteur = "btp-immobilier"
+taille = "grand-groupe"
+pays = []
+
+[[entreprises]]
+nom = "Mistral AI"
+ats = "ashby"
+identifiant = "mistral.ai"
+site = "https://jobs.ashbyhq.com/mistral.ai"
+secteur = "numerique"
+taille = "grand-groupe"
+pays = []
+
+[[entreprises]]
+nom = "Anthropic"
+ats = "greenhouse"
+identifiant = "anthropic"
+site = "https://job-boards.greenhouse.io/anthropic"
+secteur = "numerique"
+taille = "grand-groupe"
+pays = []
+
+[[entreprises]]
+nom = "Mirakl"
+ats = "greenhouse"
+identifiant = "mirakl"
+site = "https://job-boards.greenhouse.io/mirakl"
+secteur = "numerique"
+taille = "grand-groupe"
+pays = []
+
+[[entreprises]]
+nom = "Algolia"
+ats = "greenhouse"
+identifiant = "algolia"
+site = "https://job-boards.greenhouse.io/algolia"
+secteur = "numerique"
+taille = "grand-groupe"
+pays = []
+
+[[entreprises]]
+nom = "Kpler"
+ats = "lever"
+identifiant = "kpler"
+site = "https://jobs.lever.co/kpler"
+secteur = "numerique"
+taille = "grand-groupe"
+pays = []
+
+[[entreprises]]
+nom = "Scaleway"
+ats = "lever"
+identifiant = "scaleway"
+site = "https://jobs.lever.co/scaleway"
+secteur = "numerique"
+taille = "grand-groupe"
+pays = ["fr"]
+
+[[entreprises]]
+nom = "Veepee"
+ats = "lever"
+identifiant = "veepee"
+site = "https://jobs.lever.co/veepee"
+secteur = "commerce-distribution"
+taille = "grand-groupe"
+pays = ["fr", "es", "it", "be", "nl"]

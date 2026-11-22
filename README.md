@@ -90,6 +90,11 @@ uv sync
 cp config.exemple.toml config.toml   # then adapt criteria and companies
 ```
 
+Large groups and public bodies come with the tool, in
+[`catalogue/entreprises.toml`](catalogue/entreprises.toml): untick the ones that do not
+interest you in the page's **Options** panel (or check with `uv run moteur companies`).
+`config.toml` only lists your own companies (start-ups, small companies).
+
 `claude` must be installed and logged in with your subscription:
 
 ```bash
@@ -233,7 +238,7 @@ the repository:
 
 | File | Content |
 | --- | --- |
-| `config.toml` | profile sent to Claude, criteria, salary floor, followed companies |
+| `config.toml` | profile sent to Claude, criteria, salary floor, your own companies |
 | `.env` | France Travail credentials |
 | `moteur.sqlite3`, `echange/` | ads seen, scores, decisions |
 | `../latex/` | CV, block and paragraph banks, personal instructions, `compiler.sh` |

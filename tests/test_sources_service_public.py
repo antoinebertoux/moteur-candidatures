@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from moteur.config import ConfigError, parse
+from moteur.config import ConfigError
 from moteur.models import JobAd
 from moteur.sources.service_public import (
     EMPLOYERS,
@@ -14,7 +14,7 @@ from moteur.sources.service_public import (
     identifier,
     public_service_description,
 )
-from tests.conftest import FakeClient
+from tests.conftest import FakeClient, parsed
 
 
 def _card(
@@ -118,15 +118,15 @@ def test_public_service_config() -> None:
             "employeurs": ["DGSE", "DGSI", "14524"],
         }
     }
-    service_public = parse(data, Path()).service_public
+    service_public = parsed(data, Path()).service_public
     assert service_public.enabled
     assert service_public.domains == (3522, 3525)
     assert service_public.employers == (364, 13502, 14524)
     assert service_public.pages_max == 3
     with pytest.raises(ConfigError):
-        parse({"service_public": {"employeurs": ["Inconnu"]}}, Path())
+        parsed({"service_public": {"employeurs": ["Inconnu"]}}, Path())
     with pytest.raises(ConfigError):
-        parse({"service_public": {"pages_max": 0}}, Path())
+        parsed({"service_public": {"pages_max": 0}}, Path())
 
 
 # Real (shortened) extract of an ad page, taken on 17/11/2026.

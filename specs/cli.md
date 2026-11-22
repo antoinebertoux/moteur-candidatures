@@ -16,6 +16,7 @@
 | `moteur init-latex` | copies the LaTeX example to `latex/` (LTX-03) |
 | `moteur serve [--port N]` | serves the PDFs to the page |
 | `moteur mcp` | direct link with the page (ECH-20), started by the Claude desktop app |
+| `moteur companies` | lists the companies followed and the sources, with what is searched (CLI-09) |
 | `moteur detect <address…> [--name N]` | recognises the recruiting tool of career pages and prints the `[[entreprises]]` block to paste |
 
 - **CLI-01** · The commands above exist and chain the steps shown. *(untested)*
@@ -44,6 +45,10 @@
   `quotidien`, `generer`, `lettre`, `preparer`, `servir`, `detecter`, and `--verbeux`,
   `--nom`) are no longer accepted: argparse rejects them with its usual message listing
   the valid commands.
+- **CLI-09** · `moteur companies` prints every company followed, grouped by sector, with
+  its origin (catalogue or own), its size, whether it is searched and, if not, why (User's
+  choice, sector, size, country), and whether its unsolicited application is on; then
+  every keyword source and whether it is searched. It only reads.
 
 ## PDF server (`moteur serve`)
 

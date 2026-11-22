@@ -29,6 +29,11 @@ mots_cles = [
   # Common titles in the French civil service.
   "science des donnees", "intelligence artificielle",
 ]
+# Search terms typed into the sites that cannot list all their ads (Workday,
+# SmartRecruiters, France Travail, Choisir le service public, Station F), shared by every
+# company. Keep a few broad terms: each one costs a search per company, and every ad found
+# must still match "mots_cles". Required.
+recherches = ["data scientist", "machine learning", "intelligence artificielle"]
 # None of these expressions may appear in the title.
 exclusions = ["stage", "stagiaire", "alternance", "apprenti", "intern", "internship"]
 # Empty = anywhere. An ad without a location always passes.
@@ -44,7 +49,6 @@ salaire_plancher = 0
 # Free credentials on https://francetravail.io, given through the environment
 # variables FRANCE_TRAVAIL_ID and FRANCE_TRAVAIL_SECRET (or the .env file).
 actif = false
-recherches = ["intelligence artificielle", "data scientist", "machine learning"]
 departements = ["69"]
 publiee_depuis = 7
 
@@ -54,6 +58,7 @@ publiee_depuis = 7
 # over the whole site, then at the employers below (results sorted by relevance, 20 per
 # page).
 actif = true
+# Optional: replaces [criteres] recherches for this source only.
 recherches = ["data scientist", "machine learning", "science des données"]
 # Restricts every search to these domains; empty = all.
 # Known names: Défense, Numérique, Recherche, Renseignement, Sécurité, Environnement…
@@ -69,27 +74,32 @@ pages_max = 3
 # searched through the site's public search. No credentials. Internships and
 # apprenticeships are left out.
 actif = false
-recherches = ["head of ai", "lead ai", "ai engineer", "data scientist", "machine learning"]
 # Pages read per search (50 ads per page).
 pages_max = 3
 # Ads published in the last N days.
 publiee_depuis = 21
 
-# Tracked companies. "ats" and "identifiant" depend on the career page's tool
+# Your own companies: start-ups, small companies, anything not in the catalogue. Large
+# groups and public bodies come with the tool (catalogue/entreprises.toml): tick or untick
+# them in the page's Options panel. A company listed here with the same name as a
+# catalogue entry replaces it.
+# "ats" and "identifiant" depend on the career page's tool
 # (`uv run moteur detect <address>` finds them):
 #   greenhouse, lever, ashby: job-boards.greenhouse.io/<id>, jobs.lever.co/<id>, jobs.ashbyhq.com/<id>
-#   smartrecruiters: jobs.smartrecruiters.com/<id>; without "recherches" nor "pays" only
-#                    the 100 most recent ads are read, so give a large group "recherches"
+#   smartrecruiters: jobs.smartrecruiters.com/<id>, searched with [criteres] recherches
 #   recruitee, teamtailor: <id>.recruitee.com, <id>.teamtailor.com
 #   greenhouse hosted in Europe (job-boards.eu.greenhouse.io/<id>): identifiant "eu:<id>"
 #   teamtailor on the company's domain: identifiant = the host (e.g. careers.exemple.com)
 #   workday: the full address (https://<tenant>.wd3.myworkdayjobs.com/<site>),
-#            with "recherches" = keywords (otherwise IA, machine learning, data scientist)
+#            searched with [criteres] recherches
 #   radancy: the career site's address (e.g. careers.moodys.com), read through its sitemap
 #   workable: apply.workable.com/<id>
 #   welcomekit: the address of the career page hosted by Welcome to the Jungle
 #               (e.g. jobs.zama.org); welcometothejungle.com itself blocks robots
 # "spontanee = true" proposes an unsolicited application when no ad matches.
+# Optional "secteur" (see specs/catalogue.md, CAT-04, e.g. "sante", "defense", "numerique")
+# and "taille" ("public", "grand-groupe", "pme", "startup") let the page's Options panel
+# turn a whole sector or size off.
 #
 # [[entreprises]]
 # nom = "Exemple"
@@ -98,3 +108,5 @@ publiee_depuis = 21
 # site = "https://exemple.com"
 # linkedin = "https://www.linkedin.com/company/exemple/"
 # spontanee = true
+# secteur = "numerique"
+# taille = "startup"

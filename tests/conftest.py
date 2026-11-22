@@ -3,9 +3,23 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from pathlib import Path
 from typing import Any
 
-from moteur.config import Criteria
+from moteur.config import Config, Criteria, TargetCompany, parse
+
+SEARCHES = ["ia"]
+
+
+def parsed(
+    data: Mapping[str, Any], folder: Path = Path(), catalogue: tuple[TargetCompany, ...] = ()
+) -> Config:
+    """`parse`, with the required `[criteres] recherches` (CONF-11) added when missing."""
+    complete = dict(data)
+    criteria = complete.get("criteres", {})
+    if isinstance(criteria, dict) and "recherches" not in criteria:
+        complete["criteres"] = {**criteria, "recherches": SEARCHES}
+    return parse(complete, folder, catalogue)
 
 
 class FakeClient:

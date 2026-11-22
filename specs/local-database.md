@@ -40,5 +40,9 @@
   nor replaced by an empty one. A text sent by the page (`texte_offre`, ECH-11) fills in
   a missing text of a known application whatever its status (not only an accepted one,
   BASE-07).
+- **BASE-15** · User's choices about companies, sectors, sizes and sources (CAT-12) are
+  kept in the local database, one per company (keyed by the normalised name, ID-01),
+  sector, size or source. Going back to the default removes the choice. They are not
+  applications: `propositions` and `pour-la-page.json` do not carry them.
 - **BASE-10** · A database created by an older version gets the columns added since, if
   needed, without data loss.

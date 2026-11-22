@@ -56,7 +56,7 @@ capability). Engine B therefore offers two channels carrying the same content:
 
 - **ECH-20** · `moteur mcp` runs an MCP server over stdio, named `moteur`, started by the
   Claude desktop app (`mcpServers` of `claude_desktop_config.json`). It exposes exactly the
-  two tools below and nothing else: no access to files, the configuration or `.env`.
+  four tools below and nothing else: no access to files, the configuration or `.env`.
 - **ECH-21** · Tool `propositions` (annotated read-only, no input): returns
   `{"candidatures": [...]}`, the same entries as `pour-la-page.json` (ECH-01, ECH-02),
   read straight from the local database at call time. No file is written.
@@ -75,3 +75,21 @@ capability). Engine B therefore offers two channels carrying the same content:
 - **ECH-26** · Single exception to ECH-25: `decisions` starts `moteur prepare` in the
   background when it records a new preparation request (PREP-41). It does not wait for
   it, and its answer does not depend on it.
+- **ECH-27** · Tool `entreprises` (annotated read-only, no input): returns the companies
+  followed and User's choices (CAT-10 to CAT-15), read at call time:
+  - `entreprises`: for each company `cle` (normalised name, ID-01), `nom`, `origine`
+    (`catalogue` or `perso`), `secteur`, `taille`, `pays`, `site`, `recherchee` (searched,
+    CAT-13), `actif` and `actif_par_defaut` (its own state and the default, CAT-10),
+    `spontanee` and `spontanee_par_defaut` (CAT-14);
+  - `secteurs` and `tailles`: for each value of CAT-04 and CAT-03, `cle`, `actif` and the
+    number of companies;
+  - `sources`: France Travail, Choisir le service public and Station F, with `cle`,
+    `nom`, `configuree` (`actif = true` in `config.toml`), `actif` (User's choice) and
+    `recherchee` (CAT-15).
+- **ECH-28** · Tool `selection` (input: `{"choix": [...]}`, each with `objet` =
+  `entreprise`, `secteur`, `taille` or `source`, `cle`, and `actif` and/or `spontanee`
+  for a company, `actif` otherwise; `null` means back to the default): records the
+  choices (BASE-15) and returns the same answer as `entreprises`. The same choices sent
+  twice change nothing the second time.
+- **ECH-29** · An invalid input to `selection` (unknown `objet`, unknown key, wrong type)
+  returns a tool error naming the faulty choice, and records none of them.

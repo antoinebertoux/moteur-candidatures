@@ -122,6 +122,20 @@ dialog.texte::backdrop{background:rgba(0,0,0,.45)}
 dialog.texte .head{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--surface)}
 dialog.texte .head h2{font-family:var(--display);font-size:17px;margin:0}
 dialog.texte .fiche{border-top:0}
+/* Companies searched (PAGE-70 to PAGE-74). */
+.opts h3{font-family:var(--display);font-size:15px;margin:14px 0 6px}
+.opts .grp{display:flex;flex-wrap:wrap;gap:6px 14px}
+.opts .tick{display:inline-flex;flex-direction:row;align-items:center;gap:6px;font-size:14px;color:var(--ink)}
+.opts .tick input{margin:0;width:auto}
+.opts .tick.off{color:var(--muted)}
+.opts .count{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.opts .sector{margin-top:10px;font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.opts .co{display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px;padding:5px 0;border-bottom:1px solid var(--line)}
+.opts .co .name{font-weight:500;min-width:0;flex:1 1 160px;overflow-wrap:anywhere}
+.opts .co.dim .name{color:var(--muted)}
+.opts .why{font-size:12px;color:var(--warn)}
+.opts input[type=text]{max-width:320px}
+.opts fieldset{border:0;margin:0;padding:0;min-width:0}
 @media (prefers-reduced-motion:no-preference){button{transition:border-color .15s,background .15s}}
 </style>
 </head>
@@ -139,6 +153,7 @@ dialog.texte .fiche{border-top:0}
       </div>
       <span class="chip" id="moteur-etat" data-i18n-title="engine_tip">Engine B: checking…</span>
       <button id="btn-sync" hidden data-i18n="sync">Sync</button>
+      <button id="btn-options" class="ghost" aria-haspopup="dialog" data-i18n="options">Options</button>
       <button id="btn-add" class="primary" data-i18n="add">Add</button>
       <button id="btn-import" data-i18n="import" data-i18n-title="import_tip">Import (local engine)</button>
       <button id="btn-export" data-i18n="export">Export</button>
@@ -185,6 +200,11 @@ dialog.texte .fiche{border-top:0}
   <dialog class="texte" id="ad-dialog" aria-labelledby="ad-dialog-title">
     <div class="head"><h2 id="ad-dialog-title"></h2><div class="row"><span id="ad-dialog-link"></span><button id="ad-dialog-copy" data-i18n="copy">Copy</button><button id="ad-dialog-close" class="ghost" data-i18n="close">Close</button></div></div>
     <div class="fiche" id="ad-dialog-body"></div>
+  </dialog>
+
+  <dialog class="texte" id="opt-dialog" aria-labelledby="opt-dialog-title">
+    <div class="head"><h2 id="opt-dialog-title" data-i18n="opt_title">Companies searched</h2><div class="row"><button id="opt-dialog-close" class="ghost" data-i18n="close">Close</button></div></div>
+    <div class="fiche opts" id="opt-body"></div>
   </dialog>
 
   <nav class="pipeline" id="pipeline" data-i18n-aria="steps_aria" aria-label="Steps"></nav>
@@ -263,7 +283,34 @@ en:{
   delete_failed:"Deletion failed. Try again in a moment.",retouch_first:"Write the edit instruction first.",
   db_slow:"The database is not answering yet. Data will show as soon as it can be reached.",
   db_stopped:"The connection to the database stopped ({code}). Reload the page to resume.",db_load_failed:"The database could not be loaded.",
-  lang_not_saved:"Language changed, but the choice could not be saved: it will not be remembered."
+  lang_not_saved:"Language changed, but the choice could not be saved: it will not be remembered.",
+  options:"Options",opt_title:"Companies searched",
+  opt_need_engine:"These choices are kept by engine B on the PC: open this page in the Claude desktop app with engine B running.",
+  opt_loading:"Reading engine B…",
+  opt_scope:"These choices apply to engine B only, not to the scheduled tasks.",
+  opt_sources:"Sources searched by keyword",opt_sizes:"Company sizes",opt_sectors:"Sectors",
+  opt_companies:"Companies",opt_not_configured:"not configured",opt_off_by_size:"off with its size",
+  opt_search_ph:"Search a company",opt_search_aria:"Search a company",opt_searched:"searched",
+  opt_unsolicited:"unsolicited",opt_badge_catalogue:"catalogue",opt_badge_perso:"mine",
+  opt_reason_secteur:"left out: sector off",opt_reason_taille:"left out: size off",
+  opt_reason_pays:"not in your countries",opt_default:"default",opt_reset:"Back to defaults",
+  opt_reset_confirm:"Confirm: undo every choice",opt_no_sector:"No sector",opt_none:"No company matches.",
+  opt_failed:"The choice was not recorded ({why}).",opt_read_failed:"Engine B could not be read ({why}).",
+  opt_count_one:"{n} company",opt_count_other:"{n} companies",sec_administration:"Administration and State",
+  sec_defense:"Defence",sec_aeronautique_spatial:"Aeronautics and space",
+  sec_naval_maritime:"Naval and maritime",sec_cybersecurite:"Cybersecurity",sec_energie:"Energy",
+  sec_environnement:"Environment",sec_sante:"Healthcare",sec_pharmacie_biotech:"Pharma, biotech, medtech",
+  sec_banque:"Banking and finance",sec_assurance:"Insurance",sec_industrie:"Industry",
+  sec_automobile:"Automotive",sec_chimie_materiaux:"Chemicals and materials",
+  sec_electronique_semiconducteurs:"Electronics and semiconductors",
+  sec_transport_logistique:"Transport and logistics",sec_numerique:"Software and internet",
+  sec_telecommunications:"Telecommunications",sec_jeux_video:"Video games",
+  sec_commerce_distribution:"Retail and consumer goods",sec_luxe_mode:"Luxury and fashion",
+  sec_medias_culture:"Media and culture",sec_tourisme_hotellerie:"Tourism and hospitality",
+  sec_recherche_enseignement:"Research and education",sec_conseil:"Consulting",sec_esn:"IT services",
+  sec_interim_rh:"Staffing and HR",sec_btp_immobilier:"Construction and real estate",
+  sec_agroalimentaire:"Food industry",sec_economie_sociale:"Social economy, NGOs",size_public:"Public sector",
+  size_grand_groupe:"Large companies (500+)",size_pme:"SMEs (under 500)",size_startup:"Start-ups"
 },
 fr:{
   title:"Suivi des candidatures",loading:"Chargement…",lang_label:"Langue",
@@ -314,7 +361,35 @@ fr:{
   delete_failed:"La suppression a échoué. Réessaie dans un instant.",retouch_first:"Écris d'abord la consigne de retouche.",
   db_slow:"La base ne répond pas encore. Les données s'afficheront dès qu'elle sera joignable.",
   db_stopped:"La connexion à la base s'est arrêtée ({code}). Recharge la page pour reprendre.",db_load_failed:"La base n'a pas pu être chargée.",
-  lang_not_saved:"Langue changée, mais le choix n'a pas pu être enregistré : il ne sera pas retenu."
+  lang_not_saved:"Langue changée, mais le choix n'a pas pu être enregistré : il ne sera pas retenu.",
+  options:"Options",opt_title:"Entreprises recherchées",
+  opt_need_engine:"Ces choix sont gardés par le moteur B sur le PC : ouvre cette page dans l'app Claude desktop avec le moteur B lancé.",
+  opt_loading:"Lecture du moteur B…",
+  opt_scope:"Ces choix s'appliquent au moteur B seulement, pas aux tâches planifiées.",
+  opt_sources:"Sources cherchées par mots-clés",opt_sizes:"Tailles d'entreprise",opt_sectors:"Secteurs",
+  opt_companies:"Entreprises",opt_not_configured:"non configurée",opt_off_by_size:"coupée avec sa taille",
+  opt_search_ph:"Chercher une entreprise",opt_search_aria:"Chercher une entreprise",opt_searched:"recherchée",
+  opt_unsolicited:"spontanée",opt_badge_catalogue:"catalogue",opt_badge_perso:"à moi",
+  opt_reason_secteur:"écartée : secteur décoché",opt_reason_taille:"écartée : taille décochée",
+  opt_reason_pays:"hors de tes pays",opt_default:"par défaut",opt_reset:"Revenir aux réglages par défaut",
+  opt_reset_confirm:"Confirmer : annuler tous les choix",opt_no_sector:"Sans secteur",
+  opt_none:"Aucune entreprise ne correspond.",opt_failed:"Le choix n'a pas été enregistré ({why}).",
+  opt_read_failed:"Le moteur B n'a pas pu être lu ({why}).",opt_count_one:"{n} entreprise",
+  opt_count_other:"{n} entreprises",sec_administration:"Administration et État",sec_defense:"Défense",
+  sec_aeronautique_spatial:"Aéronautique et spatial",sec_naval_maritime:"Naval et maritime",
+  sec_cybersecurite:"Cybersécurité",sec_energie:"Énergie",sec_environnement:"Environnement",sec_sante:"Santé",
+  sec_pharmacie_biotech:"Pharmacie, biotech, medtech",sec_banque:"Banque et finance",sec_assurance:"Assurance",
+  sec_industrie:"Industrie",sec_automobile:"Automobile",sec_chimie_materiaux:"Chimie et matériaux",
+  sec_electronique_semiconducteurs:"Électronique et semi-conducteurs",
+  sec_transport_logistique:"Transport et logistique",sec_numerique:"Numérique",
+  sec_telecommunications:"Télécommunications",sec_jeux_video:"Jeu vidéo",
+  sec_commerce_distribution:"Commerce et distribution",sec_luxe_mode:"Luxe et mode",
+  sec_medias_culture:"Médias et culture",sec_tourisme_hotellerie:"Tourisme et hôtellerie",
+  sec_recherche_enseignement:"Recherche et enseignement",sec_conseil:"Conseil",
+  sec_esn:"ESN (services numériques)",sec_interim_rh:"Intérim et RH",sec_btp_immobilier:"BTP et immobilier",
+  sec_agroalimentaire:"Agroalimentaire",sec_economie_sociale:"Économie sociale, associations",
+  size_public:"Service public",size_grand_groupe:"Grandes entreprises (500 et plus)",
+  size_pme:"PME (moins de 500)",size_startup:"Start-ups"
 }
 };
 // Flags are drawn as SVG so that they look the same on every system (emoji flags do not
@@ -645,7 +720,7 @@ function setLang(c,save){
   c=knownLang(c);
   var changed=c!==lang;lang=c;
   try{localStorage.setItem(LANG_KEY,c);}catch(_){}
-  if(changed){applyStatic();render();afficherMoteur();showMsg();}
+  if(changed){applyStatic();render();afficherMoteur();showMsg();if($("opt-dialog").open)rendreOptions();}
   if(save)saveLang();
 }
 $("lang-btn").addEventListener("click",function(e){e.stopPropagation();openLangMenu($("lang-menu").hidden);});
@@ -853,6 +928,128 @@ $("export-close").addEventListener("click",function(){$("export-panel").hidden=t
 $("export-copy").addEventListener("click",function(){
   navigator.clipboard.writeText($("export-text").value).then(function(){say("export_copied","ok");})
     .catch(function(){$("export-text").select();say("copy_failed","bad");});
+});
+
+// Companies searched (PAGE-70 to PAGE-74): the choices live in engine B, never in the page.
+var opts={data:null,busy:false,err:null,q:"",reset:false};
+function raisonMoteur(e){
+  var c=e&&e.code;
+  if(c==="server_not_connected"||c==="capability_disabled"||c==="not_granted")return t("eng_err_stopped");
+  if(c==="not_in_manifest"||c==="cancelled"||c==="approval_required")return t("eng_err_refused");
+  return t("eng_err_other",{code:c||(e&&e.message)||t("unknown")});
+}
+function appelOptions(outil,entree){
+  return moteur.mcp.callTool(SRV,outil,entree,{cache:false}).then(function(r){
+    var p=r&&r.payload;
+    if(!p||(r.isError||r.is_error)||!Array.isArray(p.entreprises))throw {code:"reponse_illisible"};
+    return p;
+  });
+}
+function cleTrad(k){return String(k).replace(/-/g,"_");}
+function secteurLabel(k){return k?t("sec_"+cleTrad(k)):t("opt_no_sector");}
+function tailleLabel(k){return t("size_"+cleTrad(k));}
+function caseHtml(attrs,checked,label,off,disabled){
+  return '<label class="tick'+(off?" off":"")+'"><input type="checkbox" '+attrs+(checked?" checked":"")+(disabled?" disabled":"")+'> '+label+'</label>';
+}
+function lienDefaut(attrs){return ' <button type="button" class="mini" '+attrs+'>'+esc(t("opt_default"))+'</button>';}
+function ouvrirOptions(){
+  opts.err=null;opts.reset=false;
+  var dlg=$("opt-dialog");if(dlg.showModal){if(!dlg.open)dlg.showModal();}else dlg.setAttribute("open","");
+  if(!moteur.mcp){opts.data=null;rendreOptions();return;}
+  opts.busy=true;rendreOptions();
+  appelOptions("entreprises",{}).then(function(p){opts.data=p;opts.err=null;})
+    .catch(function(e){opts.err=t("opt_read_failed",{why:raisonMoteur(e)});})
+    .then(function(){opts.busy=false;rendreOptions();});
+}
+function rendreOptions(){
+  var b=$("opt-body");
+  if(!moteur.mcp){b.innerHTML='<p class="note">'+esc(t("opt_need_engine"))+'</p>';return;}
+  if(!opts.data){b.innerHTML=opts.err?'<p class="note bad">'+esc(opts.err)+'</p>':'<p class="sub">'+esc(t("opt_loading"))+'</p>';return;}
+  var d=opts.data,h='<p class="sub" style="margin:0">'+esc(t("opt_scope"))+'</p>';
+  if(opts.err)h+='<p class="note bad" role="alert">'+esc(opts.err)+'</p>';
+  h+='<fieldset'+(opts.busy?" disabled":"")+'>';
+  var tailles={};d.tailles.forEach(function(x){tailles[x.cle]=x.actif;});
+  h+='<h3>'+esc(t("opt_sources"))+'</h3><div class="grp">';
+  d.sources.forEach(function(s){
+    var note=!s.configuree?t("opt_not_configured"):(s.actif&&!s.recherchee?t("opt_off_by_size"):"");
+    h+='<span>'+caseHtml('data-obj="source" data-cle="'+esc(s.cle)+'"',s.configuree&&s.actif,esc(s.nom)+(note?' <span class="count">('+esc(note)+')</span>':""),!s.recherchee,!s.configuree);
+    if(!s.actif)h+=lienDefaut('data-def="source" data-cle="'+esc(s.cle)+'"');
+    h+='</span>';
+  });
+  h+='</div><h3>'+esc(t("opt_sizes"))+'</h3><div class="grp">';
+  d.tailles.forEach(function(x){
+    h+='<span>'+caseHtml('data-obj="taille" data-cle="'+esc(x.cle)+'"',x.actif,esc(tailleLabel(x.cle))+' <span class="count">'+x.entreprises+'</span>',!x.actif);
+    if(!x.actif)h+=lienDefaut('data-def="taille" data-cle="'+esc(x.cle)+'"');
+    h+='</span>';
+  });
+  h+='</div><h3>'+esc(t("opt_sectors"))+'</h3><div class="grp">';
+  d.secteurs.filter(function(x){return x.entreprises>0;}).forEach(function(x){
+    h+='<span>'+caseHtml('data-obj="secteur" data-cle="'+esc(x.cle)+'"',x.actif,esc(secteurLabel(x.cle))+' <span class="count">'+x.entreprises+'</span>',!x.actif);
+    if(!x.actif)h+=lienDefaut('data-def="secteur" data-cle="'+esc(x.cle)+'"');
+    h+='</span>';
+  });
+  h+='</div><h3>'+esc(t("opt_companies"))+'</h3>';
+  h+='<input type="text" id="opt-q" value="'+esc(opts.q)+'" placeholder="'+esc(t("opt_search_ph"))+'" aria-label="'+esc(t("opt_search_aria"))+'">';
+  h+='<div id="opt-list"></div>';
+  h+='<div class="row" style="margin-top:14px">'+(opts.reset?'<button type="button" class="no" id="opt-reset2">'+esc(t("opt_reset_confirm"))+'</button>':'<button type="button" class="ghost" id="opt-reset">'+esc(t("opt_reset"))+'</button>')+'</div>';
+  h+='</fieldset>';
+  b.innerHTML=h;rendreListeOptions();
+}
+function rendreListeOptions(){
+  var l=$("opt-list");if(!l||!opts.data)return;
+  var q=norm(opts.q),ordre=opts.data.secteurs.map(function(x){return x.cle;}).concat([""]),groupes={};
+  opts.data.entreprises.forEach(function(c){
+    if(q&&norm(c.nom).indexOf(q)<0)return;
+    (groupes[c.secteur||""]=groupes[c.secteur||""]||[]).push(c);
+  });
+  var h="";
+  ordre.forEach(function(s){
+    var g=groupes[s];if(!g)return;
+    g.sort(function(a,b){return a.nom.localeCompare(b.nom,locale());});
+    h+='<div class="sector">'+esc(secteurLabel(s))+' <span class="count">'+esc(tp("opt_count",g.length,{n:g.length}))+'</span></div>';
+    g.forEach(function(c){
+      var gris=c.actif&&!c.recherchee,why=gris?t("opt_reason_"+c.raison):(!c.actif&&c.raison==="pays"?t("opt_reason_pays"):"");
+      h+='<div class="co'+(c.recherchee?"":" dim")+'"><span class="name">'+esc(c.nom)+' <span class="chip">'+esc(t("opt_badge_"+(c.origine==="catalogue"?"catalogue":"perso")))+'</span>'+(why?' <span class="why">'+esc(why)+'</span>':"")+'</span>';
+      h+=caseHtml('data-obj="entreprise" data-champ="actif" data-cle="'+esc(c.cle)+'"',c.actif,esc(t("opt_searched")),!c.recherchee);
+      h+=caseHtml('data-obj="entreprise" data-champ="spontanee" data-cle="'+esc(c.cle)+'"',c.spontanee,esc(t("opt_unsolicited")),!c.spontanee);
+      if(c.actif!==c.actif_par_defaut||c.spontanee!==c.spontanee_par_defaut)h+=lienDefaut('data-def="entreprise" data-cle="'+esc(c.cle)+'"');
+      h+='</div>';
+    });
+  });
+  l.innerHTML=h||'<p class="sub">'+esc(t("opt_none"))+'</p>';
+}
+// Each tick goes to engine B at once; the panel is redrawn from its answer (PAGE-72).
+function choisir(choix){
+  if(!moteur.mcp||opts.busy)return;
+  opts.busy=true;opts.err=null;rendreOptions();
+  appelOptions("selection",{choix:choix}).then(function(p){opts.data=p;})
+    .catch(function(e){opts.err=t("opt_failed",{why:raisonMoteur(e)});})
+    .then(function(){opts.busy=false;rendreOptions();});
+}
+$("btn-options").addEventListener("click",ouvrirOptions);
+$("opt-dialog-close").addEventListener("click",function(){var dlg=$("opt-dialog");if(dlg.close)dlg.close();else dlg.removeAttribute("open");});
+$("opt-dialog").addEventListener("click",function(e){if(e.target===this&&this.close)this.close();});
+$("opt-body").addEventListener("input",function(e){if(e.target.id==="opt-q"){opts.q=e.target.value;rendreListeOptions();}});
+$("opt-body").addEventListener("change",function(e){
+  var el=e.target;if(el.type!=="checkbox"||!el.hasAttribute("data-obj"))return;
+  var c={objet:el.getAttribute("data-obj"),cle:el.getAttribute("data-cle")};
+  c[el.getAttribute("data-champ")||"actif"]=el.checked;
+  choisir([c]);
+});
+$("opt-body").addEventListener("click",function(e){
+  var el=e.target.closest("button");if(!el)return;
+  if(el.hasAttribute("data-def")){
+    var c={objet:el.getAttribute("data-def"),cle:el.getAttribute("data-cle"),actif:null};
+    if(c.objet==="entreprise")c.spontanee=null;
+    choisir([c]);return;
+  }
+  if(el.id==="opt-reset"){opts.reset=true;rendreOptions();return;}
+  if(el.id==="opt-reset2"){
+    opts.reset=false;var d=opts.data,choix=[];
+    d.entreprises.forEach(function(c){if(c.actif!==c.actif_par_defaut||c.spontanee!==c.spontanee_par_defaut)choix.push({objet:"entreprise",cle:c.cle,actif:null,spontanee:null});});
+    [["secteur",d.secteurs],["taille",d.tailles],["source",d.sources]].forEach(function(g){g[1].forEach(function(x){if(!x.actif)choix.push({objet:g[0],cle:x.cle,actif:null});});});
+    if(choix.length)choisir(choix);else rendreOptions();
+  }
 });
 
 function heure(d){return d.toLocaleTimeString(locale(),{hour:"2-digit",minute:"2-digit"});}

@@ -107,8 +107,8 @@ missing = `manuel`), `statut`, `score`, `resume`, `lettre_demandee`, `lettre`
 
 ## Direct link with engine B
 
-- **PAGE-35** · The page declares the MCP server `host:moteur` (tools `propositions` and
-  `decisions`, ECH-20). When it answers, an "Engine B: connected" chip shows, with the time
+- **PAGE-35** · The page declares the MCP server `host:moteur` (tools `propositions`,
+  `decisions`, `entreprises` and `selection`, ECH-20). When it answers, an "Engine B: connected" chip shows, with the time
   of the last synchronisation; otherwise "Engine B: not connected" and the import and
   export buttons stay the way to exchange (PAGE-30 to PAGE-34).
 - **PAGE-36** · Engine B → page: at load, then every minute while the page is visible,
@@ -152,6 +152,26 @@ missing = `manuel`), `statut`, `score`, `resume`, `lettre_demandee`, `lettre`
 - **PAGE-50** · A table counts, for A, B and manual: proposed, to process, accepted (To
   prepare, To validate, To send or Applied), rejected, applied, and the acceptance rate
   = accepted / (accepted + rejected).
+
+## Companies searched
+
+- **PAGE-70** · An "Options" button in the header opens the "Companies searched" panel.
+  It reads the tool `entreprises` (ECH-27) when it opens. When engine B is not connected
+  (PAGE-35), the panel says the choices need engine B running and shows nothing else.
+- **PAGE-71** · The panel shows, from top to bottom: the keyword sources (a source off
+  in `config.toml` is shown greyed out, "not configured"); the sizes; the sectors, each
+  with its number of companies (a sector with none is not shown); then the companies, grouped by sector, with a search
+  field. Each company shows its name, a "catalogue" or "mine" badge, a "searched" box
+  and an "unsolicited" box. A company ticked but left out by its sector or size is shown
+  greyed out with the reason. A line says that the choices apply to engine B, not to the
+  scheduled tasks.
+- **PAGE-72** · Each tick calls `selection` (ECH-28) at once and redraws the panel from
+  its answer. A failed call puts the box back and says why, as PAGE-38.
+- **PAGE-73** · A company or a group whose state differs from the default shows a
+  "default" link that sends `null` for it. A "Back to defaults" button, after a
+  confirmation, does it for every choice.
+- **PAGE-74** · The page keeps none of these choices in its own database: engine B holds
+  them (BASE-15), on the PC.
 
 ## Robustness and display
 

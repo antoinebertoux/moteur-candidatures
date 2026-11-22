@@ -16,7 +16,7 @@ provided by `window.claude.use(...)`:
 | `db` | database hosted by Claude: collection `candidatures` (one document per application) and document `reglages/page` (interface language) |
 | `downloads` | "Export" button (`candidatures-export.json`) |
 | `user` | declared on the published page |
-| `mcp` | local server `host:moteur` (tools `propositions`, `decisions`): direct link with engine B, only in the PC's Claude desktop app |
+| `mcp` | local server `host:moteur` (tools `propositions`, `decisions`, `entreprises`, `selection`): direct link with engine B, only in the PC's Claude desktop app |
 
 Opened outside Claude (locally in a browser), it shows "The database is not available in
 this view".
@@ -25,7 +25,7 @@ this view".
 
 1. In a Claude conversation, ask: "Publish `page-suivi/index.html` as an artifact, with
    the capabilities `db`, `downloads`, `user` and `mcp` (`host:moteur`, tools
-   `propositions` and `decisions`)". Claude creates a private artifact and gives you its
+   `propositions`, `decisions`, `entreprises` and `selection`)". Claude creates a private artifact and gives you its
    link.
 2. Note the artifact's **slug** (the UUID Claude gives you, or visible in its tools). The
    scheduled tasks need it (`<SLUG_DE_TA_PAGE>` in [`taches/`](../taches/)).

@@ -58,6 +58,7 @@ code, at 0 tokens.
 | [identifiers.md](identifiers.md) | `ID` | application identifier, rules shared with the page |
 | [config.md](config.md) | `CONF` | `config.toml` and `.env` |
 | [sources.md](sources.md) | `SRC` | job sites queried |
+| [catalogue.md](catalogue.md) | `CAT` | company catalogue, User's choice of companies |
 | [collection.md](collection.md) | `COL`, `FILT` | combining sources, filter, unsolicited applications |
 | [local-database.md](local-database.md) | `BASE` | what engine B keeps and its transitions |
 | [scoring.md](scoring.md) | `NOT`, `CLA` | scoring by Claude, `claude -p` calls |

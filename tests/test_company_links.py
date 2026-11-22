@@ -23,12 +23,12 @@ from moteur.company_links import (
     parse_response,
     to_look_up,
 )
-from moteur.config import ConfigError, parse
+from moteur.config import ConfigError
 from moteur.decisions import apply
 from moteur.exchange import decisions_from, for_the_page
 from moteur.local_db import LocalDb
 from moteur.models import JobAd, Rating
-from tests.conftest import FakeAssistant
+from tests.conftest import FakeAssistant, parsed
 
 TODAY = date(2026, 11, 20)
 NOTE = Rating(score=80, summary="Bon.", letter_requested=False, language="fr")
@@ -221,13 +221,13 @@ def test_a_failed_lookup_does_not_stop_the_daily_run(base: LocalDb) -> None:
 
 @pytest.mark.spec("CONF-09")
 def test_config_links_must_be_web_addresses() -> None:
-    (acme,) = parse(
+    (acme,) = parsed(
         {"entreprises": [{"nom": "Acme", "site": "https://acme.com", "linkedin": LINKEDIN}]},
         Path(),
     ).companies
     assert (acme.site, acme.linkedin) == ("https://acme.com", LINKEDIN)
     with pytest.raises(ConfigError, match=r"Acme.*linkedin"):
-        parse({"entreprises": [{"nom": "Acme", "linkedin": "acme"}]}, Path())
+        parsed({"entreprises": [{"nom": "Acme", "linkedin": "acme"}]}, Path())
 
 
 @pytest.mark.spec("BASE-13", "ECH-11")

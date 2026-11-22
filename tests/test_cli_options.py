@@ -14,6 +14,7 @@ ENGLISH_COMMANDS = {
     "export",
     "links",
     "daily",
+    "companies",
     "decisions",
     "generate",
     "letter",

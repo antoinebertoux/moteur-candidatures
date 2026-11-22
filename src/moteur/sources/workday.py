@@ -24,7 +24,6 @@ from moteur.sources.base import (
     table,
 )
 
-DEFAULT_SEARCHES = ("machine learning", "intelligence artificielle", "data scientist")
 PAGE_SIZE = 20
 PAGES_MAX = 5
 _LANGUAGE = re.compile(r"^[a-z]{2}-[A-Z]{2}$")
@@ -85,7 +84,7 @@ class SourceWorkday:
         self._client = client
         self._company = company
         self._site = split_address(company.identifier)
-        self._searches: Sequence[str] = company.searches or DEFAULT_SEARCHES
+        self._searches: Sequence[str] = company.searches
 
     @property
     def name(self) -> str:

@@ -29,7 +29,7 @@ stays empty.
 - **SRC-10** · Active only if `[france_travail] actif = true` **and**
   `FRANCE_TRAVAIL_ID` and `FRANCE_TRAVAIL_SECRET` are set; otherwise it is skipped with a
   warning. *(untested)*
-- **SRC-11** · Gets an OAuth token, then runs one search per keyword and per département
+- **SRC-11** · Gets an OAuth token, then runs one search per keyword (CONF-11) and per département
   (or one per keyword if no département), limited to ads published in the last
   `publiee_depuis` days, at most 150 results per search. Without a token in the
   response, the source fails.
@@ -39,7 +39,7 @@ stays empty.
 
 ## Choisir le service public
 
-- **SRC-20** · No credentials. Each keyword is searched on the whole site, then again
+- **SRC-20** · No credentials. Each keyword (CONF-11) is searched on the whole site, then again
   among the tracked employers only (the general search is sorted by relevance and could
   miss them). Domains, if any, filter both passes.
 - **SRC-21** · The search address follows the order imposed by the site:
@@ -74,14 +74,14 @@ stays empty.
   `<host>/jobs.rss`.
 - **SRC-35** · SmartRecruiters searches: the plain address of SRC-30 gives only a
   company's 100 most recent ads, worldwide, which misses most of a large group's board.
-  Two settings narrow the request, each optional: the company's own `recherches`
-  (`q=<keyword>`, full-text: the site matches it in titles and texts) and the countries
+  Two settings narrow the request: the terms of `[criteres] recherches` (CONF-11,
+  `q=<keyword>`, full-text: the site matches it in titles and texts) and the countries
   of `[criteres] pays` (`country=<code>`; the site accepts one country per request).
-  When at least one is set, one search is run per keyword and per country (per keyword
-  only, or per country only, when the other is empty), 100 ads per page (`offset`), at
+  One search is run per keyword and per country (per keyword only when `pays` is
+  empty), 100 ads per page (`offset`), at
   most 5 pages; a search stops when a page is incomplete or the announced total
   (`totalFound`) is reached. Searches run as in SRC-05. An ad found by several searches
-  (same SmartRecruiters id) is kept once. With neither set, SRC-30 applies unchanged.
+  (same SmartRecruiters id) is kept once.
   The location filter (`lieux`) still applies to the ads found; an ad of another country
   is not requested at all, even if it allows remote work.
 - **SRC-31** · Each ATS provides title, location, link and, when available, the text and
@@ -96,8 +96,8 @@ stays empty.
 - **SRC-40** · The identifier is the career page address as shown in the browser
   (`https://<tenant>.wdN.myworkdayjobs.com/[fr-FR/]<site>`); the language segment is
   ignored. An address outside `myworkdayjobs.com` is rejected.
-- **SRC-41** · Workday does not list everything: each of the company's keywords (by
-  default "machine learning", "intelligence artificielle", "data scientist") is searched,
+- **SRC-41** · Workday does not list everything: each term of `[criteres] recherches`
+  (CONF-11) is searched,
   20 ads per page, at most 5 pages. An ad found by several keywords is kept only once.
   Search results give no ad text (see SRC-42).
 - **SRC-42** · The page of each **retained** ad is opened (as in SRC-24) through the site's
@@ -145,7 +145,7 @@ allows everything.
 - **SRC-70** · Active only if `[station_f] actif = true`. No credentials: at each run the
   source reads the search key from `https://jobs.stationf.co/search` (hidden field
   `algolia_api_key`), since it may change. A page without that key: source error.
-- **SRC-71** · One search per keyword of `recherches` on the index
+- **SRC-71** · One search per keyword (CONF-11) on the index
   `wk_cms_jobs_production_careers` (application `CSEKHVMS53`), 50 ads per page, at most
   `pages_max` pages; it stops after the last page announced by the site. Searches run as
   in SRC-05. An ad found by several keywords (same Algolia identifier) is kept once.

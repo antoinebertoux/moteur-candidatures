@@ -9,8 +9,8 @@ proposes unsolicited applications. No call to Claude.
 - **COL-02** · Order: query every source → filter → open the page of the retained ads
   only, when their text is missing (SRC-24, SRC-51) → add unsolicited applications. If a page
   cannot be opened, the ad is kept without text.
-- **COL-03** · An unsolicited application is proposed for each tracked company marked
-  `spontanee = true` that has **no retained ad** in this collection and has **never been
+- **COL-03** · An unsolicited application is proposed for each searched company whose
+  unsolicited application is on (CAT-13, CAT-14) that has **no retained ad** in this collection and has **never been
   seen** (neither in the local database nor in `suivi/entreprises_vues.csv`). Its title
   is `role_spontane`, its link the company website, its source `cible`.
 - **COL-04** · `suivi/entreprises_vues.csv` (`;` separator, `entreprise` column) is
@@ -20,6 +20,8 @@ proposes unsolicited applications. No call to Claude.
   as seen.
 - **COL-06** · The command prints the number of retained ads and, among them, the number
   of new ones. *(untested)*
+- **COL-09** · Only searched companies (CAT-13) and searched sources (CAT-15) are
+  queried. The command prints how many companies were left out by User's choices.
 - **COL-07** · Sources are queried in parallel, at most 8 at a time; the ads come out
   in the order of the configured sources, as if queried one after the other (so FILT-05
   keeps the same ad).
