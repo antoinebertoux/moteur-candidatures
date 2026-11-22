@@ -11,6 +11,7 @@ from moteur.sources.ats import (
     ads_recruitee,
     ads_smartrecruiters,
     ads_teamtailor,
+    smartrecruiters_searches,
 )
 from moteur.sources.workday import SourceWorkday, ads_workday, split_address, workday_description
 from tests.conftest import FakeClient
@@ -241,3 +242,85 @@ def test_smartrecruiters_source_calls_the_right_address() -> None:
     target = TargetCompany(name="Acme", ats="smartrecruiters", identifier="Acme1")
     assert [o.title for o in SourceAts(client, target).collect()] == ["ML Engineer"]
     assert client.calls == [(url, {"limit": "100"})]
+
+
+class PagedSmartRecruiters(FakeClient):
+    """SmartRecruiters double: answers each search (q, country) page by page."""
+
+    def __init__(self, boards: Mapping[tuple[str, str], list[str]], total: bool = True) -> None:
+        super().__init__({})
+        self.boards = boards
+        self.total = total
+        self.lock = threading.Lock()
+
+    def get_json(
+        self,
+        url: str,
+        *,
+        params: Mapping[str, str] | None = None,
+        headers: Mapping[str, str] | None = None,
+    ) -> Any:
+        parameters = dict(params or {})
+        with self.lock:
+            self.calls.append((url, parameters))
+        ids = self.boards.get((parameters.get("q", ""), parameters.get("country", "")), [])
+        start, size = int(parameters.get("offset", "0")), int(parameters["limit"])
+        page = [{"id": i, "name": f"Ad {i}"} for i in ids[start : start + size]]
+        answer: dict[str, Any] = {"content": page}
+        if self.total:
+            answer["totalFound"] = len(ids)
+        return answer
+
+
+def _smartrecruiters(
+    client: FakeClient, searches: tuple[str, ...] = (), countries: tuple[str, ...] = ()
+) -> list[str]:
+    target = TargetCompany(
+        name="Acme", ats="smartrecruiters", identifier="Acme1", searches=searches
+    )
+    return [o.title for o in SourceAts(client, target, countries).collect()]
+
+
+@pytest.mark.spec("SRC-35")
+def test_smartrecruiters_searches_combine_keywords_and_countries() -> None:
+    assert smartrecruiters_searches(["ia", "data"], ["fr", "gb"]) == [
+        {"q": "ia", "country": "fr"},
+        {"q": "ia", "country": "gb"},
+        {"q": "data", "country": "fr"},
+        {"q": "data", "country": "gb"},
+    ]
+    assert smartrecruiters_searches(["ia"], []) == [{"q": "ia"}]
+    assert smartrecruiters_searches([], ["fr"]) == [{"country": "fr"}]
+    assert smartrecruiters_searches([], []) == []
+
+
+@pytest.mark.spec("SRC-35")
+def test_smartrecruiters_search_reads_pages_until_the_total() -> None:
+    client = PagedSmartRecruiters({("ia", "fr"): [str(i) for i in range(250)]})
+    titles = _smartrecruiters(client, ("ia",), ("fr",))
+    assert len(titles) == 250
+    assert [c[1]["offset"] for c in client.calls] == ["0", "100", "200"]
+    assert all(c[1]["q"] == "ia" and c[1]["country"] == "fr" for c in client.calls)
+
+
+@pytest.mark.spec("SRC-35")
+def test_smartrecruiters_search_stops_on_a_full_last_page_and_at_five_pages() -> None:
+    exact = PagedSmartRecruiters({("", "fr"): [str(i) for i in range(200)]})
+    assert len(_smartrecruiters(exact, countries=("fr",))) == 200
+    assert len(exact.calls) == 2
+    endless = PagedSmartRecruiters({("ia", ""): [str(i) for i in range(900)]}, total=False)
+    assert len(_smartrecruiters(endless, ("ia",))) == 500
+    assert len(endless.calls) == 5
+
+
+@pytest.mark.spec("SRC-35")
+def test_smartrecruiters_ad_found_by_several_searches_is_kept_once() -> None:
+    client = PagedSmartRecruiters({("ia", ""): ["1", "2"], ("data", ""): ["2", "3"]})
+    assert _smartrecruiters(client, ("ia", "data")) == ["Ad 1", "Ad 2", "Ad 3"]
+
+
+@pytest.mark.spec("SRC-35")
+def test_smartrecruiters_without_keywords_or_countries_keeps_the_plain_address() -> None:
+    client = PagedSmartRecruiters({})
+    _smartrecruiters(client)
+    assert client.calls == [(URLS["smartrecruiters"].format(id="Acme1"), {"limit": "100"})]

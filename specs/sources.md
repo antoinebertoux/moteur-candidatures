@@ -72,6 +72,18 @@ stays empty.
 - **SRC-34** · Teamtailor career sites on the company's own domain: an identifier that
   contains a dot is the site's host (`careers.example.com`), and its feed is read at
   `<host>/jobs.rss`.
+- **SRC-35** · SmartRecruiters searches: the plain address of SRC-30 gives only a
+  company's 100 most recent ads, worldwide, which misses most of a large group's board.
+  Two settings narrow the request, each optional: the company's own `recherches`
+  (`q=<keyword>`, full-text: the site matches it in titles and texts) and the countries
+  of `[criteres] pays` (`country=<code>`; the site accepts one country per request).
+  When at least one is set, one search is run per keyword and per country (per keyword
+  only, or per country only, when the other is empty), 100 ads per page (`offset`), at
+  most 5 pages; a search stops when a page is incomplete or the announced total
+  (`totalFound`) is reached. Searches run as in SRC-05. An ad found by several searches
+  (same SmartRecruiters id) is kept once. With neither set, SRC-30 applies unchanged.
+  The location filter (`lieux`) still applies to the ads found; an ad of another country
+  is not requested at all, even if it allows remote work.
 - **SRC-31** · Each ATS provides title, location, link and, when available, the text and
   publication date (YYYY-MM-DD). SmartRecruiters gives no text; its link is rebuilt as
   `jobs.smartrecruiters.com/<id>/<ad>` and its location as "City, COUNTRY".

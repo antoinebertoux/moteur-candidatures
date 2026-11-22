@@ -70,6 +70,27 @@ def test_workday_company_with_searches() -> None:
         parse({"entreprises": [{"nom": "X", "recherches": "IA"}]}, Path())
 
 
+@pytest.mark.spec("CONF-10")
+def test_countries() -> None:
+    assert parse({}, Path()).criteria.countries == ()
+    data = {"criteres": {"pays": ["FR", " gb "]}}
+    assert parse(data, Path()).criteria.countries == ("fr", "gb")
+    for wrong in (["france"], ["f"], ["F1"], "fr"):
+        with pytest.raises(ConfigError, match="pays"):
+            parse({"criteres": {"pays": wrong}}, Path())
+
+
+@pytest.mark.spec("CONF-04")
+def test_smartrecruiters_company_with_searches() -> None:
+    data = {
+        "entreprises": [
+            {"nom": "Acme", "ats": "smartrecruiters", "identifiant": "acme", "recherches": ["IA"]}
+        ]
+    }
+    (acme,) = parse(data, Path()).companies
+    assert (acme.ats, acme.searches) == ("smartrecruiters", ("IA",))
+
+
 @pytest.mark.parametrize(
     "data",
     [

@@ -4,13 +4,22 @@ Workable."""
 from __future__ import annotations
 
 import xml.etree.ElementTree as ET
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from email.utils import parsedate_to_datetime
+from itertools import product
 from typing import Any
 
 from moteur.config import TargetCompany
 from moteur.models import JobAd
-from moteur.sources.base import HttpClient, items, plain_text, string, table
+from moteur.sources.base import (
+    SEARCHES_IN_PARALLEL,
+    HttpClient,
+    in_parallel,
+    items,
+    plain_text,
+    string,
+    table,
+)
 
 URLS = {
     "greenhouse": "https://boards-api.greenhouse.io/v1/boards/{id}/jobs",
@@ -27,6 +36,9 @@ PARAMETERS: dict[str, dict[str, str]] = {
     "smartrecruiters": {"limit": "100"},
     "workable": {"details": "true"},
 }
+# SmartRecruiters searches (SRC-35).
+SMARTRECRUITERS_PAGE = 100
+SMARTRECRUITERS_PAGES_MAX = 5
 URL_SMARTRECRUITERS = "https://jobs.smartrecruiters.com/{id}/{ad}"
 GREENHOUSE_EU = "https://boards-api.eu.greenhouse.io/v1/boards/{id}/jobs"
 TEAMTAILOR_OWN_DOMAIN = "https://{id}/jobs.rss"
@@ -204,21 +216,71 @@ _PARSERS: dict[str, Callable[[str, Any], list[JobAd]]] = {
 _SUPPORTED = {*_PARSERS, "smartrecruiters", "teamtailor"}
 
 
+def smartrecruiters_searches(
+    keywords: Sequence[str], countries: Sequence[str]
+) -> list[dict[str, str]]:
+    """Parameters of each SmartRecruiters search: one per keyword and per country, per
+    keyword or per country alone when the other is empty; none when both are (SRC-35)."""
+    pairs = product(keywords or [""], countries or [""])
+    return [
+        {key: value for key, value in (("q", keyword), ("country", country)) if value}
+        for keyword, country in pairs
+        if keyword or country
+    ]
+
+
 class SourceAts:
     """The ads a company publishes on its recruiting tool."""
 
-    def __init__(self, client: HttpClient, company: TargetCompany) -> None:
+    def __init__(
+        self, client: HttpClient, company: TargetCompany, countries: Sequence[str] = ()
+    ) -> None:
         if company.ats not in _SUPPORTED:
             raise ValueError(f"{company.name} has no supported ATS")
         self._client = client
         self._company = company
+        self._countries = tuple(countries)
 
     @property
     def name(self) -> str:
         return f"{self._company.ats}:{self._company.name}"
 
+    def _smartrecruiters_search(self, parameters: dict[str, str]) -> list[JobAd]:
+        """The ads of one SmartRecruiters search, page after page (SRC-35)."""
+        url = ats_url("smartrecruiters", self._company.identifier)
+        found_ones: list[JobAd] = []
+        for page in range(SMARTRECRUITERS_PAGES_MAX):
+            answer = self._client.get_json(
+                url,
+                params={
+                    **parameters,
+                    "limit": str(SMARTRECRUITERS_PAGE),
+                    "offset": str(page * SMARTRECRUITERS_PAGE),
+                },
+            )
+            entries = items(table(answer).get("content"))
+            found_ones.extend(
+                ads_smartrecruiters(self._company.name, self._company.identifier, answer)
+            )
+            total = table(answer).get("totalFound")
+            read = (page + 1) * SMARTRECRUITERS_PAGE
+            if len(entries) < SMARTRECRUITERS_PAGE or (isinstance(total, int) and read >= total):
+                break
+        return found_ones
+
+    def _smartrecruiters(self, searches: list[dict[str, str]]) -> list[JobAd]:
+        seen: dict[str, JobAd] = {}
+        for ads in in_parallel(self._smartrecruiters_search, searches, SEARCHES_IN_PARALLEL):
+            for ad in ads:
+                seen.setdefault(ad.url or ad.title, ad)
+        return list(seen.values())
+
     def collect(self) -> list[JobAd]:
         ats = self._company.ats
+        if ats == "smartrecruiters":
+            searches = smartrecruiters_searches(self._company.searches, self._countries)
+            if searches:
+                return self._smartrecruiters(searches)
         identifier = self._company.identifier
         url = ats_url(ats, identifier)
         if ats == "teamtailor":

@@ -84,7 +84,7 @@ def build_sources(config: Config, client: HttpClient) -> list[Source]:
         elif target.ats == "welcomekit":
             sources.append(SourceWelcomeKit(client, target))
         elif target.ats:
-            sources.append(SourceAts(client, target))
+            sources.append(SourceAts(client, target, config.criteria.countries))
     return sources
 
 
