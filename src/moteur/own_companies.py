@@ -33,8 +33,10 @@ from moteur.sources.radancy import SourceRadancy
 from moteur.sources.sitemap import SourceSitemap
 from moteur.sources.sncf import SourceSncf
 from moteur.sources.successfactors import SourceSuccessFactors
+from moteur.sources.taleez import SourceTaleez
 from moteur.sources.talentsoft import SourceTalentsoft
 from moteur.sources.welcomekit import SourceWelcomeKit
+from moteur.sources.werecruit import SourceWeRecruit
 from moteur.sources.workday import SourceWorkday
 
 # Companies one call of `ajouter_entreprises` may hold (ECH-30).
@@ -84,6 +86,10 @@ def source_for(
         return SourceGestmax(client, target)
     if target.ats == "sncf":
         return SourceSncf(client, target)
+    if target.ats == "taleez":
+        return SourceTaleez(client, target)
+    if target.ats == "werecruit":
+        return SourceWeRecruit(client, target)
     if target.ats:
         return SourceAts(client, target, countries)
     return None

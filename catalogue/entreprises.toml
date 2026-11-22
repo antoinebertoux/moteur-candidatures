@@ -45,6 +45,9 @@
 #            or mbda.gestmax.fr/search/index)
 #   sncf: emploi.sncf.com; the group company's number in the site's « company »
 #         filter (6684 SNCF Réseau, 6685 SNCF Voyageurs)
+#   taleez: the Taleez career site host (e.g. tehtris.taleez.com)
+#   werecruit: the WeRecruit career site address with its language
+#              (e.g. careers.werecruit.io/fr/glimps)
 
 [[entreprises]]
 nom = "Thales"

@@ -1,4 +1,4 @@
-"""Talentsoft, Oracle Recruiting Cloud, SuccessFactors, Phenom and Avature sources."""
+"""Talentsoft, Oracle, SuccessFactors, Phenom, Avature, Gestmax, SNCF, Taleez, WeRecruit."""
 
 import base64
 import json
@@ -38,7 +38,9 @@ from moteur.sources.successfactors import (
     announced_total,
     complete_successfactors,
 )
+from moteur.sources.taleez import SourceTaleez, ads_taleez, complete_taleez
 from moteur.sources.talentsoft import SourceTalentsoft, ads_talentsoft
+from moteur.sources.werecruit import SourceWeRecruit, ads_werecruit, embedded_offers
 from tests.conftest import FakeClient
 
 # --- Talentsoft ---------------------------------------------------------------------
@@ -834,3 +836,162 @@ def test_sncf_page_gives_the_text() -> None:
     (ad,) = add_details([JobAd("S", "Electricien", url=url, source="sncf")], [source])
     assert ad.description == "Publiée le 20/11/2026 Description du poste"
     assert complete_sncf(ad, "<html></html>") == ad
+
+
+# --- Taleez -----------------------------------------------------------------------------
+
+TALEEZ_LIST = "https://tehtris.taleez.com/api/careez"
+
+
+def _taleez_job(slug: str, label: str = "Service Delivery Manager", **extra: Any) -> dict[str, Any]:
+    job: dict[str, Any] = {
+        "label": label,
+        "slug": slug,
+        "publishDate": 1794989392000,
+        "location": {"city": "Bordeaux", "country": "FR", "postalCode": "33000"},
+    }
+    return job | extra
+
+
+@pytest.mark.spec("SRC-104", "SRC-01")
+def test_taleez_jobs_become_ads() -> None:
+    answer = {
+        "jobs": [
+            _taleez_job("service-delivery-manager-bordeaux-tehtris-cdi"),
+            _taleez_job("sans-lieu", "Analyste SOC", location=None, publishDate="hier"),
+            _taleez_job("sans-titre", label=""),
+            {"label": "Sans slug"},
+            "pas un objet",
+        ]
+    }
+    first, second = ads_taleez("TEHTRIS", answer)
+    assert (first.title, first.location, first.published_on, first.source) == (
+        "Service Delivery Manager",
+        "Bordeaux, FR",
+        "2026-11-18",
+        "taleez",
+    )
+    assert first.url == "https://taleez.com/apply/service-delivery-manager-bordeaux-tehtris-cdi"
+    assert (second.title, second.location, second.published_on) == ("Analyste SOC", "", "")
+    assert ads_taleez("TEHTRIS", None) == []
+
+
+@pytest.mark.spec("SRC-103")
+def test_taleez_reads_the_site_list_once() -> None:
+    answer = {"jobs": [_taleez_job("a"), _taleez_job("b"), _taleez_job("a")]}
+    client = FakeClient({TALEEZ_LIST: answer})
+    target = TargetCompany(name="TEHTRIS", ats="taleez", identifier="https://tehtris.taleez.com/en")
+    source = source_for(target, client, ())
+    assert isinstance(source, SourceTaleez)
+    assert [ad.url for ad in source.collect()] == [
+        "https://taleez.com/apply/a",
+        "https://taleez.com/apply/b",
+    ]
+    assert client.calls == [(TALEEZ_LIST, {})]
+    # An unreadable answer gives no ad.
+    assert SourceTaleez(FakeClient({}), target).collect() == []
+
+
+@pytest.mark.spec("SRC-105", "SRC-51", "SRC-02")
+def test_taleez_page_gives_the_text_and_the_profile() -> None:
+    url = "https://taleez.com/apply/a"
+    posting = {
+        "@type": "JobPosting",
+        "title": "Service Delivery Manager MDR - F/M/X",
+        "description": "<p><strong>CONTEXTE</strong></p><p>Au sein du MDR.</p>",
+        "qualifications": "<ul><li>5 ans minimum</li></ul>",
+        "datePosted": "2026-11-18T09:09:52+0100",
+    }
+    page = f'<script type="application/ld+json">{json.dumps(posting)}</script>'
+    source = SourceTaleez(
+        FakeClient({url: page}), TargetCompany(name="T", identifier="t.taleez.com")
+    )
+    (ad,) = add_details(
+        [JobAd("T", "Service Delivery Manager", url=url, source="taleez")], [source]
+    )
+    assert ad.title == "Service Delivery Manager MDR - F/M/X"
+    assert ad.description == "CONTEXTE Au sein du MDR.\n5 ans minimum"
+    assert ad.published_on == "2026-11-18"
+    without_profile = page.replace("qualifications", "autre")
+    assert complete_taleez(ad, without_profile).description == "CONTEXTE Au sein du MDR."
+    assert complete_taleez(ad, "<html></html>") == ad
+
+
+# --- WeRecruit --------------------------------------------------------------------------
+
+WERECRUIT_SITE = "https://careers.werecruit.io/en/unseenlabs"
+
+
+def _werecruit_offer(number: int, **extra: Any) -> dict[str, Any]:
+    offer: dict[str, Any] = {
+        "Id": f"id-{number}",
+        "Title": {"fr-fr": f"Ingénieur logiciel {number}"},
+        "TitleTranslated": f"Ingénieur logiciel {number} F/H",
+        "Url": f"{WERECRUIT_SITE}/offers/ingenieur-logiciel-{number}",
+        "Address_City": "Cesson-Sévigné",
+        "Address_State": "FR",
+        "PublicationStartDate": "2026-11-20T10:40:36.2824107+00:00",
+    }
+    return offer | extra
+
+
+def _werecruit_page(offers: list[Any]) -> str:
+    return (
+        "<script>window.didomiOnReady = window.didomiOnReady || [];\n"
+        f"window.allOffers = {json.dumps(offers)};\n"
+        'window.offersConfig = {"count":6,"step":10};</script>'
+    )
+
+
+@pytest.mark.spec("SRC-107", "SRC-01")
+def test_werecruit_offers_become_ads() -> None:
+    page = _werecruit_page(
+        [
+            _werecruit_offer(1),
+            _werecruit_offer(2, TitleTranslated="", Address_State=None),
+            _werecruit_offer(3, TitleTranslated="", Title={}),
+            _werecruit_offer(4, Url=""),
+        ]
+    )
+    first, second = ads_werecruit("Unseenlabs", page)
+    assert (first.title, first.location, first.published_on, first.source) == (
+        "Ingénieur logiciel 1 F/H",
+        "Cesson-Sévigné, FR",
+        "2026-11-20",
+        "werecruit",
+    )
+    assert first.url == f"{WERECRUIT_SITE}/offers/ingenieur-logiciel-1"
+    assert (second.title, second.location) == ("Ingénieur logiciel 2", "Cesson-Sévigné")
+
+
+@pytest.mark.spec("SRC-106")
+def test_werecruit_reads_the_list_embedded_in_the_home_page() -> None:
+    offers = [_werecruit_offer(n) for n in range(8)] + [_werecruit_offer(3)]
+    client = FakeClient({WERECRUIT_SITE: _werecruit_page(offers)})
+    target = TargetCompany(name="Unseenlabs", ats="werecruit", identifier=WERECRUIT_SITE + "/")
+    source = source_for(target, client, ())
+    assert isinstance(source, SourceWeRecruit)
+    assert len(source.collect()) == 8  # more than the 6 shown; offer 3, twice, kept once
+    assert client.calls == [(WERECRUIT_SITE, {})]
+    # A page without the list, or with an unreadable one, gives no ad.
+    assert embedded_offers("<html></html>") == []
+    assert embedded_offers("window.allOffers = [{oops};") == []
+
+
+@pytest.mark.spec("SRC-108", "SRC-51")
+def test_werecruit_page_gives_the_text_from_escaped_data() -> None:
+    url = f"{WERECRUIT_SITE}/offers/ingenieur-logiciel-1"
+    posting = {
+        "@type": "JobPosting",
+        "title": "Ingénieur IA - Data Scientist F/H",
+        "description": "\u003cp\u003eAfin de poursuivre son d&eacute;veloppement.\u003c/p\u003e",
+        "datePosted": "2026-11-10T12:59:21+00:00",
+    }
+    page = f'<script type="application/ld&#x2B;json">{json.dumps(posting)}</script>'
+    source = SourceWeRecruit(
+        FakeClient({url: page}), TargetCompany(name="G", identifier=WERECRUIT_SITE)
+    )
+    (ad,) = add_details([JobAd("G", "Ingénieur IA", url=url, source="werecruit")], [source])
+    assert ad.title == "Ingénieur IA - Data Scientist F/H"
+    assert ad.description == "Afin de poursuivre son développement."
+    assert ad.published_on == "2026-11-10"

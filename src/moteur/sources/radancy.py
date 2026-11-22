@@ -19,8 +19,10 @@ from moteur.config import TargetCompany
 from moteur.models import JobAd
 from moteur.sources.base import HttpClient, items, plain_text, string, table
 
+# The type may be written escaped, `application/ld&#x2B;json` (WeRecruit, SRC-108).
 _DATA = re.compile(
-    r'<script[^>]*type="application/ld\+json"[^>]*>(.*?)</script>', re.DOTALL | re.IGNORECASE
+    r'<script[^>]*type="application/ld(?:\+|&#x2B;|&#43;)json"[^>]*>(.*?)</script>',
+    re.DOTALL | re.IGNORECASE,
 )
 
 

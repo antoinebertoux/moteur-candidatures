@@ -27,6 +27,11 @@ from tests.conftest import FakeClient
             "https://thales.wd3.myworkdayjobs.com/fr-FR/Careers/job/1",
             ("workday", "https://thales.wd3.myworkdayjobs.com/fr-FR/Careers"),
         ),
+        ("https://tehtris.taleez.com/en", ("taleez", "tehtris.taleez.com")),
+        (
+            "https://careers.werecruit.io/fr/glimps/offres/product-owner-6088b5",
+            ("werecruit", "careers.werecruit.io/fr/glimps"),
+        ),
     ],
 )
 def test_address_gives_tool_and_identifier(address: str, expected: tuple[str, str]) -> None:
@@ -45,6 +50,17 @@ def test_company_page_is_read_for_the_first_tool_link() -> None:
     client = FakeClient({"https://acme.ai/careers": page})
     detection = detect("acme.ai/careers", client)
     assert (detection.ats, detection.identifier) == ("ashby", "acme-ai")
+
+
+@pytest.mark.spec("CLI-04", "CLI-05")
+def test_taleez_service_hosts_are_not_a_company_site() -> None:
+    page = (
+        '<img src="https://files.taleez.com/files/commons/social-share-fr.png">'
+        '<a href="https://bertintechnologies.taleez.com/en/">Nos offres</a>'
+    )
+    client = FakeClient({"https://www.bertin-technologies.com/careers/": page})
+    detection = detect("https://www.bertin-technologies.com/careers/", client)
+    assert (detection.ats, detection.identifier) == ("taleez", "bertintechnologies.taleez.com")
 
 
 @pytest.mark.spec("CLI-05")

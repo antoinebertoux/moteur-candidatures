@@ -49,6 +49,8 @@ _EXCLUDED_DOMAINS = (
     "avature.net",
     "magnet.work",
     "gestmax.fr",
+    "taleez.com",
+    "werecruit.io",
     "tmp.com",
     "francetravail.fr",
     "pole-emploi.fr",

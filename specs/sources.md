@@ -70,7 +70,8 @@ stays empty.
   | workable | `apply.workable.com/api/v1/widget/accounts/<id>?details=true` |
 
   Workday, Radancy, Welcome Kit, Talentsoft, Oracle, SuccessFactors, Phenom, Avature,
-  Magnet, Gestmax, the sitemap of offers, McKinsey and SNCF have sections of their own below. A company without a supported ATS cannot become a
+  Magnet, Gestmax, Taleez, WeRecruit, the sitemap of offers, McKinsey and SNCF have
+  sections of their own below. A company without a supported ATS cannot become a
   source.
 - **SRC-33** · Greenhouse boards hosted in Europe: an identifier written `eu:<id>` is
   queried at `boards-api.eu.greenhouse.io/v1/boards/<id>/jobs?content=true`.
@@ -368,3 +369,44 @@ public search address, `emploi.sncf.com/internal-gw/search`, without any key; th
 - **SRC-102** · The page of each **retained** ad is opened (as in SRC-24): the
   `description` of its job posting (the page's structured data, plain SRC-02) becomes
   the ad text. A page without it leaves the ad unchanged.
+
+## Taleez
+
+Career sites built on Taleez (for instance `tehtris.taleez.com`,
+`bertintechnologies.taleez.com`). The site is a JavaScript page that reads every listed
+job from a public address, `https://<host>/api/careez`, without any key; each ad's page,
+`taleez.com/apply/<slug>`, describes it with `JobPosting` data.
+
+- **SRC-103** · The identifier is the career site host (`tehtris.taleez.com`). The
+  source reads `https://<host>/api/careez` once, without search terms: each entry of its
+  `jobs` list is an ad. An unreadable answer gives no ad. The same ad (same `slug`) is
+  kept once.
+- **SRC-104** · From each job: title = `label`; link =
+  `https://taleez.com/apply/<slug>`; location = its city followed by its country code
+  (« Bordeaux, FR »), empty when the job has no location; date = the day of
+  `publishDate` (milliseconds since 1970). A job without a `label` or a `slug` is
+  skipped (SRC-01).
+- **SRC-105** · The page of each **retained** ad is opened and read as in SRC-51 (title,
+  text, date); its `qualifications` (the profile sought), when present, follow the
+  description in the text. A page without `JobPosting` data leaves the ad unchanged.
+
+## WeRecruit
+
+Career sites built on WeRecruit (`careers.werecruit.io/<language>/<company>`, for
+instance `careers.werecruit.io/fr/glimps`, `careers.werecruit.io/en/unseenlabs`). The
+home page holds the full list of the company's offers in its code (`window.allOffers`),
+even though it shows only 6 of them at first; each offer's page describes it with
+`JobPosting` data. Some sites answer in one language only, so the language segment is
+part of the identifier.
+
+- **SRC-106** · The identifier is the career site address with its language, as shown in
+  the browser (`careers.werecruit.io/en/unseenlabs`). The source reads that page once,
+  without search terms, and keeps each offer of its embedded list. A page without that
+  list, or an unreadable one, gives no ad. The same ad (same `Id`) is kept once.
+- **SRC-107** · From each offer: title = `TitleTranslated` (the first value of `Title`
+  when empty); link = `Url`; location = `Address_City` followed by `Address_State`, the
+  country code (« Cesson-Sévigné, FR »); date = the day of `PublicationStartDate`. An
+  offer without a title or a link is skipped (SRC-01).
+- **SRC-108** · The page of each **retained** ad is opened and read as in SRC-51 (title,
+  text, date); its data block is found even when its type is written escaped
+  (`application/ld&#x2B;json`). A page without `JobPosting` data leaves the ad unchanged.

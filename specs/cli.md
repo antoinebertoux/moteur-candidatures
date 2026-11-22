@@ -30,7 +30,10 @@
   `jobs.smartrecruiters.com/<id>`, `<id>.recruitee.com`, `<id>.teamtailor.com`,
   `job-boards.eu.greenhouse.io/<id>` (identifier `eu:<id>`, SRC-33),
   `apply.workable.com/<id>` give the tool and identifier; a `myworkdayjobs.com` address
-  gives `workday` with the address as identifier (SRC-40).
+  gives `workday` with the address as identifier (SRC-40); `<x>.taleez.com` gives
+  `taleez` with that host as identifier (SRC-103), and
+  `careers.werecruit.io/<language>/<company>` gives `werecruit` with that address as
+  identifier, without what follows the company (SRC-106).
 - **CLI-05** · Any other address (the company's own career page) is downloaded once and
   the first link matching CLI-04 found in it is used. None found: the address is reported
   as "unrecognised tool", and the other addresses carry on.

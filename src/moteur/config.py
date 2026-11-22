@@ -34,6 +34,8 @@ AtsType = Literal[
     "mckinsey",
     "gestmax",
     "sncf",
+    "taleez",
+    "werecruit",
     "",
 ]
 

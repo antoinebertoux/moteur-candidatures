@@ -58,6 +58,8 @@ and the tool behind it. Supported tools and what `identifiant` is:
 | `magnet` | a Magnet by Hellowork career site (calls `api.magnet.work`, e.g. `jobs.fivesgroup.com`) | the host |
 | `gestmax` | a Gestmax career site (`<x>.gestmax.fr`) | the address of its search list of every ad (`<x>.gestmax.fr/search/index/frontsearchtab_id/<n>`, or `<x>.gestmax.fr/search/index` when the list is a table) |
 | `sncf` | the SNCF group's site, `emploi.sncf.com` | the group company's number in the site's « company » filter (`6684` SNCF Réseau, `6685` SNCF Voyageurs) |
+| `taleez` | a Taleez career site (`<x>.taleez.com`, ad links `taleez.com/apply/…`) | the host (e.g. `tehtris.taleez.com`) |
+| `werecruit` | a WeRecruit career site (`careers.werecruit.io/<language>/<company>`) | that address with its language, as shown in the browser (e.g. `careers.werecruit.io/en/unseenlabs`) |
 | `sitemap` | an in-house career site whose `robots.txt` sitemap lists every offer, each page holding `JobPosting` data | the address the offers sit under (e.g. `careers.societegenerale.com/offres-d-emploi/`) |
 
 When you are not sure of the identifier, give the career page as `adresse` instead of
