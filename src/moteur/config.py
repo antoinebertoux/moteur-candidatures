@@ -24,6 +24,11 @@ AtsType = Literal[
     "radancy",
     "workable",
     "welcomekit",
+    "talentsoft",
+    "oracle",
+    "successfactors",
+    "phenom",
+    "avature",
     "",
 ]
 

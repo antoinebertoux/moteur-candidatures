@@ -13,6 +13,7 @@ from moteur.sources.ats import (
     ads_teamtailor,
     smartrecruiters_searches,
 )
+from moteur.sources.base import SourceError
 from moteur.sources.workday import SourceWorkday, ads_workday, split_address, workday_description
 from tests.conftest import FakeClient
 
@@ -324,3 +325,30 @@ def test_smartrecruiters_without_keywords_or_countries_keeps_the_plain_address()
     client = PagedSmartRecruiters({})
     _smartrecruiters(client)
     assert client.calls == [(URLS["smartrecruiters"].format(id="Acme1"), {"limit": "100"})]
+
+
+class _BusyWorkday(FakeClient):
+    """Workday client refusing the first `refusals` pages with HTTP 429."""
+
+    def __init__(self, refusals: int) -> None:
+        super().__init__({})
+        self.refusals = refusals
+
+    def post_json(self, url: str, *, body: Any, headers: Any = None) -> Any:
+        self.calls.append((url, dict(body)))
+        if self.refusals:
+            self.refusals -= 1
+            raise SourceError(f"{url}: HTTP 429: busy")
+        return {"total": 1, "jobPostings": [{"title": "Data", "externalPath": "/job/1"}]}
+
+
+@pytest.mark.spec("SRC-43")
+def test_workday_pauses_when_still_refused() -> None:
+    target = TargetCompany(
+        name="T", ats="workday", identifier="https://t.wd3.myworkdayjobs.com/C", searches=("ia",)
+    )
+    pauses: list[float] = []
+    assert len(SourceWorkday(_BusyWorkday(2), target, pauses.append).collect()) == 1
+    assert pauses == [30.0, 30.0]
+    with pytest.raises(SourceError, match="429"):
+        SourceWorkday(_BusyWorkday(3), target, pauses.append).collect()

@@ -24,6 +24,17 @@
 #   workable: apply.workable.com/<id>
 #   welcomekit: the address of the career page hosted by Welcome to the Jungle
 #               (e.g. jobs.zama.org); welcometothejungle.com itself blocks robots
+#   talentsoft: the career site's host (e.g. casa-cacib-recrute.talent-soft.com),
+#               read through its RSS feed
+#   oracle: the career page address
+#           (https://<host>/hcmUI/CandidateExperience/en/sites/<site>),
+#           searched with [criteres] recherches
+#   successfactors: the career site's host (e.g. jobsearch.alstom.com), searched with
+#                   [criteres] recherches
+#   phenom: the career site's address with country and language
+#           (e.g. careers.bcg.com/global/en), searched with [criteres] recherches
+#   avature: the portal's address (e.g. jobs.orano.group/fr_FR/jobs), searched with
+#            [criteres] recherches (20 ads per term)
 
 [[entreprises]]
 nom = "Thales"
@@ -276,5 +287,113 @@ ats = "smartrecruiters"
 identifiant = "SaintGobain"
 site = "https://www.saint-gobain.com/en/careers"
 secteur = "chimie-materiaux"
+taille = "grand-groupe"
+pays = []
+
+[[entreprises]]
+nom = "Air Liquide"
+ats = "workday"
+identifiant = "https://airliquidehr.wd3.myworkdayjobs.com/AirLiquideExternalCareer"
+site = "https://www.airliquide.com/careers"
+secteur = "chimie-materiaux"
+taille = "grand-groupe"
+pays = []
+
+[[entreprises]]
+nom = "IQVIA"
+ats = "workday"
+identifiant = "https://iqvia.wd1.myworkdayjobs.com/IQVIA"
+site = "https://jobs.iqvia.com"
+secteur = "pharmacie-biotech"
+taille = "grand-groupe"
+pays = []
+
+[[entreprises]]
+nom = "MBDA UK"
+ats = "workday"
+identifiant = "https://mbda.wd3.myworkdayjobs.com/MBDA-UK"
+site = "https://www.mbda-systems.com"
+secteur = "defense"
+taille = "grand-groupe"
+pays = ["gb"]
+
+[[entreprises]]
+nom = "MBDA Italia"
+ats = "workday"
+identifiant = "https://mbda.wd3.myworkdayjobs.com/it-IT/MBDA-Italy"
+site = "https://www.mbda-systems.com"
+secteur = "defense"
+taille = "grand-groupe"
+pays = ["it"]
+
+[[entreprises]]
+nom = "Crédit Agricole CIB"
+ats = "talentsoft"
+identifiant = "casa-cacib-recrute.talent-soft.com"
+site = "https://www.ca-cib.fr"
+secteur = "banque"
+taille = "grand-groupe"
+pays = []
+
+[[entreprises]]
+nom = "LCL"
+ats = "talentsoft"
+identifiant = "casa-lcl-recrute.talent-soft.com"
+site = "https://www.lcl.fr"
+secteur = "banque"
+taille = "grand-groupe"
+pays = ["fr"]
+
+[[entreprises]]
+nom = "Dassault Aviation"
+ats = "talentsoft"
+identifiant = "carriere.dassault-aviation.com"
+site = "https://www.dassault-aviation.com"
+secteur = "aeronautique-spatial"
+taille = "grand-groupe"
+pays = []
+
+[[entreprises]]
+nom = "Technip Energies"
+ats = "oracle"
+identifiant = "https://hcxg.fa.em2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1"
+site = "https://www.ten.com"
+secteur = "energie"
+taille = "grand-groupe"
+pays = []
+
+[[entreprises]]
+nom = "Alstom"
+ats = "successfactors"
+identifiant = "jobsearch.alstom.com"
+site = "https://www.alstom.com"
+secteur = "industrie"
+taille = "grand-groupe"
+pays = []
+
+[[entreprises]]
+nom = "IDEMIA"
+ats = "successfactors"
+identifiant = "careers.idemia.com"
+site = "https://www.idemia.com"
+secteur = "cybersecurite"
+taille = "grand-groupe"
+pays = []
+
+[[entreprises]]
+nom = "BCG"
+ats = "phenom"
+identifiant = "careers.bcg.com/global/en"
+site = "https://www.bcg.com"
+secteur = "conseil"
+taille = "grand-groupe"
+pays = []
+
+[[entreprises]]
+nom = "Orano"
+ats = "avature"
+identifiant = "jobs.orano.group/fr_FR/jobs"
+site = "https://www.orano.group"
+secteur = "energie"
 taille = "grand-groupe"
 pays = []

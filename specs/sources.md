@@ -20,7 +20,8 @@ stays empty.
 - **SRC-06** · A server error (HTTP 500 to 599) is retried once, after 2 s. Still an
   error after that: source error (SRC-03).
 - **SRC-05** · A source running several searches (Choisir le service public: one per
-  keyword and pass; Workday: one per keyword) runs them in parallel, at most 4 at a time.
+  keyword and pass; Workday, Oracle, SuccessFactors, Phenom, Avature: one per keyword)
+  runs them in parallel, at most 4 at a time.
   The pages of one search are read in order. The result does not depend on which search
   answers first: ads are merged in the order of the searches, then deduplicated.
 
@@ -66,7 +67,9 @@ stays empty.
   | teamtailor | `<id>.teamtailor.com/jobs.rss` (RSS feed) |
   | workable | `apply.workable.com/api/v1/widget/accounts/<id>?details=true` |
 
-  A company without a supported ATS cannot become a source.
+  Workday, Radancy, Welcome Kit, Talentsoft, Oracle, SuccessFactors, Phenom and Avature
+  have sections of their own below. A company without a supported ATS cannot become a
+  source.
 - **SRC-33** · Greenhouse boards hosted in Europe: an identifier written `eu:<id>` is
   queried at `boards-api.eu.greenhouse.io/v1/boards/<id>/jobs?content=true`.
 - **SRC-34** · Teamtailor career sites on the company's own domain: an identifier that
@@ -103,6 +106,10 @@ stays empty.
 - **SRC-42** · The page of each **retained** ad is opened (as in SRC-24) through the site's
   public detail address (`/wday/cxs/<tenant>/<site>/job/<path>`): its description
   (plain, SRC-02) becomes the ad text. An unreadable detail leaves the ad without text.
+- **SRC-43** · Workday sites answer "too many requests" (HTTP 429) to bursts, for a few
+  seconds, which SRC-04's short waits do not always cover. A search page still refused
+  with 429 after SRC-04 is asked again after a 30 s pause, at most twice; only then does
+  the source fail (SRC-03).
 
 ## Radancy (TalentBrew)
 
@@ -164,3 +171,94 @@ allows everything.
 - **SRC-74** · The page of each **retained** ad is opened and read as in SRC-61; its text
   replaces the provisional one, preceded by the same experience sentence. A page without
   text blocks leaves the ad unchanged.
+
+## Talentsoft (Cegid)
+
+Career sites built on Talentsoft (for instance `casa-cacib-recrute.talent-soft.com` for
+Crédit Agricole CIB, or `carriere.dassault-aviation.com`). Each one publishes all its ads,
+with their full text, in one public RSS feed.
+
+- **SRC-80** · The identifier is the career site host. The source reads
+  `https://<host>/handlers/offerRss.ashx?LCID=1036&top=1000` (the feed holds only 20
+  ads without `top`). An unreadable feed gives no ad.
+- **SRC-81** · From each item: title = the item's title without its reference prefix
+  (`2026-110801 - Originateur H/F` → `Originateur H/F`); link = the item's link; text =
+  its description (plain, SRC-02); date = the day of `pubDate` (YYYY-MM-DD); location =
+  the item's third `category` (the first two are the job family and the contract), empty
+  when there are fewer than three.
+
+## Oracle Recruiting Cloud
+
+Career sites of Oracle's recruiting tool (for instance Technip Energies,
+`hcxg.fa.em2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1`). The page itself
+queries a public search address of the same host.
+
+- **SRC-85** · The identifier is the career page address as shown in the browser
+  (`https://<host>/hcmUI/CandidateExperience/<language>/sites/<site>`, anything after the
+  site ignored). An address without `/sites/<site>` is rejected.
+- **SRC-86** · Each term of `[criteres] recherches` (CONF-11) is searched at
+  `https://<host>/hcmRestApi/resources/latest/recruitingCEJobRequisitions`, 25 ads per
+  page, at most 5 pages; a search stops when a page is incomplete or the announced total
+  (`TotalJobsCount`) is reached. Searches run as in SRC-05. An ad found by several
+  keywords (same `Id`) is kept once.
+- **SRC-87** · From each result: title = `Title`, location = `PrimaryLocation`, date =
+  `PostedDate`, no text (see SRC-88), link =
+  `https://<host>/hcmUI/CandidateExperience/<language>/sites/<site>/job/<Id>`.
+- **SRC-88** · The details of each **retained** ad are read (as in SRC-24) from
+  `recruitingCEJobRequisitionDetails` on the same host: its description,
+  responsibilities and qualifications (plain, SRC-02), one after the other, become the
+  ad text. Unreadable details leave the ad without text.
+
+## SAP SuccessFactors
+
+Career sites built with SuccessFactors' site builder (for instance
+`jobsearch.alstom.com`, `careers.idemia.com`). Their search page is allowed to robots;
+their RSS feeds (`/services/`) are not.
+
+- **SRC-90** · The identifier is the career site host. Each term of `[criteres]
+  recherches` (CONF-11) is searched at `https://<host>/search/?q=<term>&startrow=<n>`,
+  and, when `[criteres] pays` is set, once per country with
+  `optionsFacetsDD_country=<CODE>` (upper case), as in SRC-35. 25 ads per page, at most 5
+  pages; a search stops when a page has fewer than 25 ads or the announced total
+  (« Results 1 – 25 of N ») is reached. Searches run as in SRC-05. An ad found by several
+  searches (same link) is kept once.
+- **SRC-91** · From each result row: title and link (`https://<host>/job/…`) from the
+  title link, location from the location column ("City, FR, 92400"); the date is left
+  empty, since its format depends on the site's language.
+- **SRC-92** · The page of each **retained** ad is opened (as in SRC-24): its
+  `jobdescription` block (plain, SRC-02) becomes the ad text. A page without that block
+  leaves the ad unchanged.
+
+## Phenom
+
+Career sites built on Phenom (for instance `careers.bcg.com/global/en`). The page
+queries a public search address of the same host, `/widgets`, which `robots.txt` allows.
+
+- **SRC-94** · The identifier is the career site address with its country and language
+  (`careers.bcg.com/global/en`): these two path segments give the search's `country`
+  (`global`) and `lang` (`en_global`). An address without them is rejected.
+- **SRC-95** · Each term of `[criteres] recherches` (CONF-11) is searched with a POST to
+  `https://<host>/widgets` (`ddoKey` = `refineSearch`), 50 ads per page, at most 5 pages;
+  a search stops when a page is incomplete or the announced total (`totalHits`) is
+  reached. Searches run as in SRC-05. An ad found by several keywords (same `jobId`) is
+  kept once. From each result: title, location (`location`, otherwise `city`), date (the
+  day of `postedDate`), link = `https://<host>/<country>/<language>/job/<jobId>`.
+- **SRC-96** · The page of each **retained** ad is opened and read as in SRC-51
+  (`JobPosting` data: title, text, date). A page without that data leaves the ad
+  unchanged.
+
+## Avature
+
+Career sites built on Avature (for instance `jobs.orano.group/fr_FR/jobs`). Their search page shows 6 ads at a time; their
+RSS feed gives the first 20 ads of a search.
+
+- **SRC-97** · The identifier is the career portal address (`<host>/<locale>/<portal>`).
+  Each term of `[criteres] recherches` (CONF-11) is searched once through the feed
+  `https://<host>/<locale>/<portal>/SearchJobs/feed/?search=<term>`, so at most 20 ads
+  per term. Searches run as in SRC-05. An ad found by several keywords (same link) is
+  kept once. From each item: title, link, date (the day of `pubDate`); no location nor
+  text.
+- **SRC-98** · The page of each **retained** ad is opened (as in SRC-24). Its fields
+  (label, value) give the location, « City, Country » (fields `City` and `Country`), and
+  the text: the values of 100 characters or more (plain, SRC-02), one after the other. A
+  page without fields leaves the ad unchanged.

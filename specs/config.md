@@ -23,11 +23,12 @@ catalogue is shipped with the tool and User's own companies are in the local dat
   two-letter ISO 3166-1 codes (`"fr"`, `"gb"`…, case ignored); empty or missing = every
   country. Any other value is rejected with a message quoting it. The engine holds no
   list of countries of its own: only sources that can search by country use it
-  (SmartRecruiters, SRC-35); the others rely on `lieux`.
+  (SmartRecruiters, SRC-35; SuccessFactors, SRC-90); the others rely on `lieux`.
 - **CONF-11** · `[criteres] recherches` is the one list of search terms, shared by every
   company and source: the words typed in the search box of the sites that cannot list
-  all their ads (Workday SRC-41, SmartRecruiters SRC-35, France Travail SRC-11, Choisir
-  le service public SRC-20, Station F SRC-71). Broad terms ("machine learning") rather
+  all their ads (Workday SRC-41, SmartRecruiters SRC-35, Oracle SRC-86, SuccessFactors
+  SRC-90, Phenom SRC-95, Avature SRC-97, France Travail SRC-11, Choisir le service public
+  SRC-20, Station F SRC-71). Broad terms ("machine learning") rather
   than titles: every ad found still has to pass `mots_cles` (FILT-01), and each term
   costs one search per company, so a short list keeps the number of requests low.
   The engine holds no default terms, since they depend on the job sought: the list is

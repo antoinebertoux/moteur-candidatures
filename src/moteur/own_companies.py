@@ -21,8 +21,13 @@ from moteur.local_db import LocalDb
 from moteur.models import normalise
 from moteur.selection import Choice
 from moteur.sources.ats import SourceAts
+from moteur.sources.avature import SourceAvature
 from moteur.sources.base import HttpClient, Source, SourceError
+from moteur.sources.oracle import SourceOracle
+from moteur.sources.phenom import SourcePhenom
 from moteur.sources.radancy import SourceRadancy
+from moteur.sources.successfactors import SourceSuccessFactors
+from moteur.sources.talentsoft import SourceTalentsoft
 from moteur.sources.welcomekit import SourceWelcomeKit
 from moteur.sources.workday import SourceWorkday
 
@@ -51,6 +56,16 @@ def source_for(
         return SourceRadancy(client, target)
     if target.ats == "welcomekit":
         return SourceWelcomeKit(client, target)
+    if target.ats == "talentsoft":
+        return SourceTalentsoft(client, target)
+    if target.ats == "oracle":
+        return SourceOracle(client, target)
+    if target.ats == "successfactors":
+        return SourceSuccessFactors(client, target, countries)
+    if target.ats == "phenom":
+        return SourcePhenom(client, target)
+    if target.ats == "avature":
+        return SourceAvature(client, target)
     if target.ats:
         return SourceAts(client, target, countries)
     return None

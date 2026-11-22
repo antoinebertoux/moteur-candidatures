@@ -42,14 +42,15 @@ ask Claude to find or add others. Engine B keeps these choices and companies;
   CAT-04, and two entries never have the same normalised name (ID-01). An invalid entry
   is rejected with a message naming the company, like CONF-03.
 - **CAT-08** · A company's recruiting tool (`ats`) is empty or one of: greenhouse, lever,
-  ashby, workday, smartrecruiters, recruitee, teamtailor, workable, radancy, welcomekit;
+  ashby, workday, smartrecruiters, recruitee, teamtailor, workable, radancy, welcomekit,
+  talentsoft, oracle, successfactors, phenom, avature;
   when set, `identifiant` is required. Its `site` and `linkedin`, when given, are http(s)
   addresses: they are the company's links of LNK-02. Any other value is rejected with a
   message naming the company and the field, and listing the accepted values.
 - **CAT-06** · The companies followed are the catalogue's plus User's own. An own company
   with the same normalised name as a catalogue entry replaces it entirely.
-- **CAT-07** · Every Workday or SmartRecruiters company, from the catalogue or User's
-  own, is searched with the same terms, `[criteres] recherches` (CONF-11), since the
+- **CAT-07** · Every company whose tool is searched by keyword (Workday, SmartRecruiters,
+  Oracle, SuccessFactors, Phenom, Avature), from the catalogue or User's own, is searched with the same terms, `[criteres] recherches` (CONF-11), since the
   catalogue cannot know the job sought. No company has search terms of its own.
 
 ## Default selection
@@ -97,8 +98,8 @@ career pages, and hands them to engine B, which checks each one before keeping i
   (CLI-04, CLI-05). An addition with both, or neither, is refused. When `site` is
   missing, it is `adresse`.
 - **CAT-22** · Before keeping a company, engine B queries its board once, as the
-  collection would (SRC-30 and following; Workday and SmartRecruiters with the first term
-  of `[criteres] recherches`). A board that answers is kept with the number of ads it
+  collection would (SRC-30 and following; tools searched by keyword, CAT-07, with the
+  first term of `[criteres] recherches`). A board that answers is kept with the number of ads it
   returned, zero included (the company may not be hiring right now). A source error
   (SRC-01, SRC-03) refuses the company with that error. Nothing is scored nor stored as
   an application: the next collection finds its ads.

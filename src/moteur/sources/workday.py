@@ -8,7 +8,8 @@ at once: its search is queried with a few keywords, page by page.
 from __future__ import annotations
 
 import re
-from collections.abc import Sequence
+import time
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, replace
 from urllib.parse import urlsplit
 
@@ -17,6 +18,7 @@ from moteur.models import JobAd
 from moteur.sources.base import (
     SEARCHES_IN_PARALLEL,
     HttpClient,
+    SourceError,
     in_parallel,
     items,
     plain_text,
@@ -26,6 +28,9 @@ from moteur.sources.base import (
 
 PAGE_SIZE = 20
 PAGES_MAX = 5
+# Still "too many requests" after the client's own retries (SRC-43).
+PAUSES_ON_429 = 2
+PAUSE_429 = 30.0
 _LANGUAGE = re.compile(r"^[a-z]{2}-[A-Z]{2}$")
 
 
@@ -80,11 +85,30 @@ def ads_workday(company: str, site: WorkdaySite, answer: object) -> list[JobAd]:
 
 
 class SourceWorkday:
-    def __init__(self, client: HttpClient, company: TargetCompany) -> None:
+    def __init__(
+        self,
+        client: HttpClient,
+        company: TargetCompany,
+        pause: Callable[[float], None] = time.sleep,
+    ) -> None:
         self._client = client
         self._company = company
         self._site = split_address(company.identifier)
         self._searches: Sequence[str] = company.searches
+        self._pause = pause
+
+    def _page(self, body: dict[str, object]) -> object:
+        """One search page; a lasting 429 is asked again after a pause (SRC-43)."""
+        for attempt in range(PAUSES_ON_429 + 1):
+            try:
+                return self._client.post_json(
+                    self._site.api, body=body, headers={"Accept": "application/json"}
+                )
+            except SourceError as error:
+                if "HTTP 429" not in str(error) or attempt == PAUSES_ON_429:
+                    raise
+                self._pause(PAUSE_429)
+        return None
 
     @property
     def name(self) -> str:
@@ -95,15 +119,13 @@ class SourceWorkday:
         found_ones: list[JobAd] = []
         total = 0
         for page in range(PAGES_MAX):
-            answer = self._client.post_json(
-                self._site.api,
-                body={
+            answer = self._page(
+                {
                     "appliedFacets": {},
                     "limit": PAGE_SIZE,
                     "offset": page * PAGE_SIZE,
                     "searchText": search,
-                },
-                headers={"Accept": "application/json"},
+                }
             )
             ads = ads_workday(self._company.name, self._site, answer)
             found_ones.extend(ads)
