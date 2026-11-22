@@ -255,3 +255,12 @@ site = "https://jobs.lever.co/veepee"
 secteur = "commerce-distribution"
 taille = "grand-groupe"
 pays = ["fr", "es", "it", "be", "nl"]
+
+[[entreprises]]
+nom = "Saint-Gobain"
+ats = "smartrecruiters"
+identifiant = "SaintGobain"
+site = "https://www.saint-gobain.com/en/careers"
+secteur = "chimie-materiaux"
+taille = "grand-groupe"
+pays = []
