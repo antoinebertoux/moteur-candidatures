@@ -105,6 +105,8 @@ class FranceTravail:
     searches: tuple[str, ...]
     departments: tuple[str, ...]
     published_since: int
+    own_searches: bool = False
+    """`[france_travail] recherches` is given: it replaces the shared terms (CONF-15)."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -116,6 +118,8 @@ class PublicService:
     domains: tuple[int, ...] = ()
     employers: tuple[int, ...] = ()
     pages_max: int = 3
+    own_searches: bool = False
+    """`[service_public] recherches` is given (CONF-15)."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -126,6 +130,8 @@ class StationF:
     searches: tuple[str, ...] = ()
     pages_max: int = 3
     published_since: int = 21
+    own_searches: bool = False
+    """`[station_f] recherches` is given (CONF-15)."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -185,6 +191,15 @@ class Config:
     """Companies of `catalogue/entreprises.toml` (CAT-01)."""
     companies: tuple[TargetCompany, ...] = ()
     """User's own companies, read from the local database (CAT-20, BASE-16)."""
+    default_criteria: Criteria | None = None
+    """The criteria of `config.toml` when User replaced some in the page (CONF-13)."""
+    replaced_criteria: tuple[str, ...] = ()
+    """The lists of CRITERIA_LISTS that User replaced (CONF-13)."""
+
+    @property
+    def criteria_defaults(self) -> Criteria:
+        """The criteria of `config.toml` (CONF-13)."""
+        return self.default_criteria or self.criteria
 
     @property
     def followed(self) -> tuple[TargetCompany, ...]:
@@ -277,6 +292,7 @@ def _public_service(table: Mapping[str, Any], searches: tuple[str, ...]) -> Publ
     return PublicService(
         enabled=_boolean(table, "actif", False),
         searches=_strings(table, "recherches") or searches,
+        own_searches=bool(_strings(table, "recherches")),
         domains=_identifiers(table, "domaines", DOMAINS),
         employers=_identifiers(table, "employeurs", EMPLOYERS),
         pages_max=pages_max,
@@ -293,6 +309,7 @@ def _station_f(table: Mapping[str, Any], searches: tuple[str, ...]) -> StationF:
     return StationF(
         enabled=_boolean(table, "actif", False),
         searches=_strings(table, "recherches") or searches,
+        own_searches=bool(_strings(table, "recherches")),
         pages_max=pages_max,
         published_since=published_since,
     )
@@ -429,6 +446,7 @@ def parse(
             searches=_strings(france_travail, "recherches") or searches,
             departments=_strings(france_travail, "departements"),
             published_since=_integer(france_travail, "publiee_depuis", 7),
+            own_searches=bool(_strings(france_travail, "recherches")),
         ),
         service_public=_public_service(_table(data, "service_public"), searches),
         paths=Paths(
@@ -448,6 +466,65 @@ def parse(
             "(see config.exemple.toml)"
         )
     return config
+
+
+# The lists of `[criteres]` User can replace in the page (CONF-13), with their field.
+CRITERIA_LISTS: dict[str, str] = {
+    "mots_cles": "keywords",
+    "exclusions": "exclusions",
+    "lieux": "locations",
+    "pays": "countries",
+    "recherches": "searches",
+}
+
+
+def clean_criterion(key: str, values: object) -> tuple[str, ...]:
+    """CONF-14: trimmed, empty values dropped, repeats kept once, then checked."""
+    if key not in CRITERIA_LISTS:
+        raise ConfigError(f"unknown criterion {key!r}")
+    if not isinstance(values, (list, tuple)) or not all(isinstance(v, str) for v in values):
+        raise ConfigError(f'"{key}" must be a list of strings')
+    kept: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        value = value.strip()
+        if key == "pays":
+            value = value.lower()
+        if value and normalise(value) not in seen:
+            seen.add(normalise(value))
+            kept.append(value)
+    if key == "pays":
+        _countries({"pays": kept})
+    if key == "recherches" and not kept:
+        raise ConfigError('"recherches" cannot be empty: the sites need at least one term')
+    return tuple(kept)
+
+
+def with_criteria(config: Config, replaced: Mapping[str, tuple[str, ...]]) -> Config:
+    """The configuration with the lists User replaced in the page (CONF-13, CONF-15).
+
+    Always starts from the criteria of `config.toml`, so it can be applied again.
+    """
+    defaults = config.criteria_defaults
+    kept = {key: values for key, values in replaced.items() if key in CRITERIA_LISTS}
+    fields: dict[str, Any] = {CRITERIA_LISTS[key]: values for key, values in kept.items()}
+    criteria = replace(defaults, **fields)
+    searches = criteria.searches
+    return replace(
+        config,
+        criteria=criteria,
+        default_criteria=defaults if kept else None,
+        replaced_criteria=tuple(key for key in CRITERIA_LISTS if key in kept),
+        france_travail=config.france_travail
+        if config.france_travail.own_searches
+        else replace(config.france_travail, searches=searches),
+        service_public=config.service_public
+        if config.service_public.own_searches
+        else replace(config.service_public, searches=searches),
+        station_f=config.station_f
+        if config.station_f.own_searches
+        else replace(config.station_f, searches=searches),
+    )
 
 
 def read_toml(path: Path) -> dict[str, Any]:

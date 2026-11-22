@@ -15,6 +15,7 @@ from moteur.config import (
     load_config,
     own_company,
     read_toml,
+    with_criteria,
 )
 from moteur.detection import detect
 from moteur.local_db import LocalDb
@@ -48,6 +49,8 @@ def load_with_own_companies(path: Path) -> Config:
     """`config.toml`, the catalogue and User's own companies from the database (CAT-06)."""
     config = load_config(path)
     with LocalDb(config.paths.base) as base:
+        # The criteria User replaced in the page apply to every command (CONF-13).
+        config = with_criteria(config, base.criteria())
         return replace(config, companies=base.own_companies())
 
 

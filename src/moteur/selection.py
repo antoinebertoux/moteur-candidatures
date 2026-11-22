@@ -2,16 +2,28 @@
 
 from __future__ import annotations
 
+import os
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, replace
 from typing import Any, Literal
 
-from moteur.config import SECTORS, SIZES, Config, TargetCompany
+from moteur.config import (
+    CRITERIA_LISTS,
+    SECTORS,
+    SIZES,
+    Config,
+    ConfigError,
+    Criteria,
+    TargetCompany,
+    clean_criterion,
+)
 from moteur.models import normalise
 
 Subject = Literal["entreprise", "secteur", "taille", "source"]
 Field = Literal["actif", "spontanee"]
 SUBJECTS: tuple[Subject, ...] = ("entreprise", "secteur", "taille", "source")
+CRITERION = "critere"
+"""The `objet` of a criterion replaced in the page (ECH-28, CONF-13)."""
 
 # Keyword sources (CAT-15): key -> (name shown, size it belongs to).
 SOURCES: dict[str, tuple[str, str]] = {
@@ -130,14 +142,36 @@ def configured(config: Config, source: str) -> bool:
     }[source]
 
 
+def source_on(config: Config, choices: Choices, source: str) -> bool:
+    """CAT-15: User's choice, otherwise `actif` in `config.toml`."""
+    chosen = choices.get("source", source)
+    return configured(config, source) if chosen is None else chosen
+
+
 def source_searched(config: Config, choices: Choices, source: str) -> bool:
-    """CAT-15: configured, not turned off, and its size not turned off."""
+    """CAT-15: turned on, and its size not turned off (France Travail's credentials: SRC-10)."""
     size = SOURCES[source][1]
-    return (
-        configured(config, source)
-        and choices.is_on("source", source)
-        and (not size or choices.is_on("taille", size))
-    )
+    return source_on(config, choices, source) and (not size or choices.is_on("taille", size))
+
+
+def has_credentials(source: str) -> bool:
+    """SRC-10: France Travail needs its two variables; the other sources need nothing."""
+    if source != "france_travail":
+        return True
+    return bool(os.environ.get("FRANCE_TRAVAIL_ID") and os.environ.get("FRANCE_TRAVAIL_SECRET"))
+
+
+def own_searches(config: Config, source: str) -> bool:
+    """The source has its own `recherches` in `config.toml` (CONF-15)."""
+    return {
+        "france_travail": config.france_travail.own_searches,
+        "service_public": config.service_public.own_searches,
+        "station_f": config.station_f.own_searches,
+    }[source]
+
+
+def _criterion(criteria: Criteria, key: str) -> list[str]:
+    return list(getattr(criteria, CRITERIA_LISTS[key]))
 
 
 def summary(config: Config, choices: Choices) -> dict[str, Any]:
@@ -178,16 +212,28 @@ def summary(config: Config, choices: Choices) -> dict[str, Any]:
             "nom": name,
             "taille": size,
             "configuree": configured(config, key),
-            "actif": choices.is_on("source", key),
-            "recherchee": source_searched(config, choices, key),
+            "actif": choices.get("source", key),
+            "identifiants": has_credentials(key),
+            "recherches_propres": own_searches(config, key),
+            "recherchee": source_searched(config, choices, key) and has_credentials(key),
         }
         for key, (name, size) in SOURCES.items()
+    ]
+    criteria = [
+        {
+            "cle": key,
+            "valeur": _criterion(config.criteria, key),
+            "defaut": _criterion(config.criteria_defaults, key),
+            "modifie": key in config.replaced_criteria,
+        }
+        for key in CRITERIA_LISTS
     ]
     return {
         "entreprises": companies,
         "secteurs": groups("secteur", SECTORS, "secteur"),
         "tailles": groups("taille", SIZES, "taille"),
         "sources": sources,
+        "criteres": criteria,
     }
 
 
@@ -197,7 +243,39 @@ def _flag(value: object, where: str) -> bool | None:
     raise SelectionError(f"{where}: must be true, false or null")
 
 
+@dataclass(frozen=True, slots=True)
+class Selection:
+    """The input of `selection` (ECH-28): the choices, and the criteria by list name."""
+
+    choices: list[Choice]
+    criteria: dict[str, tuple[str, ...] | None]
+
+
 def choices_from(entry: object, config: Config) -> list[Choice]:
+    """The choices of the input of `selection`, criteria left aside (ECH-28, ECH-29)."""
+    return selection_from(entry, config).choices
+
+
+def _criterion_choice(item: Mapping[str, Any], where: str) -> tuple[str, tuple[str, ...] | None]:
+    """A criterion of the page (CONF-13), checked by CONF-14."""
+    key = item.get("cle")
+    if not isinstance(key, str) or key not in CRITERIA_LISTS:
+        raise SelectionError(f"{where}: unknown critere {key!r}")
+    where = f"{where} (critere {key})"
+    unexpected = set(item) - {"objet", "cle", "valeur"}
+    if unexpected:
+        raise SelectionError(f"{where}: unexpected {', '.join(sorted(unexpected))}")
+    if "valeur" not in item:
+        raise SelectionError(f"{where}: nothing to change")
+    if item["valeur"] is None:
+        return key, None
+    try:
+        return key, clean_criterion(key, item["valeur"])
+    except ConfigError as error:
+        raise SelectionError(f"{where}: {error}") from error
+
+
+def selection_from(entry: object, config: Config) -> Selection:
     """Reads the input of `selection` (ECH-28); any fault rejects the whole input (ECH-29)."""
     if not isinstance(entry, Mapping) or not isinstance(entry.get("choix"), list):
         raise SelectionError('expected {"choix": [...]}')
@@ -208,11 +286,16 @@ def choices_from(entry: object, config: Config) -> list[Choice]:
         "source": set(SOURCES),
     }
     result: list[Choice] = []
+    criteria: dict[str, tuple[str, ...] | None] = {}
     for position, item in enumerate(entry["choix"], start=1):
         where = f"choice {position}"
         if not isinstance(item, Mapping):
             raise SelectionError(f"{where}: must be an object")
         subject = item.get("objet")
+        if subject == CRITERION:
+            name, values = _criterion_choice(item, where)
+            criteria[name] = values
+            continue
         if subject not in SUBJECTS:
             raise SelectionError(f"{where}: unknown objet {subject!r}")
         key = item.get("cle")
@@ -231,4 +314,4 @@ def choices_from(entry: object, config: Config) -> list[Choice]:
         result.extend(
             Choice(subject, key, field, _flag(item[field], f"{where} {field}")) for field in given
         )
-    return result
+    return Selection(result, criteria)

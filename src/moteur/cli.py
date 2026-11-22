@@ -32,8 +32,8 @@ from moteur.selection import (
     SOURCES,
     Choices,
     CompanyState,
-    configured,
     searched_companies,
+    source_on,
     source_searched,
     states,
 )
@@ -144,10 +144,11 @@ def companies_report(config: Config, choices: Choices) -> str:
     for key, (name, _size) in SOURCES.items():
         if source_searched(config, choices, key):
             searched = "searched"
-        elif not configured(config, key):
-            searched = "not searched: off in config.toml"
+        elif not source_on(config, choices, key):
+            chosen = choices.get("source", key) is not None
+            searched = "not searched: " + ("your choice" if chosen else "off in config.toml")
         else:
-            searched = "not searched: your choice"
+            searched = "not searched: size off"
         lines.append(f"  {name} {searched}")
     return "\n".join(lines)
 

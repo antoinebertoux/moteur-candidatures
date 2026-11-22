@@ -38,6 +38,19 @@ catalogue is shipped with the tool and User's own companies are in the local dat
 - **CONF-12** · `config.toml` lists no company: a `[[entreprises]]` array stops the
   engine with a message saying to run `moteur import-companies` (CLI-10), then to delete
   it from `config.toml`.
+- **CONF-13** · Five lists of `[criteres]` can be replaced by User in the page (PAGE-75):
+  `mots_cles`, `exclusions`, `lieux`, `pays` and `recherches`. A replaced list is kept in
+  the local database (BASE-17) and used instead of the one in `config.toml` everywhere the
+  engine uses it (filter FILT-01 to FILT-06, default selection CAT-10, searches CONF-11).
+  `config.toml` holds the defaults: a list User has not replaced follows `config.toml`,
+  and going back to the default uses `config.toml` again.
+- **CONF-14** · A list from the page is checked like one from `config.toml`: each value is
+  trimmed, empty values are dropped and a value repeated (accents and case ignored) is
+  kept once; `pays` codes as CONF-10; `recherches` cannot be empty (CONF-11). An empty
+  `mots_cles`, `exclusions` or `lieux` means "no filter", as in `config.toml`.
+- **CONF-15** · A source's own `recherches` (`[france_travail]`, `[service_public]`,
+  `[station_f]`, CONF-11) still replaces the shared list for that source, whether the
+  shared list comes from `config.toml` or from the page.
 - **CONF-06** · `config.exemple.toml` is always a valid configuration.
 - **CONF-07** · Paths derive from the location of `config.toml`: the `moteur.sqlite3`
   database and the `echange/` folder next to it; `latex/`, `Candidatures/` and

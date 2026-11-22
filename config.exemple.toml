@@ -23,6 +23,8 @@ generation = "sonnet"
 preparation = "sonnet"
 
 [criteres]
+# Defaults: "mots_cles", "exclusions", "lieux", "pays" and "recherches" can be replaced in
+# the page's Options panel (kept by engine B; "default" there comes back to this file).
 # At least one expression must appear in the title (whole words, accents ignored).
 mots_cles = [
   "data scientist", "machine learning engineer", "ml engineer", "ingenieur ia",
@@ -46,6 +48,8 @@ pays = []
 salaire_plancher = 0
 
 [france_travail]
+# "actif" here and in the sections below is the default: the Options panel can turn the
+# source on or off.
 # Free credentials on https://francetravail.io, given through the environment
 # variables FRANCE_TRAVAIL_ID and FRANCE_TRAVAIL_SECRET (or the .env file).
 actif = false

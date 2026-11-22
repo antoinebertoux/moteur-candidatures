@@ -93,6 +93,9 @@ cp config.exemple.toml config.toml   # then adapt profile and criteria
 Large groups and public bodies come with the tool, in
 [`catalogue/entreprises.toml`](catalogue/entreprises.toml): untick the ones that do not
 interest you in the page's **Options** panel (or check with `uv run moteur companies`).
+The same panel changes the search criteria (keywords, exclusions, locations, countries,
+search terms) and turns the keyword sources on or off: `config.toml` only gives the
+defaults.
 Your own companies (start-ups, small companies) are added by Claude: see
 [Adding companies](#adding-companies). `config.toml` lists no company.
 

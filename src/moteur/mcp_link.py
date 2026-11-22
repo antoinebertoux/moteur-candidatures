@@ -15,11 +15,11 @@ from mcp.server.mcpserver.exceptions import ToolError
 from mcp.types import ToolAnnotations
 
 from moteur import exchange
-from moteur.config import Config, ConfigError, Paths
+from moteur.config import Config, ConfigError, Paths, with_criteria
 from moteur.decisions import apply
 from moteur.local_db import LocalDb
 from moteur.own_companies import OwnCompanyError, add_companies, remove_companies
-from moteur.selection import SelectionError, choices_from, summary
+from moteur.selection import SelectionError, selection_from, summary
 from moteur.sources.base import HttpClient, HttpxClient
 
 NAME = "moteur"
@@ -75,7 +75,7 @@ def _no_config() -> Config:
 def companies(config: Config, paths: Paths) -> dict[str, Any]:
     """ECH-27: the companies followed and User's choices, read right now."""
     with LocalDb(paths.base) as base:
-        return summary(config, base.choices())
+        return summary(with_criteria(config, base.criteria()), base.choices())
 
 
 def record_selection(config: Config, paths: Paths, entry: object) -> dict[str, Any]:
@@ -83,10 +83,12 @@ def record_selection(config: Config, paths: Paths, entry: object) -> dict[str, A
 
     Raises `SelectionError` (ECH-29) before touching the database if one choice is invalid.
     """
-    choices = choices_from(entry, config)
+    selection = selection_from(entry, config)
     with LocalDb(paths.base) as base:
-        base.record_choices(choices)
-        return summary(config, base.choices())
+        base.record_choices(selection.choices)
+        base.record_criteria(selection.criteria)
+        # The criteria just recorded change the defaults of the companies (CAT-11).
+        return summary(with_criteria(config, base.criteria()), base.choices())
 
 
 def add_own_companies(
@@ -150,7 +152,10 @@ def server(
 
     @mcp.tool(
         name="selection",
-        description="Turns companies, sectors, sizes or sources on or off for engine B.",
+        description=(
+            "Turns companies, sectors, sizes or sources on or off for engine B, and replaces "
+            "its search criteria (mots_cles, exclusions, lieux, pays, recherches)."
+        ),
         annotations=ToolAnnotations(read_only_hint=False, destructive_hint=False),
     )
     # The parameter name is the tool's input key, sent by the page: it stays French.

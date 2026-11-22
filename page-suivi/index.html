@@ -122,7 +122,7 @@ dialog.texte::backdrop{background:rgba(0,0,0,.45)}
 dialog.texte .head{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--surface)}
 dialog.texte .head h2{font-family:var(--display);font-size:17px;margin:0}
 dialog.texte .fiche{border-top:0}
-/* Companies searched (PAGE-70 to PAGE-74). */
+/* Search options (PAGE-70 to PAGE-76). */
 .opts h3{font-family:var(--display);font-size:15px;margin:14px 0 6px}
 .opts .grp{display:flex;flex-wrap:wrap;gap:6px 14px}
 .opts .tick{display:inline-flex;flex-direction:row;align-items:center;gap:6px;font-size:14px;color:var(--ink)}
@@ -133,6 +133,15 @@ dialog.texte .fiche{border-top:0}
 .opts .co{display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px;padding:5px 0;border-bottom:1px solid var(--line)}
 .opts .co .name{font-weight:500;min-width:0;flex:1 1 160px;overflow-wrap:anywhere}
 .opts .co.dim .name{color:var(--muted)}
+.opts .crit{margin:8px 0 12px}
+.opts .crit .lab{font-size:14px;font-weight:600}
+.opts .crit .chips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+.opts .crit .val{display:inline-flex;align-items:center;gap:2px;border-radius:999px;padding:2px 4px 2px 10px;font-size:13px;background:var(--sunken);color:var(--ink);overflow-wrap:anywhere}
+.opts .crit .val button{border:0;background:transparent;padding:0 6px;font-size:14px;line-height:1;color:var(--muted)}
+.opts .crit .val button:hover{color:var(--bad)}
+.opts .crit input[type=text]{max-width:320px}
+.opts .crit .hint{font-size:12px;color:var(--muted);margin:4px 0 0}
+.opts .crit .err{font-size:12px;color:var(--bad);margin:4px 0 0}
 .opts .why{font-size:12px;color:var(--warn)}
 .opts input[type=text]{max-width:320px}
 .opts fieldset{border:0;margin:0;padding:0;min-width:0}
@@ -203,7 +212,7 @@ dialog.texte .fiche{border-top:0}
   </dialog>
 
   <dialog class="texte" id="opt-dialog" aria-labelledby="opt-dialog-title">
-    <div class="head"><h2 id="opt-dialog-title" data-i18n="opt_title">Companies searched</h2><div class="row"><button id="opt-dialog-close" class="ghost" data-i18n="close">Close</button></div></div>
+    <div class="head"><h2 id="opt-dialog-title" data-i18n="opt_title">Search options</h2><div class="row"><button id="opt-dialog-close" class="ghost" data-i18n="close">Close</button></div></div>
     <div class="fiche opts" id="opt-body"></div>
   </dialog>
 
@@ -284,12 +293,22 @@ en:{
   db_slow:"The database is not answering yet. Data will show as soon as it can be reached.",
   db_stopped:"The connection to the database stopped ({code}). Reload the page to resume.",db_load_failed:"The database could not be loaded.",
   lang_not_saved:"Language changed, but the choice could not be saved: it will not be remembered.",
-  options:"Options",opt_title:"Companies searched",
+  options:"Options",opt_title:"Search options",
   opt_need_engine:"These choices are kept by engine B on the PC: open this page in the Claude desktop app with engine B running.",
   opt_loading:"Reading engine B…",
   opt_scope:"These choices apply to engine B only, not to the scheduled tasks.",
   opt_sources:"Sources searched by keyword",opt_sizes:"Company sizes",opt_sectors:"Sectors",
-  opt_companies:"Companies",opt_not_configured:"not configured",opt_off_by_size:"off with its size",
+  opt_companies:"Companies",opt_no_credentials:"credentials missing (.env)",opt_off_by_size:"off with its size",
+  opt_own_terms:"own search terms in config.toml",opt_criteria:"Search criteria",
+  opt_criteria_when:"Changes apply from the next collection; the ads already in the list stay.",
+  crit_mots_cles:"Keywords",crit_exclusions:"Exclusions",crit_lieux:"Locations",crit_pays:"Countries",crit_recherches:"Search terms",
+  crit_hint_mots_cles:"The title must contain at least one. Empty = no filter.",
+  crit_hint_exclusions:"A title containing one is rejected.",
+  crit_hint_lieux:"An ad's location must contain one of them (e.g. \u201clyon\u201d, \u201c69\u201d, \u201cremote\u201d). Empty = anywhere. An ad without location always passes.",
+  crit_hint_pays:"Two-letter codes (fr, gb, be…). Used by the sites that search by country and to pick the catalogue companies by default. Empty = every country.",
+  crit_hint_recherches:"Typed in the search box of the sites that cannot list all their ads. Each term costs one search per company on those sites: keep a few broad terms.",
+  crit_add_ph:"Add, then Enter",crit_remove:"Remove {v}",crit_bad_country:"\u201c{v}\u201d is not a two-letter country code.",
+  crit_need_one:"Keep at least one search term.",crit_failed:"Not recorded ({why}).",
   opt_search_ph:"Search a company",opt_search_aria:"Search a company",opt_searched:"searched",
   opt_unsolicited:"unsolicited",opt_badge_catalogue:"catalogue",opt_badge_perso:"mine",
   opt_reason_secteur:"left out: sector off",opt_reason_taille:"left out: size off",
@@ -362,12 +381,22 @@ fr:{
   db_slow:"La base ne répond pas encore. Les données s'afficheront dès qu'elle sera joignable.",
   db_stopped:"La connexion à la base s'est arrêtée ({code}). Recharge la page pour reprendre.",db_load_failed:"La base n'a pas pu être chargée.",
   lang_not_saved:"Langue changée, mais le choix n'a pas pu être enregistré : il ne sera pas retenu.",
-  options:"Options",opt_title:"Entreprises recherchées",
+  options:"Options",opt_title:"Options de recherche",
   opt_need_engine:"Ces choix sont gardés par le moteur B sur le PC : ouvre cette page dans l'app Claude desktop avec le moteur B lancé.",
   opt_loading:"Lecture du moteur B…",
   opt_scope:"Ces choix s'appliquent au moteur B seulement, pas aux tâches planifiées.",
   opt_sources:"Sources cherchées par mots-clés",opt_sizes:"Tailles d'entreprise",opt_sectors:"Secteurs",
-  opt_companies:"Entreprises",opt_not_configured:"non configurée",opt_off_by_size:"coupée avec sa taille",
+  opt_companies:"Entreprises",opt_no_credentials:"identifiants manquants (.env)",opt_off_by_size:"coupée avec sa taille",
+  opt_own_terms:"termes de recherche propres dans config.toml",opt_criteria:"Critères de recherche",
+  opt_criteria_when:"Les changements s'appliquent à la prochaine collecte ; les offres déjà dans la liste restent.",
+  crit_mots_cles:"Mots-clés",crit_exclusions:"Exclusions",crit_lieux:"Lieux",crit_pays:"Pays",crit_recherches:"Termes de recherche",
+  crit_hint_mots_cles:"Le titre doit en contenir au moins un. Vide = pas de filtre.",
+  crit_hint_exclusions:"Un titre qui en contient un est écarté.",
+  crit_hint_lieux:"Le lieu de l'offre doit contenir l'un d'eux (ex. « lyon », « 69 », « remote »). Vide = partout. Une offre sans lieu passe toujours.",
+  crit_hint_pays:"Codes à deux lettres (fr, gb, be…). Servent aux sites qui cherchent par pays et au choix par défaut des entreprises du catalogue. Vide = tous les pays.",
+  crit_hint_recherches:"Tapés dans le champ de recherche des sites qui ne listent pas toutes leurs offres. Chaque terme coûte une recherche par entreprise sur ces sites : garde quelques termes larges.",
+  crit_add_ph:"Ajouter, puis Entrée",crit_remove:"Retirer {v}",crit_bad_country:"« {v} » n'est pas un code pays à deux lettres.",
+  crit_need_one:"Garde au moins un terme de recherche.",crit_failed:"Non enregistré ({why}).",
   opt_search_ph:"Chercher une entreprise",opt_search_aria:"Chercher une entreprise",opt_searched:"recherchée",
   opt_unsolicited:"spontanée",opt_badge_catalogue:"catalogue",opt_badge_perso:"à moi",
   opt_reason_secteur:"écartée : secteur décoché",opt_reason_taille:"écartée : taille décochée",
@@ -931,7 +960,7 @@ $("export-copy").addEventListener("click",function(){
 });
 
 // Companies searched (PAGE-70 to PAGE-74): the choices live in engine B, never in the page.
-var opts={data:null,busy:false,err:null,q:"",reset:false};
+var opts={data:null,busy:false,err:null,q:"",reset:false,brouillons:{},critErr:{},focus:null};
 function raisonMoteur(e){
   var c=e&&e.code;
   if(c==="server_not_connected"||c==="capability_disabled"||c==="not_granted")return t("eng_err_stopped");
@@ -941,7 +970,8 @@ function raisonMoteur(e){
 function appelOptions(outil,entree){
   return moteur.mcp.callTool(SRV,outil,entree,{cache:false}).then(function(r){
     var p=r&&r.payload;
-    if(!p||(r.isError||r.is_error)||!Array.isArray(p.entreprises))throw {code:"reponse_illisible"};
+    if(r&&(r.isError||r.is_error)){var c=r.content&&r.content[0];throw {code:"",message:(c&&c.text)||"reponse_illisible"};}
+    if(!p||!Array.isArray(p.entreprises))throw {code:"reponse_illisible"};
     return p;
   });
 }
@@ -969,11 +999,19 @@ function rendreOptions(){
   if(opts.err)h+='<p class="note bad" role="alert">'+esc(opts.err)+'</p>';
   h+='<fieldset'+(opts.busy?" disabled":"")+'>';
   var tailles={};d.tailles.forEach(function(x){tailles[x.cle]=x.actif;});
+  if(Array.isArray(d.criteres)){
+    h+='<h3>'+esc(t("opt_criteria"))+'</h3><p class="sub" style="margin:0">'+esc(t("opt_criteria_when"))+'</p>';
+    d.criteres.forEach(function(c){h+=critereHtml(c);});
+  }
   h+='<h3>'+esc(t("opt_sources"))+'</h3><div class="grp">';
   d.sources.forEach(function(s){
-    var note=!s.configuree?t("opt_not_configured"):(s.actif&&!s.recherchee?t("opt_off_by_size"):"");
-    h+='<span>'+caseHtml('data-obj="source" data-cle="'+esc(s.cle)+'"',s.configuree&&s.actif,esc(s.nom)+(note?' <span class="count">('+esc(note)+')</span>':""),!s.recherchee,!s.configuree);
-    if(!s.actif)h+=lienDefaut('data-def="source" data-cle="'+esc(s.cle)+'"');
+    // PAGE-76: ticked when turned on (User's choice, otherwise config.toml).
+    var on=s.actif==null?s.configuree:s.actif,notes=[];
+    if(s.identifiants===false)notes.push(t("opt_no_credentials"));
+    else if(on&&!s.recherchee)notes.push(t("opt_off_by_size"));
+    if(s.recherches_propres)notes.push(t("opt_own_terms"));
+    h+='<span>'+caseHtml('data-obj="source" data-cle="'+esc(s.cle)+'"',on,esc(s.nom)+(notes.length?' <span class="count">('+esc(notes.join(" · "))+')</span>':""),!s.recherchee,s.identifiants===false);
+    if(s.actif!=null)h+=lienDefaut('data-def="source" data-cle="'+esc(s.cle)+'"');
     h+='</span>';
   });
   h+='</div><h3>'+esc(t("opt_sizes"))+'</h3><div class="grp">';
@@ -994,6 +1032,47 @@ function rendreOptions(){
   h+='<div class="row" style="margin-top:14px">'+(opts.reset?'<button type="button" class="no" id="opt-reset2">'+esc(t("opt_reset_confirm"))+'</button>':'<button type="button" class="ghost" id="opt-reset">'+esc(t("opt_reset"))+'</button>')+'</div>';
   h+='</fieldset>';
   b.innerHTML=h;rendreListeOptions();
+  if(opts.focus){var f=b.querySelector('input[data-crit-in="'+opts.focus+'"]');if(f&&!f.disabled){f.focus();f.setSelectionRange(f.value.length,f.value.length);}}
+}
+// Search criteria (PAGE-75): chips with a ×, and a field where Enter or a comma adds.
+function critereHtml(c){
+  var k=esc(c.cle),h='<div class="crit"><div class="lab">'+esc(t("crit_"+c.cle));
+  if(c.modifie)h+=lienDefaut('data-def="critere" data-cle="'+k+'"');
+  h+='</div><div class="chips">';
+  c.valeur.forEach(function(v,i){
+    h+='<span class="val">'+esc(v)+'<button type="button" data-crit-del="'+k+'" data-i="'+i+'" aria-label="'+esc(t("crit_remove",{v:v}))+'">×</button></span>';
+  });
+  h+='</div><input type="text" data-crit-in="'+k+'" value="'+esc(opts.brouillons[c.cle]||"")+'" placeholder="'+esc(t("crit_add_ph"))+'" aria-label="'+esc(t("crit_"+c.cle))+'">';
+  if(opts.critErr[c.cle])h+='<p class="err" role="alert">'+esc(opts.critErr[c.cle])+'</p>';
+  h+='<p class="hint">'+esc(t("crit_hint_"+c.cle))+'</p></div>';
+  return h;
+}
+function critere(cle){
+  var l=opts.data&&opts.data.criteres||[];
+  for(var i=0;i<l.length;i++)if(l[i].cle===cle)return l[i];
+  return null;
+}
+// Sends the whole new list; a refused value stays in the field with the reason.
+function changerCritere(cle,valeur,brouillon){
+  if(!moteur.mcp||opts.busy)return;
+  if(cle==="pays"){
+    var faux=valeur.filter(function(v){return !/^[a-z]{2}$/i.test(v.trim());})[0];
+    if(faux!==undefined){opts.brouillons[cle]=brouillon;opts.critErr[cle]=t("crit_bad_country",{v:faux});opts.focus=cle;rendreOptions();return;}
+  }
+  if(cle==="recherches"&&!valeur.some(function(v){return v.trim();})){
+    opts.critErr[cle]=t("crit_need_one");opts.focus=null;rendreOptions();return;
+  }
+  opts.busy=true;opts.err=null;opts.critErr[cle]="";opts.brouillons[cle]=brouillon;opts.focus=brouillon?cle:null;rendreOptions();
+  appelOptions("selection",{choix:[{objet:"critere",cle:cle,valeur:valeur}]})
+    .then(function(p){opts.data=p;opts.brouillons[cle]="";opts.focus=brouillon?cle:null;})
+    .catch(function(e){opts.critErr[cle]=t("crit_failed",{why:e&&e.message&&!e.code?e.message:raisonMoteur(e)});opts.focus=cle;})
+    .then(function(){opts.busy=false;rendreOptions();});
+}
+function ajouterCritere(el){
+  var cle=el.getAttribute("data-crit-in"),c=critere(cle);if(!c)return;
+  var neufs=el.value.split(",").map(function(v){return v.trim();}).filter(Boolean);
+  if(!neufs.length)return;
+  changerCritere(cle,c.valeur.concat(neufs),el.value);
 }
 function rendreListeOptions(){
   var l=$("opt-list");if(!l||!opts.data)return;
@@ -1029,7 +1108,15 @@ function choisir(choix){
 $("btn-options").addEventListener("click",ouvrirOptions);
 $("opt-dialog-close").addEventListener("click",function(){var dlg=$("opt-dialog");if(dlg.close)dlg.close();else dlg.removeAttribute("open");});
 $("opt-dialog").addEventListener("click",function(e){if(e.target===this&&this.close)this.close();});
-$("opt-body").addEventListener("input",function(e){if(e.target.id==="opt-q"){opts.q=e.target.value;rendreListeOptions();}});
+$("opt-body").addEventListener("input",function(e){
+  if(e.target.id==="opt-q"){opts.q=e.target.value;rendreListeOptions();return;}
+  var cle=e.target.getAttribute("data-crit-in");if(!cle)return;
+  opts.brouillons[cle]=e.target.value;
+  if(e.target.value.indexOf(",")>=0)ajouterCritere(e.target);
+});
+$("opt-body").addEventListener("keydown",function(e){
+  if(e.key==="Enter"&&e.target.hasAttribute("data-crit-in")){e.preventDefault();ajouterCritere(e.target);}
+});
 $("opt-body").addEventListener("change",function(e){
   var el=e.target;if(el.type!=="checkbox"||!el.hasAttribute("data-obj"))return;
   var c={objet:el.getAttribute("data-obj"),cle:el.getAttribute("data-cle")};
@@ -1038,6 +1125,15 @@ $("opt-body").addEventListener("change",function(e){
 });
 $("opt-body").addEventListener("click",function(e){
   var el=e.target.closest("button");if(!el)return;
+  if(el.hasAttribute("data-crit-del")){
+    var k=el.getAttribute("data-crit-del"),cr=critere(k),i=+el.getAttribute("data-i");
+    if(cr)changerCritere(k,cr.valeur.filter(function(_,j){return j!==i;}),opts.brouillons[k]||"");
+    return;
+  }
+  if(el.getAttribute("data-def")==="critere"){
+    var ck=el.getAttribute("data-cle");opts.critErr[ck]="";
+    choisir([{objet:"critere",cle:ck,valeur:null}]);return;
+  }
   if(el.hasAttribute("data-def")){
     var c={objet:el.getAttribute("data-def"),cle:el.getAttribute("data-cle"),actif:null};
     if(c.objet==="entreprise")c.spontanee=null;
@@ -1047,7 +1143,10 @@ $("opt-body").addEventListener("click",function(e){
   if(el.id==="opt-reset2"){
     opts.reset=false;var d=opts.data,choix=[];
     d.entreprises.forEach(function(c){if(c.actif!==c.actif_par_defaut||c.spontanee!==c.spontanee_par_defaut)choix.push({objet:"entreprise",cle:c.cle,actif:null,spontanee:null});});
-    [["secteur",d.secteurs],["taille",d.tailles],["source",d.sources]].forEach(function(g){g[1].forEach(function(x){if(!x.actif)choix.push({objet:g[0],cle:x.cle,actif:null});});});
+    [["secteur",d.secteurs],["taille",d.tailles]].forEach(function(g){g[1].forEach(function(x){if(!x.actif)choix.push({objet:g[0],cle:x.cle,actif:null});});});
+    d.sources.forEach(function(x){if(x.actif!=null)choix.push({objet:"source",cle:x.cle,actif:null});});
+    (d.criteres||[]).forEach(function(x){if(x.modifie)choix.push({objet:"critere",cle:x.cle,valeur:null});});
+    opts.critErr={};opts.brouillons={};
     if(choix.length)choisir(choix);else rendreOptions();
   }
 });

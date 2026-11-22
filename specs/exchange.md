@@ -85,15 +85,22 @@ capability). Engine B therefore offers two channels carrying the same content:
   - `secteurs` and `tailles`: for each value of CAT-04 and CAT-03, `cle`, `actif` and the
     number of companies;
   - `sources`: France Travail, Choisir le service public and Station F, with `cle`,
-    `nom`, `configuree` (`actif = true` in `config.toml`), `actif` (User's choice) and
-    `recherchee` (CAT-15).
+    `nom`, `configuree` (`actif = true` in `config.toml`, the default), `actif` (User's
+    choice, `null` without one), `identifiants` (false only for France Travail without its
+    credentials, SRC-10), `recherches_propres` (the source has its own `recherches`,
+    CONF-15) and `recherchee` (CAT-15);
+  - `criteres`: for each list of CONF-13, `cle` (`mots_cles`, `exclusions`, `lieux`,
+    `pays`, `recherches`), `valeur` (the list in use), `defaut` (the list in
+    `config.toml`) and `modifie` (User replaced it).
 - **ECH-28** · Tool `selection` (input: `{"choix": [...]}`, each with `objet` =
-  `entreprise`, `secteur`, `taille` or `source`, `cle`, and `actif` and/or `spontanee`
-  for a company, `actif` otherwise; `null` means back to the default): records the
+  `entreprise`, `secteur`, `taille`, `source` or `critere`, `cle`, and `actif` and/or
+  `spontanee` for a company, `valeur` (a list of strings) for a criterion, `actif`
+  otherwise; `null` means back to the default): records the
   choices (BASE-15) and returns the same answer as `entreprises`. The same choices sent
   twice change nothing the second time.
 - **ECH-29** · An invalid input to `selection` (unknown `objet`, unknown key, wrong type)
-  returns a tool error naming the faulty choice, and records none of them.
+  returns a tool error naming the faulty choice, and records none of them. So does a
+  criterion refused by CONF-14 (bad country code, empty `recherches`), with its reason.
 - **ECH-30** · Tool `ajouter_entreprises` (input: `{"entreprises": [...]}`, 1 to 20
   companies, each with the fields of CAT-20 and either `ats` and `identifiant` or
   `adresse`, CAT-21): checks and keeps each company (CAT-22 to CAT-24) and returns
