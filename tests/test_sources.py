@@ -168,6 +168,31 @@ def test_three_429_in_a_row_make_a_source_error() -> None:
     assert pauses == [5.0, 2.0]
 
 
+def _error_message(response: httpx.Response) -> str:
+    """Message of the source error raised by a client whose server gives `response`."""
+    client = HttpxClient(transport=httpx.MockTransport(lambda _: response), pause=lambda _: None)
+    with pytest.raises(SourceError) as error:
+        client.post_json("https://exemple.test/jobs", body={})
+    return str(error.value)
+
+
+@pytest.mark.spec("SRC-109")
+def test_an_html_error_page_is_left_out_of_the_message() -> None:
+    page = "<!DOCTYPE html> <html> <head> <style> body { margin: 0; }"
+    typed = httpx.Response(403, headers={"Content-Type": "text/html; charset=UTF-8"}, text=page)
+    assert _error_message(typed) == "https://exemple.test/jobs: HTTP 403"
+    untyped = httpx.Response(403, text=f"  {page}")
+    assert _error_message(untyped) == "https://exemple.test/jobs: HTTP 403"
+
+
+@pytest.mark.spec("SRC-109")
+def test_an_explaining_error_body_is_still_quoted() -> None:
+    answer = httpx.Response(400, json={"error": "invalid_client"})
+    assert (
+        _error_message(answer) == 'https://exemple.test/jobs: HTTP 400: {"error":"invalid_client"}'
+    )
+
+
 @pytest.mark.spec("SRC-06")
 def test_a_server_error_is_retried_once() -> None:
     client, pauses = _answering_client((500, {}), (200, {}))

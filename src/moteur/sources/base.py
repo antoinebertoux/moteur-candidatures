@@ -148,12 +148,20 @@ class HttpxClient:
                 return None
             return answer.json()
         except httpx.HTTPStatusError as error:
-            # The body often explains the error (e.g. OAuth: invalid_scope, invalid_client).
-            detail = " ".join(error.response.text.split())[:300]
+            # The body often explains the error (e.g. OAuth: invalid_scope, invalid_client),
+            # unless it is a site's HTML error page (SRC-109).
+            detail = "" if _is_html(error.response) else " ".join(error.response.text.split())[:300]
             message = f"{url}: HTTP {error.response.status_code}"
             raise SourceError(f"{message}: {detail}" if detail else message) from error
         except (httpx.HTTPError, ValueError) as error:
             raise SourceError(f"{url}: {error}") from error
+
+
+def _is_html(response: httpx.Response) -> bool:
+    """True if the response is an HTML page, by its type or by its first characters."""
+    if "html" in response.headers.get("Content-Type", "").lower():
+        return True
+    return response.text.lstrip()[:15].lower().startswith(("<!doctype html", "<html"))
 
 
 def _wait(value: str | None) -> float:

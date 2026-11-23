@@ -6,6 +6,10 @@ proposes unsolicited applications. No call to Claude.
 ## Collection
 
 - **COL-01** · A failing source is reported and skipped: the others carry on.
+- **COL-10** · Workday sources failing with "too many requests" (HTTP 429) are not reported
+  one by one: once every source has been queried, a single line gives their number and
+  their companies, for instance « 15 Workday sites refuse automated access (HTTP 429):
+  Ipsen, Sanofi, … ». Other failures are still reported as in COL-01.
 - **COL-02** · Order: query every source → filter → open the page of the retained ads
   only, when their text is missing (SRC-24, SRC-51) → check again the location of the ads
   that had none (FILT-06) → add unsolicited applications. If a page cannot be opened, the

@@ -14,14 +14,16 @@ stays empty.
 - **SRC-03** · HTTP calls identify themselves as `moteur-candidatures/0.1 (usage
   personnel)`, follow redirects and give up after 20 s. An HTTP error becomes a source
   error quoting the status code and the start of the response. *(untested)*
+- **SRC-109** · When the response of an HTTP error is an HTML page (a site's error page),
+  the source error quotes only the address and the status code, not the page.
 - **SRC-04** · "Too many requests" (HTTP 429) is retried at most twice, after waiting
   the delay given by the site (`Retry-After`, capped at 30 s) or 5 s otherwise. Still
   429 after that: source error (SRC-03).
 - **SRC-06** · A server error (HTTP 500 to 599) is retried once, after 2 s. Still an
   error after that: source error (SRC-03).
 - **SRC-05** · A source running several searches (Choisir le service public: one per
-  keyword and pass; Oracle, SuccessFactors, Phenom, Avature, McKinsey: one per keyword;
-  Workday: see SRC-44)
+  keyword and pass; Workday, Oracle, SuccessFactors, Phenom, Avature, McKinsey: one per
+  keyword)
   runs them in parallel, at most 4 at a time.
   The pages of one search are read in order. The result does not depend on which search
   answers first: ads are merged in the order of the searches, then deduplicated.
@@ -111,11 +113,10 @@ stays empty.
   (plain, SRC-02) becomes the ad text. An unreadable detail leaves the ad without text.
 - **SRC-43** · Workday sites answer "too many requests" (HTTP 429) to bursts, for a few
   seconds, which SRC-04's short waits do not always cover. A search page still refused
-  with 429 after SRC-04 is asked again after a 60 s pause, at most twice; only then does
+  with 429 after SRC-04 is asked again after a 30 s pause, at most twice; only then does
   the source fail (SRC-03).
-- **SRC-44** · Workday sites are queried gently, to avoid the bursts of SRC-43: the
-  searches of one site run one after another (SRC-05 does not apply to Workday), and two
-  requests to the same site, search page or detail page alike, are at least 2 s apart.
+- ~~**SRC-44**~~ · *Removed: pacing did not help. The lasting 429s come from the sites'
+  protection against automated clients, not from bursts.*
 
 ## Radancy (TalentBrew)
 

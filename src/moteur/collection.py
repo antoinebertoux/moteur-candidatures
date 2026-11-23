@@ -18,6 +18,8 @@ log = logging.getLogger(__name__)
 SOURCES_IN_PARALLEL = 8
 # Ad pages opened at the same time: they often come from the same site.
 PAGES_IN_PARALLEL = 4
+# Name prefix of the Workday sources ("workday:<company>").
+WORKDAY_PREFIX = "workday:"
 
 
 def companies_already_seen(path: Path) -> set[str]:
@@ -47,20 +49,31 @@ def _status(row: dict[str, str]) -> str:
 def query_sources(sources: Iterable[Source]) -> list[JobAd]:
     """Gathers the ads of every source; a broken source does not stop the others.
 
-    Sources are queried in parallel; the result keeps their order.
+    Sources are queried in parallel; the result keeps their order. Workday sites refusing
+    with HTTP 429 are reported together, in one line (COL-10).
     """
 
-    def one_source(source: Source) -> list[JobAd]:
+    def one_source(source: Source) -> tuple[list[JobAd], str]:
+        """The ads of a source, and its company if it is a Workday site refusing us."""
         try:
             found_ones = source.collect()
         except SourceError as error:
+            if source.name.startswith(WORKDAY_PREFIX) and "HTTP 429" in str(error):
+                return [], source.name.removeprefix(WORKDAY_PREFIX)
             log.warning("Source %s skipped: %s", source.name, error)
-            return []
+            return [], ""
         log.info("%s: %d ads", source.name, len(found_ones))
-        return found_ones
+        return found_ones, ""
 
     results = in_parallel(one_source, sources, SOURCES_IN_PARALLEL)
-    return [ad for found_ones in results for ad in found_ones]
+    refusing = [company for _, company in results if company]
+    if refusing:
+        log.warning(
+            "%d Workday sites refuse automated access (HTTP 429): %s",
+            len(refusing),
+            ", ".join(refusing),
+        )
+    return [ad for found_ones, _ in results for ad in found_ones]
 
 
 def add_details(ads: Iterable[JobAd], sources: Iterable[Source]) -> list[JobAd]:

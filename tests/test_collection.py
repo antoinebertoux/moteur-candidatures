@@ -60,6 +60,37 @@ def test_a_broken_source_does_not_stop_the_others() -> None:
     assert query_sources([FixedSource("a"), FixedSource("b", [ad])]) == [ad]
 
 
+class RefusingSource(FixedSource):
+    def __init__(self, name: str, message: str) -> None:
+        super().__init__(name)
+        self._message = message
+
+    def collect(self) -> list[JobAd]:
+        raise SourceError(self._message)
+
+
+@pytest.mark.spec("COL-10")
+def test_workday_sites_refusing_with_429_are_reported_in_one_line(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    ad = JobAd("Acme", "Data Scientist")
+    sources = [
+        RefusingSource("workday:Ipsen", "https://ipsen.test/jobs: HTTP 429"),
+        FixedSource("b", [ad]),
+        RefusingSource("workday:Sanofi", "https://sanofi.test/jobs: HTTP 429"),
+        RefusingSource("workday:Thales", "https://thales.test/jobs: HTTP 500"),
+        RefusingSource("talentsoft:EDF", "https://edf.test/rss: HTTP 429"),
+    ]
+    with caplog.at_level("WARNING"):
+        assert query_sources(sources) == [ad]
+    messages = [record.getMessage() for record in caplog.records]
+    assert messages == [
+        "Source workday:Thales skipped: https://thales.test/jobs: HTTP 500",
+        "Source talentsoft:EDF skipped: https://edf.test/rss: HTTP 429",
+        "2 Workday sites refuse automated access (HTTP 429): Ipsen, Sanofi",
+    ]
+
+
 @pytest.mark.spec("COL-03")
 def test_unsolicited_only_for_targets_without_ad_and_never_seen() -> None:
     targets = [

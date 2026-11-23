@@ -8,7 +8,6 @@ at once: its search is queried with a few keywords, page by page.
 from __future__ import annotations
 
 import re
-import threading
 import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, replace
@@ -17,8 +16,10 @@ from urllib.parse import urlsplit
 from moteur.config import TargetCompany
 from moteur.models import JobAd
 from moteur.sources.base import (
+    SEARCHES_IN_PARALLEL,
     HttpClient,
     SourceError,
+    in_parallel,
     items,
     plain_text,
     string,
@@ -29,9 +30,7 @@ PAGE_SIZE = 20
 PAGES_MAX = 5
 # Still "too many requests" after the client's own retries (SRC-43).
 PAUSES_ON_429 = 2
-PAUSE_429 = 60.0
-# Minimum gap between two requests to the same Workday site (SRC-44).
-GAP_BETWEEN_REQUESTS = 2.0
+PAUSE_429 = 30.0
 _LANGUAGE = re.compile(r"^[a-z]{2}-[A-Z]{2}$")
 
 
@@ -91,31 +90,16 @@ class SourceWorkday:
         client: HttpClient,
         company: TargetCompany,
         pause: Callable[[float], None] = time.sleep,
-        clock: Callable[[], float] = time.monotonic,
     ) -> None:
         self._client = client
         self._company = company
         self._site = split_address(company.identifier)
         self._searches: Sequence[str] = company.searches
         self._pause = pause
-        self._clock = clock
-        # Requests to this site are spaced out, whichever thread sends them (SRC-44).
-        self._turn = threading.Lock()
-        self._last_request: float | None = None
-
-    def _wait_for_turn(self) -> None:
-        """Waits until the gap since the last request to this site has passed (SRC-44)."""
-        with self._turn:
-            if self._last_request is not None:
-                remaining = self._last_request + GAP_BETWEEN_REQUESTS - self._clock()
-                if remaining > 0:
-                    self._pause(remaining)
-            self._last_request = self._clock()
 
     def _page(self, body: dict[str, object]) -> object:
         """One search page; a lasting 429 is asked again after a pause (SRC-43)."""
         for attempt in range(PAUSES_ON_429 + 1):
-            self._wait_for_turn()
             try:
                 return self._client.post_json(
                     self._site.api, body=body, headers={"Accept": "application/json"}
@@ -158,14 +142,12 @@ class SourceWorkday:
         url = self._site.detail_url(ad.url)
         if not url:
             return ad
-        self._wait_for_turn()
         response = self._client.get_json(url, headers={"Accept": "application/json"})
         return replace(ad, description=workday_description(response))
 
     def collect(self) -> list[JobAd]:
-        """The searches run one after another, as SRC-44 requires."""
         seen: dict[str, JobAd] = {}
-        for search in self._searches:
-            for ad in self._search(search):
+        for ads in in_parallel(self._search, self._searches, SEARCHES_IN_PARALLEL):
+            for ad in ads:
                 seen.setdefault(ad.url or ad.title, ad)
         return list(seen.values())
