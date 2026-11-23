@@ -70,21 +70,14 @@ def _page(start: int, count: int, total: int) -> dict[str, object]:
 class WorkdayClient(FakeClient):
     """Answers by keyword and offset, whatever the order of the calls."""
 
-    def __init__(
-        self,
-        pages: dict[tuple[str, int], dict[str, object]],
-        gate: threading.Barrier | None = None,
-    ) -> None:
+    def __init__(self, pages: dict[tuple[str, int], dict[str, object]]) -> None:
         super().__init__({})
         self.pages = pages
-        self.gate = gate
 
     def post_json(
         self, url: str, *, body: Mapping[str, Any], headers: Mapping[str, str] | None = None
     ) -> Any:
         self.calls.append((url, dict(body)))
-        if self.gate is not None and body["offset"] == 0:
-            self.gate.wait()  # fails if the keywords run one after the other
         return self.pages.get((body["searchText"], body["offset"]))
 
 
@@ -108,16 +101,15 @@ def test_workday_pages_and_deduplicates() -> None:
     assert source.name == "workday:Exemple"
 
 
-@pytest.mark.spec("SRC-05")
-def test_workday_runs_keywords_in_parallel_keeping_order() -> None:
-    client = WorkdayClient(
-        {("ia", 0): _page(0, 2, 2), ("data", 0): _page(1, 2, 2)}, threading.Barrier(2, timeout=5)
-    )
+@pytest.mark.spec("SRC-44")
+def test_workday_keywords_keep_their_order_in_the_result() -> None:
+    client = WorkdayClient({("ia", 0): _page(0, 2, 2), ("data", 0): _page(1, 2, 2)})
     target = TargetCompany(
         name="Exemple", ats="workday", identifier=EXAMPLE, searches=("ia", "data")
     )
-    ads = SourceWorkday(client, target).collect()
+    ads = SourceWorkday(client, target, lambda _: None, lambda: 0.0).collect()
     assert [o.title for o in ads] == ["Poste 0", "Poste 1", "Poste 2"]
+    assert [c["searchText"] for _, c in client.calls] == ["ia", "data"]
 
 
 @pytest.mark.spec("SRC-42")
@@ -342,13 +334,57 @@ class _BusyWorkday(FakeClient):
         return {"total": 1, "jobPostings": [{"title": "Data", "externalPath": "/job/1"}]}
 
 
+class _Clock:
+    """Fake clock: time only moves when the source pauses."""
+
+    def __init__(self) -> None:
+        self.now = 0.0
+        self.pauses: list[float] = []
+
+    def clock(self) -> float:
+        return self.now
+
+    def pause(self, seconds: float) -> None:
+        self.pauses.append(seconds)
+        self.now += seconds
+
+
+WORKDAY_TARGET = TargetCompany(
+    name="T", ats="workday", identifier="https://t.wd3.myworkdayjobs.com/C", searches=("ia",)
+)
+
+
 @pytest.mark.spec("SRC-43")
 def test_workday_pauses_when_still_refused() -> None:
-    target = TargetCompany(
-        name="T", ats="workday", identifier="https://t.wd3.myworkdayjobs.com/C", searches=("ia",)
-    )
-    pauses: list[float] = []
-    assert len(SourceWorkday(_BusyWorkday(2), target, pauses.append).collect()) == 1
-    assert pauses == [30.0, 30.0]
+    clock = _Clock()
+    target = WORKDAY_TARGET
+    assert len(SourceWorkday(_BusyWorkday(2), target, clock.pause, clock.clock).collect()) == 1
+    assert clock.pauses == [60.0, 60.0]
     with pytest.raises(SourceError, match="429"):
-        SourceWorkday(_BusyWorkday(3), target, pauses.append).collect()
+        SourceWorkday(_BusyWorkday(3), target, clock.pause, clock.clock).collect()
+
+
+@pytest.mark.spec("SRC-44")
+def test_workday_searches_run_one_after_another_two_seconds_apart() -> None:
+    clock = _Clock()
+    client = _BusyWorkday(0)
+    target = TargetCompany(
+        name="T",
+        ats="workday",
+        identifier="https://t.wd3.myworkdayjobs.com/C",
+        searches=("ia", "data"),
+    )
+    SourceWorkday(client, target, clock.pause, clock.clock).collect()
+    assert [body["searchText"] for _, body in client.calls] == ["ia", "data"]
+    assert clock.pauses == [2.0]
+
+
+@pytest.mark.spec("SRC-44")
+def test_workday_detail_pages_are_spaced_from_the_searches() -> None:
+    clock = _Clock()
+    client = _BusyWorkday(0)
+    source = SourceWorkday(client, WORKDAY_TARGET, clock.pause, clock.clock)
+    (ad,) = source.collect()
+    assert clock.pauses == []
+    source.add_details(ad)
+    assert clock.pauses == [2.0]

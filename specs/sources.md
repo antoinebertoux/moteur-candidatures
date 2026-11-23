@@ -20,8 +20,8 @@ stays empty.
 - **SRC-06** · A server error (HTTP 500 to 599) is retried once, after 2 s. Still an
   error after that: source error (SRC-03).
 - **SRC-05** · A source running several searches (Choisir le service public: one per
-  keyword and pass; Workday, Oracle, SuccessFactors, Phenom, Avature, McKinsey: one per
-  keyword)
+  keyword and pass; Oracle, SuccessFactors, Phenom, Avature, McKinsey: one per keyword;
+  Workday: see SRC-44)
   runs them in parallel, at most 4 at a time.
   The pages of one search are read in order. The result does not depend on which search
   answers first: ads are merged in the order of the searches, then deduplicated.
@@ -111,8 +111,11 @@ stays empty.
   (plain, SRC-02) becomes the ad text. An unreadable detail leaves the ad without text.
 - **SRC-43** · Workday sites answer "too many requests" (HTTP 429) to bursts, for a few
   seconds, which SRC-04's short waits do not always cover. A search page still refused
-  with 429 after SRC-04 is asked again after a 30 s pause, at most twice; only then does
+  with 429 after SRC-04 is asked again after a 60 s pause, at most twice; only then does
   the source fail (SRC-03).
+- **SRC-44** · Workday sites are queried gently, to avoid the bursts of SRC-43: the
+  searches of one site run one after another (SRC-05 does not apply to Workday), and two
+  requests to the same site, search page or detail page alike, are at least 2 s apart.
 
 ## Radancy (TalentBrew)
 
