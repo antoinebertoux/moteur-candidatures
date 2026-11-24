@@ -42,6 +42,7 @@ AtsType = Literal[
     "cornerstone",
     "rippling",
     "talentry",
+    "join",
     "",
 ]
 

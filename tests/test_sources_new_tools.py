@@ -1,6 +1,6 @@
 """Talentsoft, Oracle, SuccessFactors, Phenom, Avature, Gestmax, SNCF, Taleez, WeRecruit,
 Cornerstone,
-Rippling, Talentry."""
+Rippling, Talentry, JOIN."""
 
 import base64
 import json
@@ -27,6 +27,7 @@ from moteur.sources.gestmax import (
     ads_gestmax_table,
     complete_gestmax,
 )
+from moteur.sources.join import SourceJoin, ads_join
 from moteur.sources.magnet import SourceMagnet, ads_magnet, login_body, public_key
 from moteur.sources.mckinsey import SourceMcKinsey, ads_mckinsey
 from moteur.sources.oracle import (
@@ -1247,3 +1248,86 @@ def test_talentry_page_gives_the_text() -> None:
     )
     assert complete_talentry(ad, page).description == "Missions & profil"
     assert complete_talentry(ad, "<html></html>") == ad
+
+
+# --- JOIN -------------------------------------------------------------------------------
+
+JOIN_PAGE = "https://join.com/companies/lettria"
+
+
+def _join_offer(number: int, **extra: Any) -> dict[str, Any]:
+    return {
+        "idParam": f"{number}-data-scientist",
+        "title": f"Data Scientist {number}",
+        "createdAt": "2026-07-23T05:57:47.958Z",
+        "city": {"cityName": "Paris", "countryName": "France"},
+        **extra,
+    }
+
+
+def _join_page(offers: list[Any], page: int = 1, count: int = 1) -> str:
+    data = {
+        "props": {
+            "pageProps": {
+                "pageData": {"jobs": {"items": offers, "pagination": {"pageCount": count}}}
+            }
+        }
+    }
+    return f'<script id="__NEXT_DATA__" type="application/json">{json.dumps(data)}</script>'
+
+
+@pytest.mark.spec("SRC-123", "SRC-01")
+def test_join_offers_become_ads() -> None:
+    page = _join_page(
+        [
+            _join_offer(1),
+            _join_offer(2, city=None),
+            _join_offer(3, title=""),
+            _join_offer(4, idParam=""),
+        ]
+    )
+    first, second = ads_join("Lettria", JOIN_PAGE, page)
+    assert (first.title, first.location, first.published_on, first.source) == (
+        "Data Scientist 1",
+        "Paris, France",
+        "2026-07-23",
+        "join",
+    )
+    assert first.url == f"{JOIN_PAGE}/1-data-scientist"
+    assert second.location == ""
+    assert ads_join("Lettria", JOIN_PAGE, "<html></html>") == []
+
+
+@pytest.mark.spec("SRC-122")
+def test_join_reads_each_page_up_to_the_page_count() -> None:
+    client = FakeClient({JOIN_PAGE: _join_page([_join_offer(1)], count=2)})
+    target = TargetCompany(name="Lettria", ats="join", identifier="join.com/companies/lettria/")
+    source = source_for(target, client, ["fr"])
+    assert isinstance(source, SourceJoin)
+    assert [ad.title for ad in source.collect()] == ["Data Scientist 1"]
+    assert [call[1] for call in client.calls] == [{}, {"page": "2"}]
+
+
+@pytest.mark.spec("SRC-122")
+def test_join_company_without_offers_gives_no_ad() -> None:
+    target = TargetCompany(name="Lettria", ats="join", identifier="join.com/companies/lettria")
+    assert SourceJoin(FakeClient({JOIN_PAGE: _join_page([])}), target).collect() == []
+    assert SourceJoin(FakeClient({JOIN_PAGE: "<html></html>"}), target).collect() == []
+
+
+@pytest.mark.spec("SRC-124", "SRC-51")
+def test_join_page_gives_the_text() -> None:
+    ad = JobAd("Lettria", "Data Scientist 1", url=f"{JOIN_PAGE}/1-data-scientist", source="join")
+    page = (
+        '<script type="application/ld+json">'
+        '{"@type": "JobPosting", "description": "<p>Missions &amp; profil</p>"}</script>'
+    )
+    assert (
+        "Missions & profil"
+        in SourceJoin(
+            FakeClient({ad.url: page}),
+            TargetCompany(name="Lettria", ats="join", identifier="join.com/companies/lettria"),
+        )
+        .add_details(ad)
+        .description
+    )

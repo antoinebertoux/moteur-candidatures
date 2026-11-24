@@ -28,6 +28,7 @@ _PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     # A company's Taleez site, not the service's own hosts (files, app…).
     ("taleez", re.compile(r"\b((?!(?:www|app|files|api)\.)[\w-]+\.taleez\.com)")),
     ("werecruit", re.compile(r"(careers\.werecruit\.io/[a-z]{2}/[\w-]+)")),
+    ("join", re.compile(r"(join\.com/companies/[\w-]+)")),
     ("rippling", re.compile(r"(ats\.rippling\.com/[\w-]+/jobs)")),
     (
         "cornerstone",

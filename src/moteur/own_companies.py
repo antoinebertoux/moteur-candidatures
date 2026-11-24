@@ -26,6 +26,7 @@ from moteur.sources.avature import SourceAvature
 from moteur.sources.base import HttpClient, Source, SourceError
 from moteur.sources.cornerstone import SourceCornerstone
 from moteur.sources.gestmax import SourceGestmax
+from moteur.sources.join import SourceJoin
 from moteur.sources.magnet import SourceMagnet
 from moteur.sources.mckinsey import SourceMcKinsey
 from moteur.sources.oracle import SourceOracle
@@ -93,6 +94,8 @@ def source_for(
         return SourceTaleez(client, target)
     if target.ats == "werecruit":
         return SourceWeRecruit(client, target)
+    if target.ats == "join":
+        return SourceJoin(client, target)
     if target.ats == "talentry":
         return SourceTalentry(client, target)
     if target.ats == "rippling":

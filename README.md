@@ -21,7 +21,7 @@ flowchart LR
     subgraph sources["Job sources"]
         FT["France Travail API"]
         SP["Choisir le service public"]
-        ATS["Career pages<br/>Greenhouse, Lever, Ashby,<br/>SmartRecruiters, Recruitee,<br/>Teamtailor, Workable,<br/>Workday, Radancy, Welcome Kit,<br/>Talentsoft, Cornerstone, Rippling, Talentry, Oracle, SuccessFactors,<br/>Phenom, Avature, Magnet, Gestmax,<br/>Taleez, WeRecruit,<br/>sitemaps of offers, McKinsey, SNCF"]
+        ATS["Career pages<br/>Greenhouse, Lever, Ashby,<br/>SmartRecruiters, Recruitee,<br/>Teamtailor, Workable,<br/>Workday, Radancy, Welcome Kit,<br/>Talentsoft, Cornerstone, Rippling, Talentry, JOIN, Oracle, SuccessFactors,<br/>Phenom, Avature, Magnet, Gestmax,<br/>Taleez, WeRecruit,<br/>sitemaps of offers, McKinsey, SNCF"]
     end
 
     subgraph B["Engine B (this repo, on the PC)"]
@@ -283,7 +283,7 @@ checked by a test that cites it (`@pytest.mark.spec("FILT-03")`);
 
 | Module | Role | Claude |
 | --- | --- | --- |
-| `sources/` | France Travail, Choisir le service public, ATS career pages (`ats.py`), Workday, Radancy, Welcome Kit, Talentsoft, Cornerstone, Rippling, Talentry, Oracle, SuccessFactors, Phenom, Avature, Magnet, Gestmax, Taleez, WeRecruit, sitemaps of offers, McKinsey, SNCF | no |
+| `sources/` | France Travail, Choisir le service public, ATS career pages (`ats.py`), Workday, Radancy, Welcome Kit, Talentsoft, Cornerstone, Rippling, Talentry, JOIN, Oracle, SuccessFactors, Phenom, Avature, Magnet, Gestmax, Taleez, WeRecruit, sitemaps of offers, McKinsey, SNCF | no |
 | `filtering.py` | keywords, exclusions, places, salary | no |
 | `collection.py` | gathers the sources, suggests unsolicited applications | no |
 | `local_db.py` | SQLite: seen, scored, to generate | no |

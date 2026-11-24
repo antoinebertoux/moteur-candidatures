@@ -45,7 +45,7 @@ ask Claude to find or add others. Engine B keeps these choices and companies;
 - **CAT-08** · A company's recruiting tool (`ats`) is empty or one of: greenhouse, lever,
   ashby, workday, smartrecruiters, recruitee, teamtailor, workable, radancy, welcomekit,
   talentsoft, oracle, successfactors, phenom, avature, magnet, sitemap, mckinsey,
-  gestmax, sncf, taleez, werecruit, cornerstone, rippling, talentry;
+  gestmax, sncf, taleez, werecruit, cornerstone, rippling, talentry, join;
   when set, `identifiant` is required. Its `site` and `linkedin`, when given, are http(s)
   addresses: they are the company's links of LNK-02. Any other value is rejected with a
   message naming the company and the field, and listing the accepted values.

@@ -63,6 +63,7 @@ and the tool behind it. Supported tools and what `identifiant` is:
 | `cornerstone` | a Cornerstone OnDemand career site (`<x>.csod.com/ux/ats/careersite/<n>/home?c=<x>`) | that address, as shown in the browser |
 | `rippling` | a Rippling career site (`ats.rippling.com/<board>/jobs`) | that address, as shown in the browser |
 | `talentry` | a Talentry career site (ad links `<host>/our-offers/<id>`, e.g. `fr.jobs.cerbahealthcare.com`) | the host |
+| `join` | a JOIN career page (`join.com/companies/<company>`) | that address, as shown in the browser |
 | `sitemap` | an in-house career site whose `robots.txt` sitemap lists every offer, each page holding `JobPosting` data | the address the offers sit under (e.g. `careers.societegenerale.com/offres-d-emploi/`) |
 
 When you are not sure of the identifier, give the career page as `adresse` instead of

@@ -53,6 +53,7 @@ _EXCLUDED_DOMAINS = (
     "werecruit.io",
     "csod.com",
     "rippling.com",
+    "join.com",
     "tmp.com",
     "francetravail.fr",
     "pole-emploi.fr",

@@ -36,7 +36,8 @@
   identifier, without what follows the company (SRC-106); a `<x>.csod.com/ux/ats/careersite/<n>/home?c=<x>` address
   gives `cornerstone` with that address as identifier (SRC-111), and
   `ats.rippling.com/<board>/jobs` gives `rippling` with that address as identifier
-  (SRC-116).
+  (SRC-116), and `join.com/companies/<company>` gives `join` with that address as
+  identifier (SRC-122).
 - **CLI-05** · Any other address (the company's own career page) is downloaded once and
   the first link matching CLI-04 found in it is used. None found: the address is reported
   as "unrecognised tool", and the other addresses carry on.

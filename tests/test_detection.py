@@ -37,6 +37,10 @@ from tests.conftest import FakeClient
             ("rippling", "ats.rippling.com/jus-mundi-careers/jobs"),
         ),
         (
+            "https://join.com/companies/lettria/16179943-forward-deployed-engineer",
+            ("join", "join.com/companies/lettria"),
+        ),
+        (
             "https://hris-suez.csod.com/ux/ats/careersite/10/home?c=hris-suez&lang=en-GB",
             ("cornerstone", "hris-suez.csod.com/ux/ats/careersite/10/home?c=hris-suez"),
         ),

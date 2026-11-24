@@ -483,3 +483,23 @@ public search address of the same host, `https://<host>/api/search`, without any
 - **SRC-121** · The page of each **retained** ad is opened (as in SRC-24): the
   `description` of its job posting (the page's structured data, plain SRC-02) becomes the
   ad text. A page without it leaves the ad unchanged.
+
+## JOIN
+
+Career pages hosted by JOIN (`join.com/companies/<company>`, for instance
+`join.com/companies/lettria`). The page holds the offers of its current page in the data
+its own code embeds (`__NEXT_DATA__`, `pageData.jobs`), 5 offers per page, `?page=<n>`
+giving the others; each offer's page describes it with `JobPosting` data.
+
+- **SRC-122** · The identifier is the company page (`join.com/companies/lettria`). The
+  source reads `https://join.com/companies/<company>` then `?page=2`, `?page=3`… without
+  search terms, until the page count announced by `pageData.jobs.pagination.pageCount`
+  is reached or 40 pages are read. A page without that data, or an unreadable one, ends
+  the reading. The same offer (same `idParam`) is kept once. A company without offers
+  gives no ad.
+- **SRC-123** · From each offer: title; location = its city name followed by its country
+  name (« New Delhi, India »); date = the day of `createdAt`; link =
+  `https://join.com/companies/<company>/<idParam>`. An offer without a title or an
+  `idParam` is skipped (SRC-01).
+- **SRC-124** · The page of each **retained** ad is opened and read as in SRC-51 (title,
+  text, date). A page without `JobPosting` data leaves the ad unchanged.
