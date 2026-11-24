@@ -51,6 +51,18 @@ missing = `manuel`), `statut`, `score`, `resume`, `lettre_demandee`, `lettre`
   CV will be generic.
 - **PAGE-08** · Applied: the follow-up is Waiting, Followed up, Interview, Rejected by
   the company or Offer received, and shows as a chip.
+- **PAGE-13** · Applied is shown in three sections, in this order, each with a heading
+  and its number of applications (according to the active filters), from the follow-up
+  (PAGE-08):
+  - "In progress": Interview or Offer received;
+  - "Awaiting reply": Waiting (no follow-up chosen) or Followed up;
+  - "Rejected by the company": Rejected by the company.
+
+  Within a section the order stays PAGE-03 (last change first). An empty section shows
+  its heading with 0 and a short line instead of cards. The "Rejected by the company"
+  section is folded by default (heading only); clicking its heading unfolds or folds
+  it. Changing the follow-up of an application moves it to its section at once. The
+  Applied counter (PAGE-01) still counts all three sections.
 - **PAGE-10** · Refusal reason: **No** (To review) and **Drop** open a short choice
   of reasons before moving the application to Rejected: Skills mismatch, Too senior,
   Too junior, Salary, Location / remote, Sector or mission, Consulting firm, Too pure ML,

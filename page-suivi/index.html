@@ -82,6 +82,10 @@ button.lettre[aria-pressed=true]{background:var(--accent-soft);border-color:var(
 .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
 .liens{font-size:14px;display:flex;flex-wrap:wrap;gap:4px 8px;overflow-wrap:anywhere}
 .resume{font-size:14px;max-width:70ch;margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+.sect{display:flex;align-items:baseline;gap:8px;width:100%;background:none;border:0;padding:14px 0 6px;margin:0;font:inherit;font-family:var(--display);font-size:15px;font-weight:600;color:var(--ink);text-align:left;cursor:default}
+button.sect{cursor:pointer}
+.sect .n{font-family:var(--mono);font-size:13px;color:var(--muted);font-weight:400}
+.sect-empty{color:var(--muted);font-size:14px;margin:0 0 4px}
 .empty{background:var(--surface);border:1px dashed var(--line);border-radius:8px;padding:28px 16px;text-align:center;color:var(--muted)}
 section.panel{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px}
 section.panel h2{font-family:var(--display);font-size:16px;font-weight:600;margin:0 0 8px}
@@ -256,7 +260,7 @@ en:{
   engine_A:"Engine A (Claude)",engine_B:"Engine B (PC)",engine_manuel:"Manual entry",search_ph:"Search a company, a title",search_aria:"Search",
   compare_title:"Engine comparison",compare_hint:"Acceptance rate: share of accepted entries among those you decided (yes or no).",
   status_a_traiter:"To review",status_acceptee:"To prepare",status_prete:"To validate",status_validee:"To send",status_postulee:"Applied",status_refusee:"Rejected",
-  suite_:"Waiting",suite_relance:"Followed up",suite_entretien:"Interview",suite_refus:"Rejected by the company",suite_offre:"Offer received",
+  suite_:"Waiting",suite_relance:"Followed up",suite_entretien:"Interview",suite_refus:"Rejected by the company",suite_offre:"Offer received",sect_cours:"In progress",sect_attente:"Awaiting reply",sect_refus:"Rejected by the company",sect_empty:"No application here.",sect_unfold:"Show",sect_fold:"Hide",
   reason_competences:"Skills mismatch",reason_trop_senior:"Too senior",reason_trop_junior:"Too junior",reason_salaire:"Salary",reason_lieu:"Location / remote",
   reason_secteur:"Sector or mission",reason_conseil:"Consulting firm",reason_ml_pur:"Too pure ML",reason_entreprise:"Company",reason_doublon:"Duplicate",reason_autre:"Other",
   link_open:"Open the link",link_site:"Company website",link_linkedin:"Company LinkedIn",err_link:"The link “{v}” must start with http:// or https://.",
@@ -344,7 +348,7 @@ fr:{
   engine_A:"Moteur A (Claude)",engine_B:"Moteur B (PC)",engine_manuel:"Ajout manuel",search_ph:"Rechercher une entreprise, un poste",search_aria:"Rechercher",
   compare_title:"Comparaison des moteurs",compare_hint:"Taux d'acceptation : part des entrées acceptées parmi celles que tu as tranchées (oui ou non).",
   status_a_traiter:"À traiter",status_acceptee:"À préparer",status_prete:"À valider",status_validee:"À envoyer",status_postulee:"Postulée",status_refusee:"Refusée",
-  suite_:"En attente",suite_relance:"Relancée",suite_entretien:"Entretien",suite_refus:"Refus de l'entreprise",suite_offre:"Proposition reçue",
+  suite_:"En attente",suite_relance:"Relancée",suite_entretien:"Entretien",suite_refus:"Refus de l'entreprise",suite_offre:"Proposition reçue",sect_cours:"En cours",sect_attente:"En attente de réponse",sect_refus:"Refus de l'entreprise",sect_empty:"Aucune candidature ici.",sect_unfold:"Afficher",sect_fold:"Masquer",
   reason_competences:"Compétences inadaptées",reason_trop_senior:"Trop senior",reason_trop_junior:"Trop junior",reason_salaire:"Salaire",reason_lieu:"Lieu / télétravail",
   reason_secteur:"Secteur ou mission",reason_conseil:"Conseil / ESN",reason_ml_pur:"Trop ML pur",reason_entreprise:"Entreprise",reason_doublon:"Doublon",reason_autre:"Autre",
   link_open:"Ouvrir le lien",link_site:"Site de l'entreprise",link_linkedin:"LinkedIn de l'entreprise",err_link:"Le lien « {v} » doit commencer par http:// ou https://.",
@@ -451,7 +455,7 @@ function moteurLabel(m){return t("engine_"+(MOTEURS.indexOf(m)>=0?m:"manuel"));}
 // Refusal reasons (PAGE-10): same codes as REASONS in moteur/refusal.py.
 var MOTIFS=["competences","trop_senior","trop_junior","salaire","lieu","secteur","conseil","ml_pur","entreprise","doublon","autre"];
 function motifLabel(c){return c?t("reason_"+(MOTIFS.indexOf(c)>=0?c:"autre")):"";}
-var state={docs:[],loaded:false,tab:"a_traiter",open:null,drafts:{},confirmDel:null,refusing:null,msg:null};
+var state={docs:[],loaded:false,tab:"a_traiter",open:null,drafts:{},confirmDel:null,refusing:null,msg:null,refusFold:true};
 var db=null,downloads=null,col=null,langPending=false;
 // Direct link with engine B (PAGE-35 to PAGE-38): MCP server `moteur mcp` on the PC.
 var SRV="host:moteur";
@@ -660,8 +664,29 @@ function renderList(list){
     return;
   }
   var html="";
-  rows.forEach(function(d){
-    var sp=d.type==="spontanee";
+  if(state.tab==="postulee"){
+    // PAGE-13: Applied in three sections, from the follow-up (PAGE-08).
+    var sections=[
+      {k:"cours",test:function(d){return d.suite==="entretien"||d.suite==="offre";}},
+      {k:"attente",test:function(d){return d.suite!=="entretien"&&d.suite!=="offre"&&d.suite!=="refus";}},
+      {k:"refus",test:function(d){return d.suite==="refus";}}
+    ];
+    sections.forEach(function(sec){
+      var part=rows.filter(sec.test),fold=sec.k==="refus";
+      var shut=fold&&state.refusFold;
+      var head='<span>'+esc(t("sect_"+sec.k))+'</span><span class="n">'+part.length+'</span>';
+      if(fold)html+='<button class="sect" data-sect="refus" aria-expanded="'+(!shut)+'">'+head+'<span class="n">'+(shut?"▸ ":"▾ ")+esc(t(shut?"sect_unfold":"sect_fold"))+'</span></button>';
+      else html+='<h3 class="sect">'+head+'</h3>';
+      if(shut)return;
+      if(!part.length){html+='<p class="sect-empty">'+esc(t("sect_empty"))+'</p>';return;}
+      part.forEach(function(d){html+=carte(d);});
+    });
+  } else rows.forEach(function(d){html+=carte(d);});
+  $("list").innerHTML=html;
+}
+
+function carte(d){
+    var html="",sp=d.type==="spontanee";
     html+='<article class="card '+(sp?"t-spontanee":"t-offre")+'" data-id="'+esc(d.id)+'"><div class="head"><div>';
     html+='<button class="title" data-act="toggle" aria-expanded="'+(state.open===d.id)+'">'+esc(d.entreprise||t("unknown_company"))+(d.poste?" · "+esc(d.poste):"")+'</button>';
     html+='<div class="meta"><span class="chip '+(sp?"spont":"offre")+'">'+esc(t(sp?"chip_unsolicited":"chip_ad"))+'</span>';
@@ -685,8 +710,7 @@ function renderList(list){
     if(state.fiche===d.id&&d.preparation)html+=fiche(d);
     if(state.open===d.id)html+=detail(d);
     html+='</article>';
-  });
-  $("list").innerHTML=html;
+    return html;
 }
 
 function renderStats(){
@@ -783,6 +807,7 @@ $("list").addEventListener("change",function(e){
   else if(e.target.hasAttribute("data-motif-sel"))write(card.getAttribute("data-id"),{motif_refus:e.target.value});
 });
 $("list").addEventListener("click",function(e){
+  if(e.target.closest("[data-sect]")){state.refusFold=!state.refusFold;render();return;}
   var b=e.target.closest("[data-act]");if(!b)return;
   var card=b.closest(".card"),id=card.getAttribute("data-id"),act=b.getAttribute("data-act");
   var draft=state.open===id?collectDraft(card):{};
