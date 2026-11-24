@@ -260,11 +260,11 @@ en:{
   engine_A:"Engine A (Claude)",engine_B:"Engine B (PC)",engine_manuel:"Manual entry",search_ph:"Search a company, a title",search_aria:"Search",
   compare_title:"Engine comparison",compare_hint:"Acceptance rate: share of accepted entries among those you decided (yes or no).",
   status_a_traiter:"To review",status_acceptee:"To prepare",status_prete:"To validate",status_validee:"To send",status_postulee:"Applied",status_refusee:"Rejected",
-  suite_:"Waiting",suite_relance:"Followed up",suite_entretien:"Interview",suite_refus:"Rejected by the company",suite_offre:"Offer received",sect_cours:"In progress",sect_attente:"Awaiting reply",sect_refus:"Rejected by the company",sect_empty:"No application here.",sect_unfold:"Show",sect_fold:"Hide",
+  suite_:"Waiting",suite_relance:"Followed up",suite_entretien:"HR interview",suite_entretien_technique:"Technical / manager interview",suite_refus:"Rejected by the company",suite_offre:"Offer received",sect_cours:"In progress",sect_attente:"Awaiting reply",sect_refus:"Rejected by the company",sect_empty:"No application here.",sect_unfold:"Show",sect_fold:"Hide",
   reason_competences:"Skills mismatch",reason_trop_senior:"Too senior",reason_trop_junior:"Too junior",reason_salaire:"Salary",reason_lieu:"Location / remote",
   reason_secteur:"Sector or mission",reason_conseil:"Consulting firm",reason_ml_pur:"Too pure ML",reason_entreprise:"Company",reason_doublon:"Duplicate",reason_autre:"Other",
   link_open:"Open the link",link_site:"Company website",link_linkedin:"Company LinkedIn",err_link:"The link “{v}” must start with http:// or https://.",
-  doc_cv:"CV",doc_letter:"Letter",prep:"Preparation",ad_text_view:"View ad text",ad_text_copied:"Ad text copied.",prep_of:"Preparation of {d}",
+  doc_cv:"CV",doc_letter:"Letter",prep:"HR preparation",prep_tech:"Technical preparation",ad_text_view:"View ad text",ad_text_copied:"Ad text copied.",prep_of:"HR preparation of {d}",prep_tech_of:"Technical preparation of {d}",
   letter_toggle:"Letter: {v}",yes:"yes",no:"no",letter_asked_tip:"The ad asks for a letter. ",click_change:"Click to change",
   save_failed:"Saving failed ({code}). Try again in a moment.",error:"error",
   act_yes:"Yes",act_no:"No",chip_cv_letter:"CV and letter to generate",chip_cv:"CV to generate",act_validate:"Validate",act_applied:"Mark as applied",act_reopen:"Back to review",
@@ -275,13 +275,13 @@ en:{
   letter_redo_ok:"Run <code>uv run moteur letter</code>",letter_redo_off:"Export, then run <code>uv run moteur decisions</code> and <code>uv run moteur letter</code>",letter_redo_end:": the new PDF will replace the old one.",
   fld_letter_instr:"Instruction for the letter (optional: empty = rewritten from scratch)",fld_reason:"Refusal reason",reason_none:"Not specified",fld_reason_detail:"Reason detail",
   fld_suite:"Follow-up",prep_intro:"Interview preparation (all optional, kept for the next request)",fld_salary:"Salary announced",fld_interview:"Interview: date, format, interviewers",
-  fld_prep_instr:"Instruction for the preparation",prep_requested:"Preparation requested",prep_req_ok:": engine B is writing it, the sheet will arrive here in a few minutes.",
+  fld_prep_instr:"Instruction for the preparation",fld_hr_feedback:"Feedback from the earlier interviews (what was said, what they expect)",prep_requested:"Preparation requested",prep_req_ok:": engine B is writing it, the sheet will arrive here in a few minutes.",prep_req_ok_tech:": engine B is writing it (deeper research), the sheet will arrive here in 10 to 20 minutes.",
   prep_req_off:". Engine B is not connected: open the page in the Claude desktop app, or run <code>uv run moteur prepare</code>.",
-  act_save:"Save",act_prep_redo:"Redo the preparation",act_prep:"Prepare the interview",act_ready:"CV ready, move to validation",act_retouch:"Request again with this instruction",
+  act_save:"Save",act_prep_redo:"Redo the preparation",act_prep:"Prepare the HR interview",act_prep_tech:"Prepare the technical / manager interview",act_ready:"CV ready, move to validation",act_retouch:"Request again with this instruction",
   act_reletter:"Regenerate the letter",act_drop:"Drop",act_del_confirm:"Confirm deletion",act_del:"Delete",
   list_loading:"Loading applications…",list_empty_filter:"Nothing at this step with these filters.",list_empty:"No application yet. Add an entry or import the local engine's file.",
   unknown_company:"Unknown company",chip_unsolicited:"Unsolicited",chip_ad:"Ad",score:"score {n}",chip_letter_asked:"Letter requested by the ad",chip_letter_redo:"Letter to regenerate",
-  chip_letter_gen:"Letter to generate: uv run moteur letter",sent_on:"sent on {d}",chip_offer:"Offer",chip_interview:"Interview",chip_refused:"Rejected",chip_followed:"Followed up",
+  chip_letter_gen:"Letter to generate: uv run moteur letter",sent_on:"sent on {d}",chip_offer:"Offer",chip_interview:"HR interview",chip_interview_tech:"Technical interview",chip_refused:"Rejected",chip_followed:"Followed up",
   chip_prep:"Preparation in progress",added_on:"added on {d}",
   th_engine:"Engine",th_proposed:"Proposed",th_review:"To review",th_accepted:"Accepted",th_rejected:"Rejected",th_applied:"Applied",th_rate:"Acceptance rate",percent:"{n}%",
   sub_one:"{n} entries, {s} unsolicited",sub_other:"{n} entries, {s} unsolicited",
@@ -348,11 +348,11 @@ fr:{
   engine_A:"Moteur A (Claude)",engine_B:"Moteur B (PC)",engine_manuel:"Ajout manuel",search_ph:"Rechercher une entreprise, un poste",search_aria:"Rechercher",
   compare_title:"Comparaison des moteurs",compare_hint:"Taux d'acceptation : part des entrées acceptées parmi celles que tu as tranchées (oui ou non).",
   status_a_traiter:"À traiter",status_acceptee:"À préparer",status_prete:"À valider",status_validee:"À envoyer",status_postulee:"Postulée",status_refusee:"Refusée",
-  suite_:"En attente",suite_relance:"Relancée",suite_entretien:"Entretien",suite_refus:"Refus de l'entreprise",suite_offre:"Proposition reçue",sect_cours:"En cours",sect_attente:"En attente de réponse",sect_refus:"Refus de l'entreprise",sect_empty:"Aucune candidature ici.",sect_unfold:"Afficher",sect_fold:"Masquer",
+  suite_:"En attente",suite_relance:"Relancée",suite_entretien:"Entretien RH",suite_entretien_technique:"Entretien technique / manager",suite_refus:"Refus de l'entreprise",suite_offre:"Proposition reçue",sect_cours:"En cours",sect_attente:"En attente de réponse",sect_refus:"Refus de l'entreprise",sect_empty:"Aucune candidature ici.",sect_unfold:"Afficher",sect_fold:"Masquer",
   reason_competences:"Compétences inadaptées",reason_trop_senior:"Trop senior",reason_trop_junior:"Trop junior",reason_salaire:"Salaire",reason_lieu:"Lieu / télétravail",
   reason_secteur:"Secteur ou mission",reason_conseil:"Conseil / ESN",reason_ml_pur:"Trop ML pur",reason_entreprise:"Entreprise",reason_doublon:"Doublon",reason_autre:"Autre",
   link_open:"Ouvrir le lien",link_site:"Site de l'entreprise",link_linkedin:"LinkedIn de l'entreprise",err_link:"Le lien « {v} » doit commencer par http:// ou https://.",
-  doc_cv:"CV",doc_letter:"Lettre",prep:"Préparation",ad_text_view:"Voir le texte de l'offre",ad_text_copied:"Texte de l'offre copié.",prep_of:"Préparation du {d}",
+  doc_cv:"CV",doc_letter:"Lettre",prep:"Préparation RH",prep_tech:"Préparation technique",ad_text_view:"Voir le texte de l'offre",ad_text_copied:"Texte de l'offre copié.",prep_of:"Préparation RH du {d}",prep_tech_of:"Préparation technique du {d}",
   letter_toggle:"Lettre : {v}",yes:"oui",no:"non",letter_asked_tip:"L'offre demande une lettre. ",click_change:"Clique pour changer",
   save_failed:"L'enregistrement a échoué ({code}). Réessaie dans un instant.",error:"erreur",
   act_yes:"Oui",act_no:"Non",chip_cv_letter:"CV et lettre à générer",chip_cv:"CV à générer",act_validate:"Valider",act_applied:"Marquer comme postulée",act_reopen:"Remettre à traiter",
@@ -363,13 +363,13 @@ fr:{
   letter_redo_ok:"Lance <code>uv run moteur letter</code>",letter_redo_off:"Exporte, puis lance <code>uv run moteur decisions</code> et <code>uv run moteur letter</code>",letter_redo_end:" : le nouveau PDF remplacera l'ancien.",
   fld_letter_instr:"Consigne pour la lettre (facultatif : vide = réécrite de zéro)",fld_reason:"Motif du refus",reason_none:"Non précisé",fld_reason_detail:"Précision du motif",
   fld_suite:"Suite donnée",prep_intro:"Préparation de l'entretien (tout est facultatif, gardé pour la prochaine demande)",fld_salary:"Salaire annoncé",fld_interview:"Entretien : date, format, interlocuteurs",
-  fld_prep_instr:"Consigne pour la préparation",prep_requested:"Préparation demandée",prep_req_ok:" : le moteur B la rédige, la fiche arrivera ici dans quelques minutes.",
+  fld_prep_instr:"Consigne pour la préparation",fld_hr_feedback:"Retour des entretiens précédents (ce qui s'est dit, ce qu'ils attendent)",prep_requested:"Préparation demandée",prep_req_ok:" : le moteur B la rédige, la fiche arrivera ici dans quelques minutes.",prep_req_ok_tech:" : le moteur B la rédige (recherche approfondie), la fiche arrivera ici dans 10 à 20 minutes.",
   prep_req_off:". Le moteur B n'est pas connecté : ouvre la page dans l'app Claude desktop, ou lance <code>uv run moteur prepare</code>.",
-  act_save:"Enregistrer",act_prep_redo:"Refaire la préparation",act_prep:"Préparer l'entretien",act_ready:"CV prêt, passer à valider",act_retouch:"Redemander avec la consigne",
+  act_save:"Enregistrer",act_prep_redo:"Refaire la préparation",act_prep:"Préparer l'entretien RH",act_prep_tech:"Préparer l'entretien technique / manager",act_ready:"CV prêt, passer à valider",act_retouch:"Redemander avec la consigne",
   act_reletter:"Régénérer la lettre",act_drop:"Abandonner",act_del_confirm:"Confirmer la suppression",act_del:"Supprimer",
   list_loading:"Chargement des candidatures…",list_empty_filter:"Rien à cette étape avec ces filtres.",list_empty:"Aucune candidature pour l'instant. Ajoute une entrée ou importe le fichier du moteur local.",
   unknown_company:"Entreprise inconnue",chip_unsolicited:"Spontanée",chip_ad:"Offre",score:"score {n}",chip_letter_asked:"Lettre demandée par l'offre",chip_letter_redo:"Lettre à régénérer",
-  chip_letter_gen:"Lettre à générer : uv run moteur letter",sent_on:"envoyée le {d}",chip_offer:"Proposition",chip_interview:"Entretien",chip_refused:"Refus",chip_followed:"Relancée",
+  chip_letter_gen:"Lettre à générer : uv run moteur letter",sent_on:"envoyée le {d}",chip_offer:"Proposition",chip_interview:"Entretien RH",chip_interview_tech:"Entretien technique",chip_refused:"Refus",chip_followed:"Relancée",
   chip_prep:"Préparation en cours",added_on:"ajoutée le {d}",
   th_engine:"Moteur",th_proposed:"Proposées",th_review:"À traiter",th_accepted:"Acceptées",th_rejected:"Refusées",th_applied:"Postulées",th_rate:"Taux d'acceptation",percent:"{n} %",
   sub_one:"{n} entrées, dont {s} candidature spontanée",sub_other:"{n} entrées, dont {s} candidatures spontanées",
@@ -449,7 +449,7 @@ function tp(key,n,params){
 function locale(){return langInfo(lang).locale;}
 
 var STATUTS=["a_traiter","acceptee","prete","validee","postulee","refusee"];
-var SUITES=["","relance","entretien","refus","offre"];
+var SUITES=["","relance","entretien","entretien_technique","refus","offre"];
 var MOTEURS=["A","B","manuel"];
 function moteurLabel(m){return t("engine_"+(MOTEURS.indexOf(m)>=0?m:"manuel"));}
 // Refusal reasons (PAGE-10): same codes as REASONS in moteur/refusal.py.
@@ -491,15 +491,23 @@ function liensSaisis(o){
 // Local PDFs go through `uv run moteur serve`: a file:// link is blocked from claude.ai.
 var SERVEUR_LOCAL="http://127.0.0.1:8765/";
 function docUrl(ref){ref=String(ref||"").trim();if(!ref)return "";if(/^https?:\/\//i.test(ref))return ref;if(/^[a-z]+:/i.test(ref))return "";return SERVEUR_LOCAL+ref.replace(/^\/+/,"").split("/").map(encodeURIComponent).join("/");}
-function docLinks(d){var h="",c=docUrl(d.cv_ref),l=docUrl(d.lettre_ref);if(c)h+='<a class="doc" href="'+esc(c)+'" target="_blank" rel="noopener noreferrer">'+esc(t("doc_cv"))+'</a>';if(l)h+='<a class="doc" href="'+esc(l)+'" target="_blank" rel="noopener noreferrer">'+esc(t("doc_letter"))+'</a>';if(d.preparation)h+='<button data-act="fiche" aria-expanded="'+(state.fiche===d.id)+'">'+esc(t("prep"))+'</button>';return h;}
+function docLinks(d){var h="",c=docUrl(d.cv_ref),l=docUrl(d.lettre_ref);if(c)h+='<a class="doc" href="'+esc(c)+'" target="_blank" rel="noopener noreferrer">'+esc(t("doc_cv"))+'</a>';if(l)h+='<a class="doc" href="'+esc(l)+'" target="_blank" rel="noopener noreferrer">'+esc(t("doc_letter"))+'</a>';PREP_KINDS.forEach(function(k){if(d[PREP[k].sheet])h+='<button data-act="fiche" data-kind="'+k+'" aria-expanded="'+(state.fiche===d.id+":"+k)+'">'+esc(t(PREP[k].label))+'</button>';});return h;}
 // Default letter: unsolicited, public sector, banks. The toggle (field `lettre`: `oui` or
 // `non`) wins. Must stay identical to default_letter in moteur/models.py (ID-05).
 var SOURCES_PUBLIQUES=["service_public","choisirleservicepublic.gouv.fr","place-emploi-public"];
 var MOTS_LETTRE=["ministere","direction generale","dgsi","dgse","dga","dinum","anssi","agence de l'innovation de defense","commissariat","secretariat general","autorite","tracfin","prefecture","armees","gendarmerie","police nationale","service statistique","cnes","cnrs","inria","interpol","beta.gouv",
   "banque","bank","bnp paribas","societe generale","credit agricole","cacib","lcl","natixis","bpce","caisse d'epargne","credit mutuel","cic","bpifrance","rothschild","lazard","hsbc","la banque postale","oddo","amundi"];
-// Interview preparation (PAGE-11): pending while the request is more recent than the sheet.
-function prepEnCours(d){return !!d.preparation_demandee_le&&String(d.preparation_demandee_le)>String(d.preparation_le||"");}
-function prepPossible(d){return d.statut==="postulee"&&d.suite==="entretien";}
+// Interview preparation (PAGE-11, PREP-50): an HR sheet and a technical / manager sheet,
+// each pending while its request is more recent than it.
+var PREP={rh:{req:"preparation_demandee_le",sheet:"preparation",at:"preparation_le",label:"prep",of:"prep_of",act:"act_prep",ok:"prep_req_ok"},
+  technique:{req:"preparation_technique_demandee_le",sheet:"preparation_technique",at:"preparation_technique_le",label:"prep_tech",of:"prep_tech_of",act:"act_prep_tech",ok:"prep_req_ok_tech"}};
+var PREP_KINDS=["rh","technique"];
+function prepKind(d){return d.suite==="entretien_technique"?"technique":"rh";}
+function prepEnCours(d,kind){
+  if(!kind)return PREP_KINDS.some(function(k){return prepEnCours(d,k);});
+  var p=PREP[kind];return !!d[p.req]&&String(d[p.req])>String(d[p.at]||"");
+}
+function prepPossible(d){return d.statut==="postulee"&&(d.suite==="entretien"||d.suite==="entretien_technique");}
 // Minimal Markdown for the sheet: everything is escaped first, only http(s) links are kept.
 function mdInline(s){
   return esc(s).replace(/`([^`]+)`/g,"<code>$1</code>").replace(/\*\*([^*]+)\*\*/g,"<strong>$1</strong>")
@@ -530,8 +538,9 @@ function md(src){
 function dateFiche(s){var d=new Date(s);return isNaN(d)?"":d.toLocaleString(locale(),{day:"numeric",month:"long",hour:"2-digit",minute:"2-digit"});}
 // Stored days (YYYY-MM-DD) shown in the interface's language; anything else as is.
 function jour(s){var m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String(s||""));if(!m)return String(s||"");return new Date(Date.UTC(+m[1],+m[2]-1,+m[3])).toLocaleDateString(locale(),{day:"numeric",month:"short",year:"numeric",timeZone:"UTC"});}
-function fiche(d){
-  return '<div class="fiche"><div class="row"><span class="sub" style="margin:0">'+esc(d.preparation_le?t("prep_of",{d:dateFiche(d.preparation_le)}):t("prep"))+'</span><button class="ghost" data-act="fiche">'+esc(t("close"))+'</button></div>'+md(d.preparation)+'</div>';
+function fiche(d,kind){
+  var p=PREP[kind];
+  return '<div class="fiche"><div class="row"><span class="sub" style="margin:0">'+esc(d[p.at]?t(p.of,{d:dateFiche(d[p.at])}):t(p.label))+'</span><button class="ghost" data-act="fiche" data-kind="'+kind+'">'+esc(t("close"))+'</button></div>'+md(d[p.sheet])+'</div>';
 }
 
 function lettreDefaut(d){
@@ -638,11 +647,12 @@ function detail(d){
   if(prepPossible(d)){
     h+='<div class="sub" style="margin:0">'+esc(t("prep_intro"))+'</div>';
     h+='<div class="grid2">'+field(d.id,"pretentions","fld_salary",d)+field(d.id,"entretien_infos","fld_interview",d)+'</div>';
+    if(prepKind(d)==="technique")h+=field(d.id,"retour_entretien_rh","fld_hr_feedback",d,"area");
     h+=field(d.id,"preparation_consigne","fld_prep_instr",d,"area");
-    if(prepEnCours(d))h+='<div class="note">'+esc(t("prep_requested"))+(moteur.ok?esc(t("prep_req_ok")):t("prep_req_off"))+'</div>';
+    PREP_KINDS.forEach(function(k){if(prepEnCours(d,k))h+='<div class="note">'+esc(t("prep_requested"))+(moteur.ok?esc(t(PREP[k].ok)):t("prep_req_off"))+'</div>';});
   }
   h+='<div class="row"><button data-act="save">'+esc(t("act_save"))+'</button>';
-  if(prepPossible(d))h+='<button class="primary" data-act="preparer">'+esc(t(d.preparation?"act_prep_redo":"act_prep"))+'</button>';
+  if(prepPossible(d)){var pk=PREP[prepKind(d)];h+='<button class="primary" data-act="preparer">'+esc(t(d[pk.sheet]?"act_prep_redo":pk.act))+'</button>';}
   if(d.statut==="acceptee")h+='<button data-act="pret">'+esc(t("act_ready"))+'</button>';
   if(d.statut==="prete"||d.statut==="validee")h+='<button data-act="retouche">'+esc(t("act_retouch"))+'</button>';
   if(d.lettre_ref&&(d.statut==="prete"||d.statut==="validee"))h+='<button data-act="relettre">'+esc(t("act_reletter"))+'</button>';
@@ -667,8 +677,8 @@ function renderList(list){
   if(state.tab==="postulee"){
     // PAGE-13: Applied in three sections, from the follow-up (PAGE-08).
     var sections=[
-      {k:"cours",test:function(d){return d.suite==="entretien"||d.suite==="offre";}},
-      {k:"attente",test:function(d){return d.suite!=="entretien"&&d.suite!=="offre"&&d.suite!=="refus";}},
+      {k:"cours",test:function(d){return d.suite==="entretien"||d.suite==="entretien_technique"||d.suite==="offre";}},
+      {k:"attente",test:function(d){return d.suite!=="entretien"&&d.suite!=="entretien_technique"&&d.suite!=="offre"&&d.suite!=="refus";}},
       {k:"refus",test:function(d){return d.suite==="refus";}}
     ];
     sections.forEach(function(sec){
@@ -698,7 +708,7 @@ function carte(d){
     if((d.statut==="prete"||d.statut==="validee")&&lettrePrevue(d)&&!d.lettre_ref)html+='<span class="chip warn">'+esc(t("chip_letter_gen"))+'</span>';
     if(d.statut==="postulee"){
       html+='<span>'+esc(t("sent_on",{d:jour(d.date_postulee||d.date_maj||"")}))+'</span>';
-      if(d.suite==="entretien"||d.suite==="offre")html+='<span class="chip ok">'+esc(t(d.suite==="offre"?"chip_offer":"chip_interview"))+'</span>';
+      if(d.suite==="entretien"||d.suite==="entretien_technique"||d.suite==="offre")html+='<span class="chip ok">'+esc(t(d.suite==="offre"?"chip_offer":d.suite==="entretien"?"chip_interview":"chip_interview_tech"))+'</span>';
       if(d.suite==="refus")html+='<span class="chip bad">'+esc(t("chip_refused"))+'</span>';
       if(d.suite==="relance")html+='<span class="chip">'+esc(t("chip_followed"))+'</span>';
       if(prepEnCours(d))html+='<span class="chip warn">'+esc(t("chip_prep"))+'</span>';
@@ -707,7 +717,7 @@ function carte(d){
     if(String(d.texte_offre||"").trim())html+='<button class="mini" data-act="texte-offre">'+esc(t("ad_text_view"))+'</button>';
     html+='</div></div><div class="row">'+docLinks(d)+lettreBouton(d)+actions(d)+'</div></div>';
     if(state.refusing===d.id)html+=motifPicker(d);
-    if(state.fiche===d.id&&d.preparation)html+=fiche(d);
+    PREP_KINDS.forEach(function(k){if(state.fiche===d.id+":"+k&&d[PREP[k].sheet])html+=fiche(d,k);});
     if(state.open===d.id)html+=detail(d);
     html+='</article>';
     return html;
@@ -814,7 +824,7 @@ $("list").addEventListener("click",function(e){
   var done=function(){delete state.drafts[id];};
   if(act==="toggle"){state.open=state.open===id?null:id;state.confirmDel=null;render();return;}
   if(act==="del"){state.confirmDel=id;render();return;}
-  if(act==="fiche"){state.fiche=state.fiche===id?null:id;render();return;}
+  if(act==="fiche"){var fk=id+":"+(b.getAttribute("data-kind")||"rh");state.fiche=state.fiche===fk?null:fk;render();return;}
   if(act==="texte-offre"){ouvrirTexteOffre(id);return;}
   // "No" and "Drop" first ask for the reason (PAGE-10).
   if(act==="non"){state.refusing=state.refusing===id?null:id;render();return;}
@@ -845,8 +855,9 @@ $("list").addEventListener("click",function(e){
   else if(act==="valider")f.statut="validee";
   else if(act==="postulee"){f.statut="postulee";f.date_postulee=today();}
   else if(act==="preparer"){
-    f.preparation_demandee_le=new Date().toISOString();
-    ["pretentions","entretien_infos","preparation_consigne"].forEach(function(k){if(f[k]!=null)f[k]=String(f[k]).trim().slice(0,2000);});
+    var pdoc=state.docs.filter(function(x){return x.id===id;})[0]||{};
+    f[PREP[prepKind(pdoc)].req]=new Date().toISOString();
+    ["pretentions","entretien_infos","preparation_consigne","retour_entretien_rh"].forEach(function(k){if(f[k]!=null)f[k]=String(f[k]).trim().slice(0,2000);});
   }
   else if(act==="relettre"){f.lettre_refaire_le=new Date().toISOString();f.lettre_consigne=String(f.lettre_consigne||"").trim();}
   else if(act==="retouche"){
@@ -892,7 +903,7 @@ function importRows(arr,auto){
   var known={};state.docs.forEach(function(d){known[d.id]=d;});
   var added=0,updated=0,skipped=0,chain=Promise.resolve();
   var LIENS=["site_entreprise","linkedin_entreprise"];
-  var GEN=["cv_ref","lettre_ref","resume","score","lettre_demandee","preparation","preparation_le"];
+  var GEN=["cv_ref","lettre_ref","resume","score","lettre_demandee","preparation","preparation_le","preparation_technique","preparation_technique_le"];
   arr.forEach(function(raw){
     if(!raw||typeof raw!=="object"||!raw.entreprise){skipped++;return;}
     var d={type:raw.type==="spontanee"?"spontanee":"offre",entreprise:String(raw.entreprise),poste:String(raw.poste||""),lieu:String(raw.lieu||""),
@@ -1195,11 +1206,11 @@ function echecMoteur(e){
 // Only the fields the engine reads (ECH-11); the ad text is sent whatever the status (BASE-14).
 var CHAMPS_MOTEUR=["id","statut","consigne","lettre_demandee","lettre","lettre_refaire_le","lettre_consigne","type","entreprise","poste","lieu","url","source","motif_refus","motif_detail","site_entreprise","linkedin_entreprise","liens_manuels"];
 // A preparation request also carries what the page knows of the follow-up (PREP-10).
-var CHAMPS_PREPARATION=["preparation_demandee_le","pretentions","entretien_infos","preparation_consigne","date_postulee","suite","contact","notes","texte_offre"];
+var CHAMPS_PREPARATION=["preparation_demandee_le","preparation_technique_demandee_le","pretentions","entretien_infos","preparation_consigne","retour_entretien_rh","date_postulee","suite","contact","notes","texte_offre"];
 function pourLeMoteur(d){
   var o={};CHAMPS_MOTEUR.forEach(function(k){if(d[k]!=null&&d[k]!=="")o[k]=d[k];});
   if(d.texte_offre)o.texte_offre=d.texte_offre;
-  if(d.preparation_demandee_le)CHAMPS_PREPARATION.forEach(function(k){if(d[k]!=null&&d[k]!=="")o[k]=d[k];});
+  if(d.preparation_demandee_le||d.preparation_technique_demandee_le)CHAMPS_PREPARATION.forEach(function(k){if(d[k]!=null&&d[k]!=="")o[k]=d[k];});
   return o;
 }
 // Page → engine (PAGE-37): one call at a time, changes in quick succession go together.

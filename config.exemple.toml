@@ -19,8 +19,10 @@ taille_lot = 8
 [modeles]
 notation = "haiku"
 generation = "sonnet"
-# Interview preparation sheets (with web search).
+# Interview preparation sheets (with web search): HR interview, then technical / manager
+# interview (deeper, so a stronger model).
 preparation = "sonnet"
+preparation_technique = "opus"
 
 [criteres]
 # Defaults: "mots_cles", "exclusions", "lieux", "pays" and "recherches" can be replaced in

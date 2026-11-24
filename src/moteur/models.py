@@ -83,6 +83,13 @@ class Application:
     """Interview preparation sheet (Markdown), empty if none (PREP-32)."""
     preparation_le: str = ""
     """Time the sheet was written, in the page's `toISOString()` format."""
+    technical_preparation: str = ""
+    """Technical / manager interview sheet (Markdown), empty if none (PREP-54)."""
+    technical_preparation_le: str = ""
+
+
+PrepKind = Literal["rh", "technique"]
+"""Kind of preparation sheet: HR interview or technical / manager interview (PREP-50)."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -96,6 +103,9 @@ class PrepRequest:
     instruction: str = ""
     context: str = ""
     """What the page knows of the follow-up: sent date, follow-up, contact, notes."""
+    kind: PrepKind = "rh"
+    hr_feedback: str = ""
+    """What was said in the earlier interviews (`retour_entretien_rh`, PREP-51)."""
 
 
 # Organisations for which a letter is made by default (the page's toggle can always

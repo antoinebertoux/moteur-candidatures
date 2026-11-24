@@ -35,7 +35,7 @@ reference: when the code and a spec disagree, one of them is wrong and must be f
 ```
 
 Claude is only called to **score** (Haiku), to **write** (Sonnet) and to **prepare an
-interview** (Sonnet, with web search), through
+interview** (Sonnet for HR, Opus for technical / manager, with web search), through
 `claude -p` with User's subscription, never an API key. Everything else is plain
 code, at 0 tokens.
 

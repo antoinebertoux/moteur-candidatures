@@ -19,8 +19,9 @@ capability). Engine B therefore offers two channels carrying the same content:
   format `2026-11-17T21:45:48.123Z`, comparable with the page's.
 
 - **ECH-03** · An application with a preparation sheet (PREP-32) adds `preparation`
-  (the Markdown text) and `preparation_le` (date of the sheet, same format), whatever its
-  status in engine B.
+  (the Markdown text) and `preparation_le` (date of the sheet, same format), and with a
+  technical / manager sheet (PREP-54) `preparation_technique` and
+  `preparation_technique_le`, whatever its status in engine B.
 
 - **ECH-04** · Every entry adds `site_entreprise` and `linkedin_entreprise` when its
   company has them (LNK-02), whatever the source.
@@ -42,7 +43,8 @@ capability). Engine B therefore offers two channels carrying the same content:
 - **ECH-11** · Fields read: `id`, `statut`, `consigne`, `lettre_demandee`, `lettre`
   (`oui` / `non` or boolean; missing = no choice), `lettre_refaire_le`,
   `lettre_consigne`, `motif_refus`, `motif_detail`, `preparation_demandee_le`,
-  `pretentions`, `entretien_infos`, `preparation_consigne`, `site_entreprise`,
+  `pretentions`, `entretien_infos`, `preparation_consigne`,
+  `preparation_technique_demandee_le`, `retour_entretien_rh`, `site_entreprise`,
   `linkedin_entreprise` and `liens_manuels` (PAGE-42), and enough to rebuild the ad if `entreprise` and `poste` are
   present (`type`, `lieu`, `url`, `source`, `texte_offre`). The page sends `texte_offre` whenever it has one, whatever the
   status (BASE-14).

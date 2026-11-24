@@ -69,10 +69,10 @@ rules (only the owner writes).
 | `cv_ref`, `lettre_ref` | text | relative path or http(s) link of the PDFs |
 | `contact`, `notes`, `texte_offre` | text | free |
 | `consigne`, `retouche_le`, `lettre_consigne`, `lettre_refaire_le` | text | edit requests |
-| `suite` | text | after sending: empty, `relance`, `entretien`, `refus`, `offre` |
+| `suite` | text | after sending: empty, `relance`, `entretien` (HR interview), `entretien_technique` (technical / manager interview), `refus`, `offre` |
 | `motif_refus`, `motif_detail` | text | refusal reason (PAGE-10) |
-| `preparation_demandee_le`, `pretentions`, `entretien_infos`, `preparation_consigne` | text | interview preparation request (PAGE-11) |
-| `preparation`, `preparation_le` | text | preparation sheet (Markdown) and its date, written by engine B |
+| `preparation_demandee_le`, `preparation_technique_demandee_le`, `pretentions`, `entretien_infos`, `preparation_consigne`, `retour_entretien_rh` | text | interview preparation requests, HR and technical / manager (PAGE-11) |
+| `preparation`, `preparation_le`, `preparation_technique`, `preparation_technique_le` | text | preparation sheets (Markdown) and their dates, written by engine B |
 | `site_entreprise`, `linkedin_entreprise`, `liens_manuels` | text, boolean | company links (PAGE-41, PAGE-42) |
 | `date_ajout`, `date_maj`, `date_postulee` | text | `YYYY-MM-DD` |
 

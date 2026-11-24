@@ -12,7 +12,7 @@
 | `moteur decisions <file>` | reads the page's export |
 | `moteur generate` | folders of accepted applications, missing letters, then export |
 | `moteur letter [id…]` | letters only, then export |
-| `moteur prepare [id…]` | interview preparation sheets (PREP-40), then export |
+| `moteur prepare [id…] [--technical]` | interview preparation sheets (PREP-40), then export |
 | `moteur init-latex` | copies the LaTeX example to `latex/` (LTX-03) |
 | `moteur serve [--port N]` | serves the PDFs to the page |
 | `moteur mcp` | direct link with the page (ECH-20), started by the Claude desktop app |

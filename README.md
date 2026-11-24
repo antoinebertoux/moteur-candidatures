@@ -30,7 +30,7 @@ flowchart LR
         DB[("moteur.sqlite3")]
         NOT["score<br/>score + summary<br/>(Claude Haiku)"]
         GEN["generate / letter<br/>LaTeX CV + letter<br/>(Claude Sonnet)"]
-        PREP["prepare<br/>interview sheet, web search<br/>(Claude Sonnet)"]
+        PREP["prepare<br/>interview sheets, web search<br/>(Claude Sonnet / Opus)"]
         MCP["moteur mcp<br/>MCP server"]
         SRV["serve<br/>127.0.0.1:8765"]
         COL --> DB --> NOT --> DB
@@ -180,7 +180,7 @@ uv run moteur prepare            # pending interview preparation sheets
 | `decisions <file>` | reads the page's export | no |
 | `generate` | prepares CV and letter for accepted ads | Sonnet |
 | `letter [ids…]` | adds the missing letter to folders whose CV already exists | Sonnet |
-| `prepare [ids…]` | interview preparation sheets (all pending requests by default) | Sonnet |
+| `prepare [ids…] [--technical]` | interview preparation sheets (all pending requests by default) | Sonnet (HR), Opus (technical / manager) |
 | `mcp` | direct link with the page, started by the Claude desktop app | no |
 | `detect <urls…>` | recognises the recruiting tool behind career pages | no |
 | `companies` | lists the companies followed and the sources, with what is searched | no |
@@ -224,10 +224,13 @@ upload it in the desktop app's settings (Capabilities, Skills).
 
 ### Interview preparation
 
-On an application marked *Postulée* whose follow-up is *Entretien*, the page's
-"Prepare the interview" button records a request. `moteur mcp` then starts
+On an application marked *Postulée* whose follow-up is *Entretien RH*, the page's
+"Prepare the HR interview" button records a request. `moteur mcp` then starts
 `moteur prepare` in the background, which writes `preparation-entretien.md` in the
-application's folder and sends the sheet back to the page
+application's folder and sends the sheet back to the page. Once the follow-up is
+*Entretien technique / manager*, a second, deeper sheet (Opus: the team, the job itself,
+projects to tell, likely technical and manager questions) is written to
+`preparation-entretien-technique.md`; the HR sheet stays readable
 ([`specs/interview-prep.md`](specs/interview-prep.md)). The output of the last
 background run is in `echange/preparation.log`.
 
@@ -292,7 +295,7 @@ checked by a test that cites it (`@pytest.mark.spec("FILT-03")`);
 | `generation.py` | LaTeX CV and letter, compilation | Sonnet |
 | `latex_repository.py` | `latex/` folder: required files, personal instructions, `init-latex` | no |
 | `cover_letter.py` | letter alone, for a folder whose CV exists | Sonnet |
-| `interview_prep.py` | interview preparation sheet, with web search | Sonnet |
+| `interview_prep.py` | interview preparation sheets, with web search | Sonnet / Opus |
 | `claude_cli.py` | calls to `claude -p` | — |
 | `exchange.py` | files exchanged with the tracking page | no |
 | `decisions.py` | applies the page's decisions (file or direct link) | no |

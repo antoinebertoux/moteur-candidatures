@@ -57,12 +57,14 @@ def requested_preparations(base: LocalDb, decisions: list[exchange.Decision]) ->
     """
     new_ones = 0
     for decision in decisions:
-        if decision.preparation is None:
+        requests = [r for r in (decision.preparation, decision.technical_preparation) if r]
+        if not requests:
             continue
         if decision.ad is not None and base.find(decision.key) is None:
             status = ACCEPTED if decision.status == "acceptee" else CLOSE
             base.complete_from_the_page(decision.key, decision.ad, decision.with_letter, status)
-        new_ones += base.request_preparation(decision.key, decision.preparation)
+        for request in requests:
+            new_ones += base.request_preparation(decision.key, request)
     return new_ones
 
 

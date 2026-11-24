@@ -51,7 +51,8 @@ Checked by hand.
 
 - **TACHE-10** · For each Postulée application waiting or followed up, the task looks in
   Gmail for a reply from the company since the sent date. Reply found → `suite` =
-  interview, rejection or offer (a mere acknowledgement changes nothing) and a dated line
+  interview (`entretien` for a first interview, `entretien_technique` for a later step,
+  as TACHE-15), rejection or offer (a mere acknowledgement changes nothing) and a dated line
   appended to the notes.
 - **TACHE-11** · No reply after 10 days: a short follow-up draft is prepared (Gmail draft
   if an address is known) and appended to the notes. Nothing is ever sent; User sets
@@ -68,7 +69,9 @@ Checked by hand.
   applications in the database.
 - **TACHE-15** · A matching email updates the application: acknowledgement → notes only;
   rejection → `suite` = refus, with the reason given by the company (never guessed);
-  interview, call or test → `suite` = entretien; offer → `suite` = offre; request for
+  first interview or call (recruiter, HR) → `suite` = entretien; a later step
+  (interview with the manager or the team, technical test, case study, or any invitation
+  while `suite` is already entretien) → `suite` = entretien_technique; offer → `suite` = offre; request for
   information → notes only. Each case appends one dated line to the notes, never twice.
 - **TACHE-16** · A direct approach by a recruiter or a company for a fitting role is
   added as a new To review ad (`source` = "approche par e-mail"); replies about

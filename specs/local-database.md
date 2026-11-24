@@ -28,9 +28,10 @@
   application, and replaced when the page changes them; an unknown reason is stored as
   `autre`. Leaving `refusee` clears them.
 - **BASE-12** · A preparation request from the page (PREP-01) is stored with its time,
-  salary announced, interview details and instruction, whatever the application's state;
-  an older or identical request changes nothing. A successful sheet stores its text and
-  date (PREP-32). The application's status is never changed by a preparation.
+  salary announced, interview details, instruction and feedback from earlier interviews,
+  whatever the application's state; each kind (HR, technical / manager) has its own time,
+  and an older or identical request of a kind changes nothing. A successful sheet stores
+  its text and date in the columns of its kind (PREP-32, PREP-54). The application's status is never changed by a preparation.
 - **BASE-13** · Company links (LNK-01): a document whose `liens_manuels` is true sets its
   company's website and LinkedIn page as User's correction (LNK-02), an empty field
   meaning "no correction" for that link. A document whose `liens_manuels` is false or

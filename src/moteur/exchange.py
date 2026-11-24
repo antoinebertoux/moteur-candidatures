@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from moteur.company_links import CompanyLinks, company_key, is_web_address
-from moteur.models import Application, JobAd, PrepRequest, default_letter
+from moteur.models import Application, JobAd, PrepKind, PrepRequest, default_letter
 from moteur.refusal import normalise_detail, normalise_reason
 
 
@@ -43,6 +43,8 @@ class Decision:
     """Interview preparation request (PREP-01), None if the page made none."""
     links: CompanyLinks | None = None
     """User's correction of the company links (PAGE-42), None if there is none."""
+    technical_preparation: PrepRequest | None = None
+    """Technical / manager interview preparation request (PREP-50), None if none."""
 
     @property
     def with_letter(self) -> bool:
@@ -81,9 +83,16 @@ _CONTEXT = (
 MAX_PREP_FIELD = 2_000
 
 
-def _preparation(entry: dict[str, Any]) -> PrepRequest | None:
-    """The page's preparation request, with what it knows of the follow-up (PREP-10)."""
-    requested_at = _text(entry, "preparation_demandee_le")
+_REQUESTED_AT: dict[PrepKind, str] = {
+    "rh": "preparation_demandee_le",
+    "technique": "preparation_technique_demandee_le",
+}
+
+
+def _preparation(entry: dict[str, Any], kind: PrepKind = "rh") -> PrepRequest | None:
+    """The page's preparation request of a kind, with what it knows of the follow-up
+    (PREP-10, PREP-51)."""
+    requested_at = _text(entry, _REQUESTED_AT[kind])
     if not requested_at:
         return None
     context = [
@@ -95,6 +104,8 @@ def _preparation(entry: dict[str, Any]) -> PrepRequest | None:
         _text(entry, "entretien_infos")[:MAX_PREP_FIELD],
         _text(entry, "preparation_consigne")[:MAX_PREP_FIELD],
         "\n".join(context)[:10_000],
+        kind,
+        _text(entry, "retour_entretien_rh")[:MAX_PREP_FIELD],
     )
 
 
@@ -183,8 +194,12 @@ def for_the_page(
         if application.preparation:
             row["preparation"] = application.preparation
             row["preparation_le"] = application.preparation_le
+        if application.technical_preparation:
+            row["preparation_technique"] = application.technical_preparation
+            row["preparation_technique_le"] = application.technical_preparation_le
         # ECH-05: the ad text of the folders and sheets, so that the page keeps it.
-        if ad.description and (application.cv_ref or application.preparation):
+        sheet = application.preparation or application.technical_preparation
+        if ad.description and (application.cv_ref or sheet):
             row["texte_offre"] = ad.description[:MAX_AD_TEXT]
         rows.append(row)
     rows.extend(_archive_entry(a) for a in archived if a.ad.description)
@@ -244,6 +259,7 @@ def decisions_from(data: object) -> list[Decision]:
                     normalise_detail(entry.get("motif_detail")),
                     _preparation(entry),
                     _links(entry),
+                    _preparation(entry, "technique"),
                 )
             )
     return decisions

@@ -22,6 +22,10 @@ from moteur.interview_prep import (
     CUT,
     MAX_LENGTH,
     SHEET_FILE,
+    TECH_CUT,
+    TECH_MAX_LENGTH,
+    TECH_SHEET_FILE,
+    TECH_SYSTEM,
     WEB_TOOLS,
     allowed_details,
     clean_sheet,
@@ -410,3 +414,145 @@ def test_a_missing_or_empty_request_is_not_read() -> None:
         "insiste sur le RAG",
         with_.preparation.context if with_.preparation else "",
     )
+
+
+TECH_SHEET = "# Préparation technique / manager : Acme — Lead AI\n## À retenir\nTout."
+TECHNICAL = {
+    "suite": "entretien_technique",
+    "preparation_technique_demandee_le": "2026-11-25T09:00:00.000Z",
+    "retour_entretien_rh": "La RH a insisté sur l'autonomie",
+    "entretien_infos": "Mardi 10 h, sur place avec la manager data",
+}
+
+
+def ask_technical(base: LocalDb, paths: Paths, **fields: Any) -> int:
+    return ask(base, paths, **{**TECHNICAL, **fields})
+
+
+@pytest.mark.spec("PREP-50", "PREP-01", "PREP-02", "BASE-12", "ECH-11")
+def test_the_technical_request_is_separate_from_the_hr_one(base: LocalDb, paths: Paths) -> None:
+    ask(base, paths)
+    base.record_preparation(AD.key, SHEET, "2026-11-19T10:05:00.000Z")
+    # The page still sends the served HR request: only the technical one is new.
+    assert ask_technical(base, paths) == 1
+    assert ask_technical(base, paths) == 0
+    assert base.pending_preparations() == []
+    assert base.pending_preparations("technique") == [AD.key]
+    request = base.prep_request(AD.key, "technique")
+    assert request is not None
+    assert request.kind == "technique"
+    assert request.requested_at == "2026-11-25T09:00:00.000Z"
+    assert request.hr_feedback == "La RH a insisté sur l'autonomie"
+    assert request.interview_details == "Mardi 10 h, sur place avec la manager data"
+    hr_request = base.prep_request(AD.key)
+    assert hr_request is not None and hr_request.requested_at == "2026-11-19T10:00:00.000Z"
+
+
+@pytest.mark.spec("PREP-51")
+def test_the_technical_prompt_builds_on_the_hr_sheet(base: LocalDb, paths: Paths) -> None:
+    ask(base, paths)
+    base.record_preparation(AD.key, SHEET, "2026-11-19T10:05:00.000Z")
+    ask_technical(base, paths)
+    application = base.find(AD.key)
+    request = base.prep_request(AD.key, "technique")
+    assert application is not None and request is not None
+    prompt = preparation_prompt(application, request, paths, "Mon profil")
+    for expected in (
+        "Entreprise : Acme",
+        "Suite : entretien_technique",
+        "Texte de l'offre",
+        "Mon profil",
+        "\\newcommand{\\pRAG}{RAG}",
+        "## Retour des entretiens précédents\nLa RH a insisté sur l'autonomie",
+        "## Fiche de l'entretien RH (déjà connue du candidat, à ne pas répéter)\n" + SHEET,
+        "## Consigne du candidat (prioritaire)\ninsiste sur le RAG",
+    ):
+        assert expected in prompt
+    hr_request = base.prep_request(AD.key)
+    assert hr_request is not None
+    hr_prompt = preparation_prompt(application, hr_request, paths, "")
+    assert "Retour des entretiens" not in hr_prompt
+    assert "Fiche de l'entretien RH" not in hr_prompt
+
+
+@pytest.mark.spec("PREP-52", "CLA-04")
+def test_the_technical_call_uses_its_model_and_web_tools(base: LocalDb, paths: Paths) -> None:
+    ask(base, paths)
+    ask_technical(base, paths)
+    assistant = FakeAssistant(TECH_SHEET)
+    assert prepare(base, assistant, paths, "sonnet", "", technical_model="opus") == (2, [])
+    assert assistant.models == ["sonnet", "opus"]
+    assert assistant.tools == [WEB_TOOLS, WEB_TOOLS]
+    assert assistant.delays == [900, 1800]
+    assert assistant.systems[1] == TECH_SYSTEM
+    assert assistant.systems[0] != TECH_SYSTEM
+
+
+@pytest.mark.spec("PREP-54", "PREP-02", "ECH-03", "ECH-05")
+def test_the_technical_sheet_is_written_apart_and_sent(base: LocalDb, paths: Paths) -> None:
+    ask(base, paths)
+    prepare(base, FakeAssistant(SHEET), paths, "sonnet", "", clock=lambda: "2026-11-19T10:05Z")
+    ask_technical(base, paths)
+    prepare(
+        base,
+        FakeAssistant(f"Voici.\n{TECH_SHEET}"),
+        paths,
+        "sonnet",
+        "",
+        clock=lambda: "2026-11-25T09:20:00.000Z",
+    )
+    folder = paths.applications / folder_name(AD)
+    assert (folder / TECH_SHEET_FILE).read_text(encoding="utf-8") == TECH_SHEET + "\n"
+    assert (folder / SHEET_FILE).read_text(encoding="utf-8") == SHEET + "\n"
+    (row,) = for_the_page(base.for_the_page(), paths.root)
+    assert row["preparation"] == SHEET + "\n"
+    assert row["preparation_technique"] == TECH_SHEET + "\n"
+    assert row["preparation_technique_le"] == "2026-11-25T09:20:00.000Z"
+    assert row["texte_offre"] == "Texte de l'offre"
+
+
+@pytest.mark.spec("PREP-54", "ECH-03")
+def test_a_technical_sheet_alone_is_sent_and_cut_at_its_own_length(
+    base: LocalDb, paths: Paths
+) -> None:
+    ask_technical(base, paths, preparation_demandee_le="")
+    prepare(base, FakeAssistant(TECH_SHEET), paths, "sonnet", "")
+    (row,) = for_the_page(base.for_the_page(), paths.root)
+    assert "preparation" not in row
+    assert row["preparation_technique"] == TECH_SHEET + "\n"
+    long_sheet = "# Fiche\n" + "x" * (MAX_LENGTH + 5_000)
+    assert len(clean_sheet(long_sheet, TECH_MAX_LENGTH, TECH_CUT)) == len(long_sheet) + 1
+    cut = clean_sheet("# Fiche\n" + "x" * TECH_MAX_LENGTH * 2, TECH_MAX_LENGTH, TECH_CUT)
+    assert len(cut) <= TECH_MAX_LENGTH and cut.endswith(TECH_CUT + "\n")
+
+
+@pytest.mark.spec("PREP-55", "PREP-21")
+def test_a_failed_technical_sheet_stays_pending_and_keeps_the_hr_one(
+    base: LocalDb, paths: Paths
+) -> None:
+    ask(base, paths)
+    prepare(base, FakeAssistant(SHEET), paths, "sonnet", "")
+    ask_technical(base, paths)
+
+    class Failing(FakeAssistant):
+        def ask(self, prompt: str, **options: Any) -> str:
+            raise ClaudeError("délai dépassé")
+
+    successes, failures = prepare(base, Failing(""), paths, "sonnet", "")
+    assert successes == 0
+    assert len(failures) == 1 and "technique / manager" in failures[0]
+    assert base.pending_preparations("technique") == [AD.key]
+    application = base.find(AD.key)
+    assert application is not None and application.preparation == SHEET + "\n"
+
+
+@pytest.mark.spec("PREP-40")
+def test_prepare_given_keys_can_ask_for_the_technical_sheet(base: LocalDb, paths: Paths) -> None:
+    base.add([AD])
+    assistant = FakeAssistant(TECH_SHEET)
+    assert prepare(base, assistant, paths, "sonnet", "", [AD.key], kind="technique") == (1, [])
+    assert assistant.models == ["opus"]
+    application = base.find(AD.key)
+    assert application is not None
+    assert application.technical_preparation == TECH_SHEET + "\n"
+    assert application.preparation == ""

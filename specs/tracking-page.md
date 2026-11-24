@@ -13,7 +13,9 @@ missing = `manuel`), `statut`, `score`, `resume`, `lettre_demandee`, `lettre`
 `retouche_le`, `lettre_refaire_le`, `lettre_consigne`, `suite`, `motif_refus`,
 `motif_detail`, `date_ajout`, `date_maj`, `date_postulee`, `preparation_demandee_le`,
 `pretentions`, `entretien_infos`, `preparation_consigne`, `preparation`,
-`preparation_le`, `site_entreprise`, `linkedin_entreprise`, `liens_manuels`.
+`preparation_le`, `preparation_technique_demandee_le`, `retour_entretien_rh`,
+`preparation_technique`, `preparation_technique_le`, `site_entreprise`,
+`linkedin_entreprise`, `liens_manuels`.
 
 ## Workflow
 
@@ -49,12 +51,15 @@ missing = `manuel`), `statut`, `score`, `resume`, `lettre_demandee`, `lettre`
 - **PAGE-07** · In To prepare, for an ad (not an unsolicited application) that does not
   come from engine B and has no text, the page asks to paste the ad text, otherwise the
   CV will be generic.
-- **PAGE-08** · Applied: the follow-up is Waiting, Followed up, Interview, Rejected by
-  the company or Offer received, and shows as a chip.
+- **PAGE-08** · Applied: the follow-up is Waiting, Followed up, HR interview,
+  Technical / manager interview, Rejected by the company or Offer received (`suite` =
+  empty, `relance`, `entretien`, `entretien_technique`, `refus`, `offre`), and shows as a
+  chip. `entretien` is the first interview (recruiter, HR); every later interview step
+  (manager, team, technical test) is `entretien_technique`.
 - **PAGE-13** · Applied is shown in three sections, in this order, each with a heading
   and its number of applications (according to the active filters), from the follow-up
   (PAGE-08):
-  - "In progress": Interview or Offer received;
+  - "In progress": HR interview, Technical / manager interview or Offer received;
   - "Awaiting reply": Waiting (no follow-up chosen) or Followed up;
   - "Rejected by the company": Rejected by the company.
 
@@ -71,14 +76,18 @@ missing = `manuel`), `statut`, `score`, `resume`, `lettre_demandee`, `lettre`
   `ml_pur`, `entreprise`, `doublon`, `autre`), with an optional free-text detail
   (`motif_detail`, at most 200 characters). "Reject without a reason" stays possible. In
   Rejected the reason shows as a chip and can be changed; **Back to review** clears it.
-- **PAGE-11** · Interview preparation ([interview-prep.md](interview-prep.md)): on a
-  Applied application whose follow-up is Interview, a "Prepare the interview" button
-  opens a short form — salary announced, interview details (date, format,
+- **PAGE-11** · Interview preparation ([interview-prep.md](interview-prep.md)): on an
+  Applied application whose follow-up is HR interview, a "Prepare the HR interview"
+  button opens a short form — salary announced, interview details (date, format,
   interviewers), instruction, all optional and kept from one request to the next — and
-  records `preparation_demandee_le`. While the request is more recent than the sheet, a
-  "Preparation in progress" chip shows. Once `preparation` has arrived, a "Preparation"
-  button opens the sheet (Markdown shown formatted, readable on mobile) with its date,
-  and the request button becomes "Redo the preparation".
+  records `preparation_demandee_le`. When the follow-up is Technical / manager interview,
+  the form also has "Feedback from the earlier interviews" (`retour_entretien_rh`) and the
+  button "Prepare the technical / manager interview" records
+  `preparation_technique_demandee_le` (PREP-50). While a request is more recent than its
+  sheet, a "Preparation in progress" chip shows. Once a sheet has arrived (`preparation`,
+  `preparation_technique`), an "HR preparation" or "Technical preparation" button opens
+  it (Markdown shown formatted, readable on mobile) with its date, whatever the current
+  follow-up, and the request button becomes "Redo the preparation".
 - **PAGE-12** · Ad text: every application whose `texte_offre` is not empty shows a
   small, discreet "View ad text" link (French: "Voir le texte de l'offre"), smaller than
   the action buttons, whatever its step. It is read-only: it opens a window showing the
@@ -103,7 +112,8 @@ missing = `manuel`), `statut`, `score`, `resume`, `lettre_demandee`, `lettre`
   otherwise `B`). An entry without a company is ignored. A summary is shown (added,
   updated, ignored).
 - **PAGE-31** · A known entry only receives updates to `cv_ref`, `lettre_ref`, `resume`,
-  `score`, `lettre_demandee`, `preparation` and `preparation_le`, and to `site_entreprise`
+  `score`, `lettre_demandee`, `preparation`, `preparation_le`, `preparation_technique` and
+  `preparation_technique_le`, and to `site_entreprise`
   and `linkedin_entreprise` unless `liens_manuels` is true, and to `texte_offre` only when
   the page has none (ECH-05). User's decisions are never overwritten. An entry marked
   `archive` (ECH-06) only fills in a missing `texte_offre` of a known document; an

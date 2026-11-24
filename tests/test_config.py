@@ -23,6 +23,7 @@ def test_the_example_config_is_valid() -> None:
 def test_default_values(tmp_path: Path) -> None:
     config = parsed({}, tmp_path)
     assert (config.batch_size, config.generation_model) == (8, "sonnet")
+    assert (config.preparation_model, config.technical_preparation_model) == ("sonnet", "opus")
     assert not config.france_travail.enabled
     assert not config.station_f.enabled
     assert (config.station_f.pages_max, config.station_f.published_since) == (3, 21)

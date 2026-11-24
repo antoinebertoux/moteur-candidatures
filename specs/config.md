@@ -7,8 +7,9 @@ catalogue is shipped with the tool and User's own companies are in the local dat
 
 - **CONF-01** · If `config.toml` is missing, the engine stops and says to copy
   `config.exemple.toml`; if it is malformed, it stops and quotes the TOML error.
-- **CONF-02** · Defaults: 8 ads per scoring batch, models `haiku` for scoring and
-  `sonnet` for writing and for interview preparation, France Travail, Choisir le
+- **CONF-02** · Defaults: 8 ads per scoring batch, models `haiku` for scoring,
+  `sonnet` for writing and for HR interview preparation, `opus` for technical / manager
+  interview preparation (`[modeles] preparation_technique`), France Travail, Choisir le
   service public and Station F disabled; Station F reads 3 pages per search and keeps ads
   published in the last 21 days; no salary floor, root folder `..` (the parent of `moteur/`).
 - **CONF-03** · A value of the wrong type is rejected with a message naming the key;

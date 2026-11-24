@@ -195,6 +195,8 @@ class Config:
     service_public: PublicService
     paths: Paths
     preparation_model: str = "sonnet"
+    technical_preparation_model: str = "opus"
+    """Model of the technical / manager interview sheet (PREP-52)."""
     station_f: StationF = StationF()
     catalogue: tuple[TargetCompany, ...] = ()
     """Companies of `catalogue/entreprises.toml` (CAT-01)."""
@@ -478,6 +480,7 @@ def parse(
             exchange=folder / "echange",
         ),
         preparation_model=_string(models, "preparation", "sonnet"),
+        technical_preparation_model=_string(models, "preparation_technique", "opus"),
         station_f=_station_f(_table(data, "station_f"), searches),
         catalogue=catalogue,
         companies=companies,

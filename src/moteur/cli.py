@@ -231,8 +231,11 @@ def command_init_latex(config: Config) -> None:
     print("Optional: put your photo in cv/images/ and set it with \\setphoto in cv/modele-cv.tex")
 
 
-def command_prepare(config: Config, base: LocalDb, keys: list[str]) -> None:
-    """Interview preparation sheets: the given identifiers, or every pending request."""
+def command_prepare(
+    config: Config, base: LocalDb, keys: list[str], technical: bool = False
+) -> None:
+    """Interview preparation sheets: the given identifiers (HR sheet, or technical /
+    manager sheet with `--technical`), or every pending request (PREP-40)."""
     result = prepare_alone(
         base,
         ClaudeCli(binary=claude_binary()),
@@ -240,6 +243,8 @@ def command_prepare(config: Config, base: LocalDb, keys: list[str]) -> None:
         config.preparation_model,
         config.profile,
         keys,
+        technical_model=config.technical_preparation_model,
+        kind="technique" if technical else "rh",
     )
     if result is None:
         print("A preparation is already running: it will handle the pending requests")
@@ -279,8 +284,12 @@ def build_parser() -> argparse.ArgumentParser:
     command(
         "letter", "add the letter to folders already generated (all the missing ones)"
     ).add_argument("keys", nargs="*", help="specific identifiers (same format as the page)")
-    command("prepare", "interview preparation sheets (all pending requests)").add_argument(
-        "keys", nargs="*", help="specific identifiers (same format as the page)"
+    prepare = command("prepare", "interview preparation sheets (all pending requests)")
+    prepare.add_argument("keys", nargs="*", help="specific identifiers (same format as the page)")
+    prepare.add_argument(
+        "--technical",
+        action="store_true",
+        help="for the given identifiers, the technical / manager interview sheet",
     )
     command("companies", "list the companies followed and the sources, with what is searched")
     command("mcp", "direct link with the page, started by the Claude desktop app")
@@ -361,7 +370,7 @@ def main(arguments: Sequence[str] | None = None) -> int:
                 command_letter(config, base, options.keys)
                 command_export(config, base)
             if options.command == "prepare":
-                command_prepare(config, base, options.keys)
+                command_prepare(config, base, options.keys, options.technical)
                 command_export(config, base)
             if options.command == "serve":
                 serve(config.paths.applications, options.port)

@@ -12,7 +12,7 @@ from typing import Literal, Self, cast
 
 from moteur.company_links import CompanyLinks, company_key
 from moteur.config import AtsType, TargetCompany
-from moteur.models import Application, JobAd, PrepRequest, Rating, normalise
+from moteur.models import Application, JobAd, PrepKind, PrepRequest, Rating, normalise
 from moteur.refusal import DUPLICATE, Refusal
 from moteur.selection import Choice, Choices
 
@@ -117,11 +117,30 @@ _ADDED_COLUMNS = {
     "contexte_page": "TEXT NOT NULL DEFAULT ''",
     "preparation": "TEXT NOT NULL DEFAULT ''",
     "preparation_le": "TEXT NOT NULL DEFAULT ''",
+    "preparation_technique_demandee_le": "TEXT NOT NULL DEFAULT ''",
+    "retour_entretien_rh": "TEXT NOT NULL DEFAULT ''",
+    "preparation_technique": "TEXT NOT NULL DEFAULT ''",
+    "preparation_technique_le": "TEXT NOT NULL DEFAULT ''",
 }
 
-# A request is pending while it is more recent than the sheet, or there is no sheet
-# (PREP-02). Both times use the `toISOString()` format, so they compare as text.
-_PENDING = "preparation_demandee_le != '' AND preparation_demandee_le > preparation_le"
+# Columns of each kind of sheet: request time, sheet, sheet time (PREP-50).
+_PREP_COLUMNS: dict[PrepKind, tuple[str, str, str]] = {
+    "rh": ("preparation_demandee_le", "preparation", "preparation_le"),
+    "technique": (
+        "preparation_technique_demandee_le",
+        "preparation_technique",
+        "preparation_technique_le",
+    ),
+}
+
+
+def _pending(kind: PrepKind) -> str:
+    """A request is pending while it is more recent than the sheet of its kind, or there
+    is no such sheet (PREP-02). Both times use the `toISOString()` format, so they compare
+    as text."""
+    requested, _, made = _PREP_COLUMNS[kind]
+    return f"{requested} != '' AND {requested} > {made}"
+
 
 SaveOutcome = Literal["added", "updated", "unchanged"]
 
@@ -153,6 +172,8 @@ def _application(row: sqlite3.Row) -> Application:
         letter_instruction=row["consigne_lettre"],
         preparation=row["preparation"],
         preparation_le=row["preparation_le"],
+        technical_preparation=row["preparation_technique"],
+        technical_preparation_le=row["preparation_technique_le"],
     )
 
 
@@ -250,6 +271,7 @@ class LocalDb:
         application with a preparation sheet, whatever its status (ECH-03)."""
         rows = self._connection.execute(
             "SELECT * FROM candidatures WHERE statut IN (?, ?) OR preparation != ''"
+            " OR preparation_technique != ''"
             " ORDER BY date_ajout, cle",
             (SCORED, GENERATED),
         ).fetchall()
@@ -260,7 +282,8 @@ class LocalDb:
         their text goes to the page so that it can still be read (ECH-06)."""
         rows = self._connection.execute(
             "SELECT * FROM candidatures WHERE statut = ? AND description != ''"
-            " AND preparation = '' ORDER BY date_ajout, cle",
+            " AND preparation = '' AND preparation_technique = ''"
+            " ORDER BY date_ajout, cle",
             (CLOSE,),
         ).fetchall()
         return [_application(row) for row in rows]
@@ -422,49 +445,60 @@ class LocalDb:
             )
 
     def request_preparation(self, key: str, request: PrepRequest) -> bool:
-        """Stores a preparation request (BASE-12); an older or identical one changes nothing.
+        """Stores a preparation request (BASE-12); an older or identical request of the
+        same kind changes nothing.
 
         Returns true if the request is new. The status is never changed.
         """
+        requested = _PREP_COLUMNS[request.kind][0]
         with self._connection:
             cursor = self._connection.execute(
-                "UPDATE candidatures SET preparation_demandee_le = ?, pretentions = ?,"
-                " entretien_infos = ?, preparation_consigne = ?, contexte_page = ?"
-                " WHERE cle = ? AND preparation_demandee_le < ?",
+                f"UPDATE candidatures SET {requested} = ?, pretentions = ?,"
+                " entretien_infos = ?, preparation_consigne = ?, contexte_page = ?,"
+                f" retour_entretien_rh = ? WHERE cle = ? AND {requested} < ?",
                 (
                     request.requested_at,
                     request.salary_expectations,
                     request.interview_details,
                     request.instruction,
                     request.context,
+                    request.hr_feedback,
                     key,
                     request.requested_at,
                 ),
             )
         return cursor.rowcount > 0
 
-    def prep_request(self, key: str) -> PrepRequest | None:
-        """The last preparation request of an application, or None if there is none."""
+    def prep_request(self, key: str, kind: PrepKind = "rh") -> PrepRequest | None:
+        """The last preparation request of a kind, or None if there is none."""
+        requested = _PREP_COLUMNS[kind][0]
         row = self._connection.execute(
-            "SELECT preparation_demandee_le, pretentions, entretien_infos,"
-            " preparation_consigne, contexte_page FROM candidatures"
-            " WHERE cle = ? AND preparation_demandee_le != ''",
+            f"SELECT {requested}, pretentions, entretien_infos, preparation_consigne,"
+            f" contexte_page, retour_entretien_rh FROM candidatures"
+            f" WHERE cle = ? AND {requested} != ''",
             (key,),
         ).fetchone()
-        return PrepRequest(*row) if row else None
+        if not row:
+            return None
+        requested_at, salary, details, instruction, context, feedback = row
+        return PrepRequest(requested_at, salary, details, instruction, context, kind, feedback)
 
-    def pending_preparations(self) -> list[str]:
-        """Identifiers of the applications whose preparation is pending (PREP-02)."""
+    def pending_preparations(self, kind: PrepKind = "rh") -> list[str]:
+        """Identifiers of the applications whose preparation of a kind is pending
+        (PREP-02)."""
+        requested = _PREP_COLUMNS[kind][0]
         rows = self._connection.execute(
-            f"SELECT cle FROM candidatures WHERE {_PENDING} ORDER BY preparation_demandee_le, cle"
+            f"SELECT cle FROM candidatures WHERE {_pending(kind)} ORDER BY {requested}, cle"
         ).fetchall()
         return [row["cle"] for row in rows]
 
-    def record_preparation(self, key: str, text: str, made_at: str) -> None:
-        """Stores a successful sheet (PREP-32); the status does not change."""
+    def record_preparation(self, key: str, text: str, made_at: str, kind: PrepKind = "rh") -> None:
+        """Stores a successful sheet in the columns of its kind (PREP-32, PREP-54); the
+        status and the other kind's sheet do not change."""
+        _, sheet, made = _PREP_COLUMNS[kind]
         with self._connection:
             self._connection.execute(
-                "UPDATE candidatures SET preparation = ?, preparation_le = ? WHERE cle = ?",
+                f"UPDATE candidatures SET {sheet} = ?, {made} = ? WHERE cle = ?",
                 (text, made_at, key),
             )
 
