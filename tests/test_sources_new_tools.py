@@ -1,4 +1,6 @@
-"""Talentsoft, Oracle, SuccessFactors, Phenom, Avature, Gestmax, SNCF, Taleez, WeRecruit."""
+"""Talentsoft, Oracle, SuccessFactors, Phenom, Avature, Gestmax, SNCF, Taleez, WeRecruit,
+Cornerstone,
+Rippling, Talentry."""
 
 import base64
 import json
@@ -14,6 +16,11 @@ from moteur.models import JobAd
 from moteur.own_companies import source_for
 from moteur.sources.avature import SourceAvature, ads_avature, complete_avature, portal_of
 from moteur.sources.base import SourceError
+from moteur.sources.cornerstone import (
+    SourceCornerstone,
+    ads_cornerstone,
+    split_cornerstone_address,
+)
 from moteur.sources.gestmax import (
     SourceGestmax,
     ads_gestmax,
@@ -29,6 +36,7 @@ from moteur.sources.oracle import (
     split_oracle_address,
 )
 from moteur.sources.phenom import SourcePhenom, ads_phenom, split_phenom_address
+from moteur.sources.rippling import SourceRippling, ads_rippling, complete_rippling
 from moteur.sources.sitemap import SourceSitemap, complete_sitemap, provisional_title
 from moteur.sources.sncf import SEARCH as SNCF_SEARCH
 from moteur.sources.sncf import SourceSncf, ads_sncf, complete_sncf
@@ -39,6 +47,7 @@ from moteur.sources.successfactors import (
     complete_successfactors,
 )
 from moteur.sources.taleez import SourceTaleez, ads_taleez, complete_taleez
+from moteur.sources.talentry import SourceTalentry, ads_talentry, complete_talentry
 from moteur.sources.talentsoft import SourceTalentsoft, ads_talentsoft
 from moteur.sources.werecruit import SourceWeRecruit, ads_werecruit, embedded_offers
 from tests.conftest import FakeClient
@@ -522,6 +531,9 @@ def test_sitemap_offers_come_from_the_robots_sitemaps() -> None:
         "sitemap",
     )
     assert ad.url == "https://careers.exemple.com/offres-d-emploi/algo-developer-260002H8-en"
+    assert provisional_title(
+        "https://jobs.exail.com/fr/annonce/4701647-ingenieur-electronique-hf-78100-saint-germain"
+    ) == ("Ingenieur Electronique Hf")
     assert provisional_title("https://x.com/jobs/junior-software-engineer-550851") == (
         "Junior Software Engineer"
     )
@@ -995,3 +1007,243 @@ def test_werecruit_page_gives_the_text_from_escaped_data() -> None:
     assert ad.title == "Ingénieur IA - Data Scientist F/H"
     assert ad.description == "Afin de poursuivre son développement."
     assert ad.published_on == "2026-11-10"
+
+
+# --- Cornerstone ------------------------------------------------------------------------
+
+CORNERSTONE_PAGE_URL = "https://hris-suez.csod.com/ux/ats/careersite/10/home?c=hris-suez"
+CORNERSTONE_SEARCH = "https://uk.api.csod.com/rec-job-search/external/jobs"
+CORNERSTONE_PAGE = (
+    '<script>csod.context={"corp":"hris-suez","cultureID":2,'
+    '"endpoints":{"cloud":"https://uk.api.csod.com/","api":"/"},"token":"SECRET"};</script>'
+)
+
+
+def _cornerstone_offer(number: int, **extra: Any) -> dict[str, Any]:
+    return {
+        "requisitionId": number,
+        "postingEffectiveDate": "14/09/2026",
+        "displayJobTitle": f"Data Scientist {number}",
+        "locations": [{"city": "Le-Pecq", "state": "IDF", "country": "FR"}],
+        "externalDescription": "<p>Missions &amp; profil</p>",
+        **extra,
+    }
+
+
+def _cornerstone_site() -> Any:
+    return split_cornerstone_address(CORNERSTONE_PAGE_URL)
+
+
+@pytest.mark.spec("SRC-113", "SRC-01")
+def test_cornerstone_offers_become_ads() -> None:
+    answer = {
+        "data": {
+            "requisitions": [
+                _cornerstone_offer(1),
+                _cornerstone_offer(2, locations=[], postingEffectiveDate="nope"),
+                _cornerstone_offer(3, displayJobTitle=""),
+                _cornerstone_offer(4, requisitionId=None),
+            ]
+        }
+    }
+    first, second = ads_cornerstone("Suez", _cornerstone_site(), answer)
+    assert (first.title, first.location, first.published_on, first.description) == (
+        "Data Scientist 1",
+        "Le-Pecq, FR",
+        "2026-09-14",
+        "Missions & profil",
+    )
+    assert first.url == (
+        "https://hris-suez.csod.com/ux/ats/careersite/10/home/requisition/1?c=hris-suez"
+    )
+    assert first.source == "cornerstone"
+    assert (second.location, second.published_on) == ("", "")
+    assert ads_cornerstone("Suez", _cornerstone_site(), None) == []
+
+
+@pytest.mark.spec("SRC-111", "SRC-112", "SRC-05")
+def test_cornerstone_reads_the_token_then_searches_each_term_page_by_page() -> None:
+    page_one = {
+        "data": {"totalCount": 26, "requisitions": [_cornerstone_offer(n) for n in range(25)]}
+    }
+    page_two = {"data": {"totalCount": 26, "requisitions": [_cornerstone_offer(25)]}}
+    client = FakeClient(
+        {CORNERSTONE_PAGE_URL: CORNERSTONE_PAGE, CORNERSTONE_SEARCH: [page_one, page_two]}
+    )
+    target = TargetCompany(
+        name="Suez",
+        ats="cornerstone",
+        identifier="hris-suez.csod.com/ux/ats/careersite/10/home?c=hris-suez",
+        searches=("ia",),
+    )
+    source = source_for(target, client, ["fr"])
+    assert isinstance(source, SourceCornerstone)
+    assert len(source.collect()) == 26
+    bodies = [call[1] for call in client.calls if call[0] == CORNERSTONE_SEARCH]
+    assert [body["pageNumber"] for body in bodies] == [1, 2]
+    assert bodies[0]["searchText"] == "ia"
+    assert bodies[0]["cultureId"] == 2
+
+
+@pytest.mark.spec("SRC-111")
+def test_cornerstone_page_without_token_is_a_source_error() -> None:
+    target = TargetCompany(
+        name="Suez",
+        ats="cornerstone",
+        identifier="hris-suez.csod.com/ux/ats/careersite/10/home?c=hris-suez",
+        searches=("ia",),
+    )
+    with pytest.raises(SourceError):
+        SourceCornerstone(FakeClient({CORNERSTONE_PAGE_URL: "<html></html>"}), target).collect()
+    with pytest.raises(ValueError, match="unexpected Cornerstone address"):
+        split_cornerstone_address("hris-suez.csod.com/other")
+
+
+@pytest.mark.spec("SRC-114")
+def test_cornerstone_token_never_reaches_the_ads() -> None:
+    answer = {"data": {"requisitions": [_cornerstone_offer(1)]}}
+    client = FakeClient({CORNERSTONE_PAGE_URL: CORNERSTONE_PAGE, CORNERSTONE_SEARCH: answer})
+    target = TargetCompany(
+        name="Suez",
+        ats="cornerstone",
+        identifier="hris-suez.csod.com/ux/ats/careersite/10/home?c=hris-suez",
+        searches=("ia",),
+    )
+    ads = SourceCornerstone(client, target).collect()
+    assert "SECRET" not in repr(ads)
+
+
+# --- Rippling -----------------------------------------------------------------------------
+
+RIPPLING_BOARD = "https://ats.rippling.com/jus-mundi-careers/jobs"
+
+
+def _rippling_page(data: dict[str, Any]) -> str:
+    return f'<html><script id="__NEXT_DATA__" type="application/json">{json.dumps(data)}</script>'
+
+
+def _rippling_offer(number: int, **extra: Any) -> dict[str, Any]:
+    return {
+        "id": str(number),
+        "name": f"NLP Engineer {number}",
+        "url": f"{RIPPLING_BOARD}/{number}",
+        "locations": [{"name": "Paris, France", "countryCode": "FR"}],
+        **extra,
+    }
+
+
+@pytest.mark.spec("SRC-116", "SRC-117", "SRC-01")
+def test_rippling_offers_become_ads() -> None:
+    offers = [
+        _rippling_offer(1),
+        _rippling_offer(2, locations=[]),
+        _rippling_offer(3, name=""),
+        _rippling_offer(1),
+    ]
+    data = {"props": {"pageProps": {"dehydratedState": {"queries": [{"state": {"data": offers}}]}}}}
+    first, second = ads_rippling("Jus Mundi", _rippling_page(data))
+    assert (first.title, first.location, first.url, first.source) == (
+        "NLP Engineer 1",
+        "Paris, France",
+        f"{RIPPLING_BOARD}/1",
+        "rippling",
+    )
+    assert second.location == ""
+    assert ads_rippling("Jus Mundi", "<html></html>") == []
+    assert ads_rippling("Jus Mundi", '<script id="__NEXT_DATA__">{oops</script>') == []
+
+
+@pytest.mark.spec("SRC-116")
+def test_rippling_reads_the_board_page_once() -> None:
+    offers = [_rippling_offer(1)]
+    data = {"props": {"pageProps": {"dehydratedState": {"queries": [{"state": {"data": offers}}]}}}}
+    client = FakeClient({RIPPLING_BOARD: _rippling_page(data)})
+    target = TargetCompany(
+        name="Jus Mundi", ats="rippling", identifier="ats.rippling.com/jus-mundi-careers/jobs/"
+    )
+    source = source_for(target, client, ["fr"])
+    assert isinstance(source, SourceRippling)
+    assert len(source.collect()) == 1
+    assert [call[0] for call in client.calls] == [RIPPLING_BOARD]
+
+
+@pytest.mark.spec("SRC-118", "SRC-02")
+def test_rippling_page_gives_the_text() -> None:
+    ad = JobAd("Jus Mundi", "NLP Engineer 1", url=f"{RIPPLING_BOARD}/1", source="rippling")
+    data = {
+        "props": {
+            "pageProps": {
+                "apiData": {
+                    "jobPost": {
+                        "description": {"company": "<p>About us</p>", "role": "<p>Your role</p>"}
+                    }
+                }
+            }
+        }
+    }
+    assert complete_rippling(ad, _rippling_page(data)).description == "About us Your role"
+    assert complete_rippling(ad, "<html></html>") == ad
+
+
+# --- Talentry ---------------------------------------------------------------------------
+
+TALENTRY_HOST = "fr.jobs.cerbahealthcare.com"
+TALENTRY_SEARCH = f"https://{TALENTRY_HOST}/api/search"
+
+
+def _talentry_offer(number: int, **extra: Any) -> dict[str, Any]:
+    return {
+        "id": str(number),
+        "title": f"Data Scientist {number}",
+        "location": "Paris",
+        "publicationDate": "2026-11-23T11:13:49+0000",
+        "inactive": False,
+        **extra,
+    }
+
+
+@pytest.mark.spec("SRC-120", "SRC-01")
+def test_talentry_offers_become_ads() -> None:
+    answer = {
+        "jobs": {
+            "offers": [
+                _talentry_offer(1),
+                _talentry_offer(2, inactive=True),
+                _talentry_offer(3, title=""),
+                _talentry_offer(4, id=""),
+            ]
+        }
+    }
+    (ad,) = ads_talentry("Cerba", TALENTRY_HOST, answer)
+    assert (ad.title, ad.location, ad.published_on, ad.source) == (
+        "Data Scientist 1",
+        "Paris",
+        "2026-11-23",
+        "talentry",
+    )
+    assert ad.url == f"https://{TALENTRY_HOST}/our-offers/1"
+    assert ads_talentry("Cerba", TALENTRY_HOST, None) == []
+
+
+@pytest.mark.spec("SRC-119")
+def test_talentry_reads_every_page_until_the_total() -> None:
+    first = {"jobs": {"totalCount": 21, "offers": [_talentry_offer(n) for n in range(20)]}}
+    second = {"jobs": {"totalCount": 21, "offers": [_talentry_offer(20), _talentry_offer(3)]}}
+    client = FakeClient({TALENTRY_SEARCH: [first, second]})
+    target = TargetCompany(name="Cerba", ats="talentry", identifier=f"https://{TALENTRY_HOST}/x")
+    source = source_for(target, client, ["fr"])
+    assert isinstance(source, SourceTalentry)
+    assert len(source.collect()) == 21
+    assert [call[1]["currentPage"] for call in client.calls] == [1, 2]
+    assert client.calls[0][1]["facets"] == {}
+
+
+@pytest.mark.spec("SRC-121", "SRC-02")
+def test_talentry_page_gives_the_text() -> None:
+    ad = JobAd("Cerba", "Data Scientist 1", url=f"https://{TALENTRY_HOST}/our-offers/1")
+    page = (
+        '<script type="application/ld+json">'
+        '{"@type": "JobPosting", "description": "<p>Missions &amp; profil</p>"}</script>'
+    )
+    assert complete_talentry(ad, page).description == "Missions & profil"
+    assert complete_talentry(ad, "<html></html>") == ad

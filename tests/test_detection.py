@@ -32,6 +32,14 @@ from tests.conftest import FakeClient
             "https://careers.werecruit.io/fr/glimps/offres/product-owner-6088b5",
             ("werecruit", "careers.werecruit.io/fr/glimps"),
         ),
+        (
+            "https://ats.rippling.com/jus-mundi-careers/jobs/a9-b8",
+            ("rippling", "ats.rippling.com/jus-mundi-careers/jobs"),
+        ),
+        (
+            "https://hris-suez.csod.com/ux/ats/careersite/10/home?c=hris-suez&lang=en-GB",
+            ("cornerstone", "hris-suez.csod.com/ux/ats/careersite/10/home?c=hris-suez"),
+        ),
     ],
 )
 def test_address_gives_tool_and_identifier(address: str, expected: tuple[str, str]) -> None:

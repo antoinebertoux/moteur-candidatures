@@ -38,10 +38,13 @@ def _locations(sitemap: str) -> tuple[list[str], list[str]]:
 
 
 def provisional_title(address: str) -> str:
-    """Words of the last segment before the first one holding a digit (SRC-53)."""
+    """Words of the last segment before the first one holding a digit (SRC-53); leading
+    all-digit words (an offer number) are dropped."""
     segment = [s for s in urlsplit(address).path.split("/") if s][-1:] or [""]
     words: list[str] = []
     for word in segment[0].split("-"):
+        if not words and word.isdigit():
+            continue
         if any(character.isdigit() for character in word):
             break
         if word:

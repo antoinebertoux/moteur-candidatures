@@ -22,7 +22,7 @@ stays empty.
 - **SRC-06** · A server error (HTTP 500 to 599) is retried once, after 2 s. Still an
   error after that: source error (SRC-03).
 - **SRC-05** · A source running several searches (Choisir le service public: one per
-  keyword and pass; Workday, Oracle, SuccessFactors, Phenom, Avature, McKinsey: one per
+  keyword and pass; Workday, Oracle, SuccessFactors, Phenom, Avature, McKinsey, Cornerstone: one per
   keyword)
   runs them in parallel, at most 4 at a time.
   The pages of one search are read in order. The result does not depend on which search
@@ -150,8 +150,9 @@ In-house career sites that list each offer in their sitemap and describe it with
   none), follows the sitemap indexes they list (one level), and keeps the addresses that
   start with the identifier and go further. An unreadable sitemap is skipped; the same
   address is kept once.
-- **SRC-53** · The provisional title comes from the last segment of the address: the
-  words before the first word that holds a digit (the offer's reference), hyphens
+- **SRC-53** · The provisional title comes from the last segment of the address: leading
+  words made only of digits (an offer number placed first) are dropped, then the words
+  before the first word that holds a digit (the offer's reference), hyphens
   becoming spaces and each word capitalised (`algo-developer-260002H8-en` → « Algo
   Developer »). An address whose title would be empty is ignored. No location nor text
   yet.
@@ -421,3 +422,64 @@ part of the identifier.
 - **SRC-108** · The page of each **retained** ad is opened and read as in SRC-51 (title,
   text, date); its data block is found even when its type is written escaped
   (`application/ld&#x2B;json`). A page without `JobPosting` data leaves the ad unchanged.
+
+## Cornerstone (Cornerstone OnDemand career sites)
+
+Career sites hosted by Cornerstone (`hris-suez.csod.com`, `mxns.csod.com`): the page
+`https://<host>/ux/ats/careersite/<site number>/home?c=<tenant>` is a JavaScript page.
+Its code holds a short-lived access token and the address of the site's search service
+(`csod.context`); the page uses them to ask for the offers, and the answer already holds
+each offer's description.
+
+- **SRC-111** · The identifier is the career page address as shown in the browser
+  (`hris-suez.csod.com/ux/ats/careersite/10/home?c=hris-suez`). The source reads that
+  page once per run and takes from its `csod.context` the token, the language number and
+  the search service address (`endpoints.cloud`). A page without them, or an unreadable
+  one, is a source error (SRC-03).
+- **SRC-112** · One search per term `[criteres] recherches` (CONF-11, SRC-05) sent to
+  `<search service>rec-job-search/external/jobs` with the token as bearer: 25 offers per
+  page, pages read in order until an incomplete page, the announced total
+  (`data.totalCount`) or 40 pages. The same offer (same `requisitionId`) is kept once.
+- **SRC-113** · From each offer: title = `displayJobTitle`; location = the city and
+  country code of its first location (« Le-Pecq, FR »); date = `postingEffectiveDate`
+  (`14/09/2026` becomes `2026-09-14`); text = `externalDescription` (plain, SRC-02); link =
+  `https://<host>/ux/ats/careersite/<site number>/home/requisition/<requisitionId>?c=<tenant>`.
+  An offer without a title or a `requisitionId` is skipped (SRC-01). No detail page is
+  opened.
+- **SRC-114** · The token is used only for the requests of the run, in memory, and is
+  never written to the database, the logs or the exchange files.
+
+## Rippling
+
+Career sites hosted by Rippling (`ats.rippling.com/<board>/jobs`, for instance
+`ats.rippling.com/jus-mundi-careers/jobs`). The list page holds every offer in the data
+its own code embeds (`__NEXT_DATA__`); each offer's page holds its description there too.
+
+- **SRC-116** · The identifier is the board address (`ats.rippling.com/jus-mundi-careers/jobs`).
+  The source reads that page once, without search terms, and keeps each offer of the list
+  embedded in it (the entries having a `name` and a `url`). A page without that list, or an
+  unreadable one, gives no ad. The same ad (same `url`) is kept once.
+- **SRC-117** · From each offer: title = `name`; link = `url`; location = the `name` of its
+  first location (« Paris, France »). An offer without a title or a link is skipped
+  (SRC-01).
+- **SRC-118** · The page of each **retained** ad is opened (as in SRC-24): the company and
+  role descriptions of its `jobPost` (plain, SRC-02) become the ad text. A page without
+  them leaves the ad unchanged.
+
+## Talentry
+
+Career sites built on Talentry (`fr.jobs.cerbahealthcare.com`; the SNCF group's site, which
+has its own rules above, uses the same service). The site's page reads its offers from a
+public search address of the same host, `https://<host>/api/search`, without any key.
+
+- **SRC-119** · The identifier is the career site host (`fr.jobs.cerbahealthcare.com`).
+  Every offer is read, without search terms: the source sends
+  `{"facets": {}, "currentPage": <n>, "loadOffers": true}`, `n` from 1, 20 offers per
+  page, at most 40 pages; it stops at an incomplete page or once the announced total
+  (`jobs.totalCount`) is reached. The same offer (same `id`) is kept once.
+- **SRC-120** · From each offer (`jobs.offers`): title; location as shown; date = the day
+  of `publicationDate`; link = `https://<host>/our-offers/<id>`. An offer marked `inactive`
+  is skipped, and an offer without a title or an `id` is skipped (SRC-01).
+- **SRC-121** · The page of each **retained** ad is opened (as in SRC-24): the
+  `description` of its job posting (the page's structured data, plain SRC-02) becomes the
+  ad text. A page without it leaves the ad unchanged.

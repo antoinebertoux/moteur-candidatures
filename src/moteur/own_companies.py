@@ -24,16 +24,19 @@ from moteur.selection import Choice
 from moteur.sources.ats import SourceAts
 from moteur.sources.avature import SourceAvature
 from moteur.sources.base import HttpClient, Source, SourceError
+from moteur.sources.cornerstone import SourceCornerstone
 from moteur.sources.gestmax import SourceGestmax
 from moteur.sources.magnet import SourceMagnet
 from moteur.sources.mckinsey import SourceMcKinsey
 from moteur.sources.oracle import SourceOracle
 from moteur.sources.phenom import SourcePhenom
 from moteur.sources.radancy import SourceRadancy
+from moteur.sources.rippling import SourceRippling
 from moteur.sources.sitemap import SourceSitemap
 from moteur.sources.sncf import SourceSncf
 from moteur.sources.successfactors import SourceSuccessFactors
 from moteur.sources.taleez import SourceTaleez
+from moteur.sources.talentry import SourceTalentry
 from moteur.sources.talentsoft import SourceTalentsoft
 from moteur.sources.welcomekit import SourceWelcomeKit
 from moteur.sources.werecruit import SourceWeRecruit
@@ -90,6 +93,12 @@ def source_for(
         return SourceTaleez(client, target)
     if target.ats == "werecruit":
         return SourceWeRecruit(client, target)
+    if target.ats == "talentry":
+        return SourceTalentry(client, target)
+    if target.ats == "rippling":
+        return SourceRippling(client, target)
+    if target.ats == "cornerstone":
+        return SourceCornerstone(client, target)
     if target.ats:
         return SourceAts(client, target, countries)
     return None

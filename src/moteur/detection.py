@@ -28,6 +28,11 @@ _PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     # A company's Taleez site, not the service's own hosts (files, app…).
     ("taleez", re.compile(r"\b((?!(?:www|app|files|api)\.)[\w-]+\.taleez\.com)")),
     ("werecruit", re.compile(r"(careers\.werecruit\.io/[a-z]{2}/[\w-]+)")),
+    ("rippling", re.compile(r"(ats\.rippling\.com/[\w-]+/jobs)")),
+    (
+        "cornerstone",
+        re.compile(r"([\w-]+\.csod\.com/ux/ats/careersite/\d+/home\?c=[\w-]+)"),
+    ),
 )
 # Path segments that are not a board identifier (embed scripts, API words).
 _NOT_IDENTIFIERS = {"embed", "api", "v1", "js", "static", "www", "careers", "jobs", "widget"}

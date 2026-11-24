@@ -60,6 +60,9 @@ and the tool behind it. Supported tools and what `identifiant` is:
 | `sncf` | the SNCF group's site, `emploi.sncf.com` | the group company's number in the site's « company » filter (`6684` SNCF Réseau, `6685` SNCF Voyageurs) |
 | `taleez` | a Taleez career site (`<x>.taleez.com`, ad links `taleez.com/apply/…`) | the host (e.g. `tehtris.taleez.com`) |
 | `werecruit` | a WeRecruit career site (`careers.werecruit.io/<language>/<company>`) | that address with its language, as shown in the browser (e.g. `careers.werecruit.io/en/unseenlabs`) |
+| `cornerstone` | a Cornerstone OnDemand career site (`<x>.csod.com/ux/ats/careersite/<n>/home?c=<x>`) | that address, as shown in the browser |
+| `rippling` | a Rippling career site (`ats.rippling.com/<board>/jobs`) | that address, as shown in the browser |
+| `talentry` | a Talentry career site (ad links `<host>/our-offers/<id>`, e.g. `fr.jobs.cerbahealthcare.com`) | the host |
 | `sitemap` | an in-house career site whose `robots.txt` sitemap lists every offer, each page holding `JobPosting` data | the address the offers sit under (e.g. `careers.societegenerale.com/offres-d-emploi/`) |
 
 When you are not sure of the identifier, give the career page as `adresse` instead of

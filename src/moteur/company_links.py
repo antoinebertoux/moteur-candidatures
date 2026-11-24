@@ -51,6 +51,8 @@ _EXCLUDED_DOMAINS = (
     "gestmax.fr",
     "taleez.com",
     "werecruit.io",
+    "csod.com",
+    "rippling.com",
     "tmp.com",
     "francetravail.fr",
     "pole-emploi.fr",
