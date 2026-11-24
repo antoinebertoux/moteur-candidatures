@@ -117,6 +117,13 @@ stays empty.
   the source fail (SRC-03).
 - ~~**SRC-44**~~ · *Removed: pacing did not help. The lasting 429s come from the sites'
   protection against automated clients, not from bursts.*
+- **SRC-110** · Every request to a Workday site (search page and detail page) goes
+  through Python's standard HTTP client (`urllib`) instead of the usual one: since
+  November 2026, Workday's protection refuses the usual client but accepts this one.
+  Everything else stays as for the other sources: same identification and 20 s limit
+  (SRC-03), same retries (SRC-04, SRC-06, SRC-43), same error messages (SRC-109). The
+  engine never imitates a browser: if Workday refuses this client too, its sites are
+  reported as refused (COL-10).
 
 ## Radancy (TalentBrew)
 

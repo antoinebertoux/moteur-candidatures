@@ -13,8 +13,14 @@ from moteur.sources.ats import (
     ads_teamtailor,
     smartrecruiters_searches,
 )
-from moteur.sources.base import SourceError
-from moteur.sources.workday import SourceWorkday, ads_workday, split_address, workday_description
+from moteur.sources.base import HttpxClient, SourceError, UrllibClient
+from moteur.sources.workday import (
+    SourceWorkday,
+    ads_workday,
+    client_for_workday,
+    split_address,
+    workday_description,
+)
 from tests.conftest import FakeClient
 
 EXAMPLE = "https://exemple.wd3.myworkdayjobs.com/fr-FR/Careers"
@@ -352,3 +358,14 @@ def test_workday_pauses_when_still_refused() -> None:
     assert pauses == [30.0, 30.0]
     with pytest.raises(SourceError, match="429"):
         SourceWorkday(_BusyWorkday(3), target, pauses.append).collect()
+
+
+@pytest.mark.spec("SRC-110")
+def test_workday_uses_the_standard_client_instead_of_the_usual_one() -> None:
+    usual = HttpxClient()
+    try:
+        assert isinstance(client_for_workday(usual), UrllibClient)
+    finally:
+        usual.close()
+    fake = FakeClient({})
+    assert client_for_workday(fake) is fake

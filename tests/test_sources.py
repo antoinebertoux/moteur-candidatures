@@ -1,10 +1,18 @@
+import io
+import json
+import urllib.error
+import urllib.request
+import urllib.response
+from email.message import Message
+from typing import Any
+
 import httpx
 import pytest
 
 from moteur.config import TargetCompany
 from moteur.sources import france_travail
 from moteur.sources.ats import URLS, SourceAts, ads_ashby, ads_greenhouse, ads_lever
-from moteur.sources.base import HttpxClient, SourceError, plain_text
+from moteur.sources.base import HttpxClient, SourceError, UrllibClient, plain_text
 from moteur.sources.france_travail import SourceFranceTravail, ad_from_result
 from tests.conftest import FakeClient
 
@@ -228,3 +236,82 @@ def test_teamtailor_site_on_the_company_domain() -> None:
     plain = TargetCompany(name="Qevlar", ats="teamtailor", identifier="qevlar")
     SourceAts(client, plain).collect()
     assert client.calls[1][0] == "https://qevlar.teamtailor.com/jobs.rss"
+
+
+def _urllib_client(
+    *answers: tuple[int, dict[str, str], bytes],
+) -> tuple[UrllibClient, list[urllib.request.Request], list[float]]:
+    """Standard-library client whose server gives the answers in turn; also returns the
+    requests sent and the pauses."""
+    queue = iter(answers)
+    requests: list[urllib.request.Request] = []
+    pauses: list[float] = []
+
+    def opener(request: urllib.request.Request, timeout: float) -> Any:
+        requests.append(request)
+        status, headers, body = next(queue)
+        message = Message()
+        for name, value in headers.items():
+            message[name] = value
+        if status >= 400:
+            raise urllib.error.HTTPError(request.full_url, status, "", message, io.BytesIO(body))
+        return urllib.response.addinfourl(io.BytesIO(body), message, request.full_url, status)
+
+    return UrllibClient(opener=opener, pause=pauses.append), requests, pauses
+
+
+@pytest.mark.spec("SRC-110")
+def test_the_standard_client_posts_json_and_identifies_itself() -> None:
+    client, requests, _ = _urllib_client(
+        (200, {"Content-Type": "application/json"}, b'{"total": 3}')
+    )
+    answer = client.post_json(
+        "https://exemple.test/jobs",
+        body={"searchText": "ia"},
+        headers={"Accept": "application/json"},
+    )
+    assert answer == {"total": 3}
+    (request,) = requests
+    assert request.get_method() == "POST"
+    assert isinstance(request.data, bytes)
+    assert json.loads(request.data) == {"searchText": "ia"}
+    assert request.get_header("User-agent") == "moteur-candidatures/0.1 (usage personnel)"
+    assert request.get_header("Content-type") == "application/json"
+    assert request.get_header("Accept") == "application/json"
+
+
+@pytest.mark.spec("SRC-110", "SRC-04")
+def test_the_standard_client_retries_a_429_like_the_usual_one() -> None:
+    client, requests, pauses = _urllib_client(
+        (429, {"Retry-After": "120"}, b""), (429, {}, b""), (200, {}, b'{"ok": 1}')
+    )
+    assert client.get_json("https://exemple.test/jobs", params={"q": "ia"}) == {"ok": 1}
+    assert pauses == [30.0, 5.0]
+    assert requests[0].full_url == "https://exemple.test/jobs?q=ia"
+
+
+@pytest.mark.spec("SRC-110", "SRC-109")
+def test_the_standard_client_leaves_an_html_error_page_out() -> None:
+    page = b"<!DOCTYPE html> <html> <head> <style> body { margin: 0; }"
+    client, _, _ = _urllib_client(*[(429, {"Content-Type": "text/html; charset=UTF-8"}, page)] * 3)
+    with pytest.raises(SourceError) as error:
+        client.post_json("https://exemple.test/jobs", body={})
+    assert str(error.value) == "https://exemple.test/jobs: HTTP 429"
+    client, _, _ = _urllib_client((400, {}, b'{"error": "invalid_client"}'))
+    with pytest.raises(SourceError, match="invalid_client"):
+        client.get_json("https://exemple.test/jobs")
+
+
+@pytest.mark.spec("SRC-110")
+def test_the_standard_client_turns_a_network_error_into_a_source_error() -> None:
+    def failing(request: urllib.request.Request, timeout: float) -> Any:
+        raise TimeoutError("The read operation timed out")
+
+    with pytest.raises(SourceError, match="The read operation timed out"):
+        UrllibClient(opener=failing).get_json("https://exemple.test/jobs")
+
+
+@pytest.mark.spec("SRC-110")
+def test_the_standard_client_gives_none_for_an_empty_answer() -> None:
+    client, _, _ = _urllib_client((204, {}, b""))
+    assert client.get_json("https://exemple.test/jobs") is None

@@ -18,7 +18,9 @@ from moteur.models import JobAd
 from moteur.sources.base import (
     SEARCHES_IN_PARALLEL,
     HttpClient,
+    HttpxClient,
     SourceError,
+    UrllibClient,
     in_parallel,
     items,
     plain_text,
@@ -84,6 +86,12 @@ def ads_workday(company: str, site: WorkdaySite, answer: object) -> list[JobAd]:
     ]
 
 
+def client_for_workday(client: HttpClient) -> HttpClient:
+    """The standard-library client in place of the usual one, which Workday refuses
+    (SRC-110); any other client (e.g. a test one) is kept."""
+    return UrllibClient() if isinstance(client, HttpxClient) else client
+
+
 class SourceWorkday:
     def __init__(
         self,
@@ -91,7 +99,7 @@ class SourceWorkday:
         company: TargetCompany,
         pause: Callable[[float], None] = time.sleep,
     ) -> None:
-        self._client = client
+        self._client = client_for_workday(client)
         self._company = company
         self._site = split_address(company.identifier)
         self._searches: Sequence[str] = company.searches
