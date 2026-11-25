@@ -31,7 +31,7 @@ job itself (PREP-50 to PREP-55). Unless a rule says otherwise, a rule applies to
 - **PREP-10** · Everything about the application: company, title, location, link, type,
   sent date, follow-up and notes from the page (replies, follow-ups), the ad text
   (`offre.md` or the page's text), the CV and letter as sent (`cv.tex`, `lettre.tex` of
-  the folder, when they exist), `pretentions`, `entretien_infos` and the instruction,
+  the folder wherever it is filed, CV-17, when they exist), `pretentions`, `entretien_infos` and the instruction,
   marked as taking priority.
 - **PREP-11** · User's background, as material for answers: the `profil` from
   `config.toml`, the CV bank of the CV's language and the letter paragraph bank.
@@ -68,7 +68,8 @@ job itself (PREP-50 to PREP-55). Unless a rule says otherwise, a rule applies to
 - **PREP-31** · No invented experience, figure or fact about User: anything not in the
   material of PREP-10 to PREP-12 is left out. *(untested: instruction to the model)*
 - **PREP-32** · The sheet is written to `preparation-entretien.md` in the application's
-  folder (CV-01, created if missing, with its `offre.md`), replacing a previous sheet. It
+  folder where it is filed (CV-21: `sent/` or `hold/`, never a new folder at the root;
+  created in `sent/` if missing, with its `offre.md`), replacing a previous sheet. It
   is also stored in engine B's database with its date and sent to the page (ECH-03),
   where it is read (PAGE-11). A sheet longer than 40,000 characters is cut, with a
   final line saying so.

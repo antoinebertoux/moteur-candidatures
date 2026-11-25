@@ -17,6 +17,37 @@ personal instructions and `compiler.sh`. Its expected format is in
   `banque-en` bank. Generated files point to `../../latex/` so they compile from their
   folder.
 
+## Where the folder is filed
+
+- **CV-17** · An application's folder (CV-01) sits in one of three places of
+  `Candidatures/`, by where the application stands:
+  - at the root (`Candidatures/<folder>/`): not sent yet (To review to To send in the
+    page) or dropped by User (Rejected);
+  - `Candidatures/sent/<folder>/`: applied (`statut` = `postulee`), not refused by the
+    company;
+  - `Candidatures/hold/<folder>/`: applied, then refused by the company (`suite` =
+    `refus`, PAGE-08).
+  `sent/old/` (applications of the previous job search, INV-04) is never touched.
+- **CV-18** · Each synchronisation with the page (`moteur decisions`, ECH-12, and the
+  direct link, ECH-22) files the folder of every document whose `statut` is `postulee`:
+  into `hold/` when its `suite` is `refus`, otherwise into `sent/` (so it goes back to
+  `sent/` if the refusal is undone). The folder is looked for under its CV-01 name at the
+  root, in `sent/` and in `hold/`; `sent/` and `hold/` are created when missing, so a new
+  installation needs nothing beforehand. A document without a folder is skipped. Folders
+  of documents in any other status are never moved, and a folder is never moved back to
+  the root.
+- **CV-19** · Filing never loses a file. When the destination folder already exists
+  (for example a preparation sheet written at the root by an older version), each file
+  of the other copy is moved into it when absent there, dropped when identical, and
+  otherwise left where it is with a warning; a copy left empty is removed.
+- **CV-20** · After a move, the PDF paths engine B stores for the application
+  (`cv_ref`, `lettre_ref`, GEN-02) point to the new place, and so do the CV and Letter
+  links it sends to the page from then on.
+- **CV-21** · Every step that writes into the folder of an application (generation,
+  letter, interview preparation) uses the folder where it is filed (CV-17). When there is
+  none yet, generation and letter create it at the root, and an interview preparation
+  creates it in `sent/` (an application being prepared for an interview has been sent).
+
 ## CV
 
 - **CV-10** · Starting point: the repository's CV template. If there is an edit

@@ -14,6 +14,7 @@ from pathlib import Path
 
 from moteur.claude_cli import Assistant, ClaudeError, ProcessResult, extract_block
 from moteur.config import Paths
+from moteur.folders import folder_for_writing
 from moteur.latex_repository import (
     CV_INSTRUCTIONS,
     LETTER_INSTRUCTIONS,
@@ -320,8 +321,7 @@ def generate_folder(
     if not cv_bank_file.is_file():
         # LTX-10: only the applications in that language fail.
         raise GenerationError(f"missing bank {cv_bank_file.relative_to(paths.root)}")
-    folder = paths.applications / folder_name(ad)
-    folder.mkdir(parents=True, exist_ok=True)
+    folder = folder_for_writing(paths.applications, folder_name(ad))  # CV-21
     _write_sheet(folder, ad)
 
     cv = folder / "cv.tex"

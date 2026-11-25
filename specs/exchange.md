@@ -42,7 +42,7 @@ capability). Engine B therefore offers two channels carrying the same content:
   `statut` are ignored.
 - **ECH-11** · Fields read: `id`, `statut`, `consigne`, `lettre_demandee`, `lettre`
   (`oui` / `non` or boolean; missing = no choice), `lettre_refaire_le`,
-  `lettre_consigne`, `motif_refus`, `motif_detail`, `preparation_demandee_le`,
+  `lettre_consigne`, `motif_refus`, `motif_detail`, `suite` (CV-18), `preparation_demandee_le`,
   `pretentions`, `entretien_infos`, `preparation_consigne`,
   `preparation_technique_demandee_le`, `retour_entretien_rh`, `site_entreprise`,
   `linkedin_entreprise` and `liens_manuels` (PAGE-42), and enough to rebuild the ad if `entreprise` and `poste` are
@@ -51,14 +51,16 @@ capability). Engine B therefore offers two channels carrying the same content:
 - **ECH-12** · `moteur decisions <file>` applies, in this order: adding unknown accepted
   applications (BASE-07); letter choice of accepted, ready or approved applications
   (BASE-08); status decisions (BASE-05, BASE-06); letter regenerations (LET-07); preparation
-  requests (BASE-12). It then
-  prints the summary and what is left to generate. *(untested)*
+  requests (BASE-12); and last files the folders of applied applications into `sent/`
+  or `hold/` (CV-18). It then prints the summary and what is left to generate.
+  *(untested)*
 
 ## Direct link: MCP server `moteur mcp`
 
 - **ECH-20** · `moteur mcp` runs an MCP server over stdio, named `moteur`, started by the
   Claude desktop app (`mcpServers` of `claude_desktop_config.json`). It exposes exactly the
-  six tools below and nothing else: no access to files, the configuration or `.env`.
+  six tools below and nothing else: no access to the configuration or `.env`, and no
+  file access other than filing application folders (CV-18).
 - **ECH-21** · Tool `propositions` (annotated read-only, no input): returns
   `{"candidatures": [...]}`, the same entries as `pour-la-page.json` (ECH-01, ECH-02),
   read straight from the local database at call time. No file is written.
@@ -66,7 +68,7 @@ capability). Engine B therefore offers two channels carrying the same content:
   same format as ECH-10 and ECH-11): applies them exactly like `moteur decisions`
   (ECH-12) and returns the counts: decisions applied, applications added or completed,
   letter choices or regenerations, folders to generate, letters to add, preparations
-  requested. Applying the same
+  requested, folders filed (CV-18). Applying the same
   documents twice changes nothing the second time.
 - **ECH-23** · An invalid input to `decisions` returns a tool error with the message of
   ECH-10, and changes nothing.

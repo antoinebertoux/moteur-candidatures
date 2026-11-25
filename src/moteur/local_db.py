@@ -436,6 +436,16 @@ class LocalDb:
                 (letter_ref, key),
             )
 
+    def set_refs(self, key: str, cv_ref: str, letter_ref: str) -> bool:
+        """Points the PDF paths to where the folder is filed now (CV-20)."""
+        with self._connection:
+            cursor = self._connection.execute(
+                "UPDATE candidatures SET cv_ref = ?, lettre_ref = ?"
+                " WHERE cle = ? AND (cv_ref != ? OR lettre_ref != ?)",
+                (cv_ref, letter_ref, key, cv_ref, letter_ref),
+            )
+        return cursor.rowcount > 0
+
     def mark_generated(self, key: str, cv_ref: str, letter_ref: str) -> None:
         with self._connection:
             self._connection.execute(

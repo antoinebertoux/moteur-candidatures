@@ -45,6 +45,8 @@ class Decision:
     """User's correction of the company links (PAGE-42), None if there is none."""
     technical_preparation: PrepRequest | None = None
     """Technical / manager interview preparation request (PREP-50), None if none."""
+    follow_up: str = ""
+    """The page's `suite` (PAGE-08): `refus` files an applied folder in `hold/` (CV-18)."""
 
     @property
     def with_letter(self) -> bool:
@@ -260,6 +262,7 @@ def decisions_from(data: object) -> list[Decision]:
                     _preparation(entry),
                     _links(entry),
                     _preparation(entry, "technique"),
+                    _text(entry, "suite"),
                 )
             )
     return decisions

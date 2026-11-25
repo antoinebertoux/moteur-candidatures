@@ -33,20 +33,44 @@ def local_path(url_path: str, folder: Path) -> Path | None:
     return target
 
 
+_FILED_PLACES = ("sent", "hold")
+
+
+def filed_path(url_path: str, folder: Path) -> Path | None:
+    """The file named by the link, or by the same `<folder>/<file>` at the root, in
+    `sent/` or in `hold/` when the folder was filed since (SRV-04); None if none exists."""
+    direct = local_path(url_path, folder)
+    if direct is not None and direct.is_file():
+        return direct
+    pieces = [m for m in posixpath.normpath(unquote(urlsplit(url_path).path)).split("/") if m]
+    if not pieces or pieces[0] != PREFIX:
+        return None
+    rest = pieces[1:]
+    if rest[:1] and rest[0] in _FILED_PLACES:
+        rest = rest[1:]
+    if len(rest) != 2:
+        return None
+    for place in ("", *_FILED_PLACES):
+        candidate = local_path("/".join([PREFIX, place, *rest]), folder)
+        if candidate is not None and candidate.is_file():
+            return candidate
+    return None
+
+
 class _Handler(SimpleHTTPRequestHandler):
     def __init__(self, *args: object, folder: Path, **kwargs: object) -> None:
         self._folder = folder
         super().__init__(*args, directory=str(folder), **kwargs)  # type: ignore[arg-type]
 
     def send_head(self) -> BytesIO | BinaryIO | None:
-        target = local_path(self.path, self._folder)
-        if target is None or not target.is_file():
+        target = filed_path(self.path, self._folder)
+        if target is None:
             self.send_error(404)
             return None
         return super().send_head()
 
     def translate_path(self, path: str) -> str:
-        target = local_path(path, self._folder)
+        target = filed_path(path, self._folder) or local_path(path, self._folder)
         return str(target if target is not None else self._folder)
 
     def end_headers(self) -> None:

@@ -74,3 +74,7 @@ buttons therefore point to this small server.
   (`config.toml`, `.env`, `latex/`, `..`, links leaving the folder) returns 404.
 - **SRV-03** · Responses carry `Cache-Control: no-store`, so that a regenerated PDF shows
   up to date.
+- **SRV-04** · A link the page wrote before its folder was filed (CV-18) still opens:
+  when `/Candidatures/[sent/ or hold/]<folder>/<file>` does not exist, the same
+  `<folder>/<file>` is looked for at the root, in `sent/` and in `hold/`, and the first
+  found is served. SRV-02 still applies to every path tried.

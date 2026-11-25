@@ -102,9 +102,10 @@ confirmation (page or message) before going on.
 3. Notes: write `reponses-formulaire.md` in the application's folder: date sent, address of the
    form, account used (site and e-mail, never a password), salary given, the validated
    free texts, the other notable answers.
-4. Folder: move it from `Candidatures/` to `Candidatures/sent/`, then update `cv_ref`
-   and `lettre_ref` in the page to the new paths (same `update`, or a second one with the
-   new version).
+4. Folder: do **not** move it. Engine B files it into `Candidatures/sent/` at the
+   `decisions` call of step 2 (or the page's next sync), and later into
+   `Candidatures/hold/` if the company refuses (CV-18). Leave `cv_ref` and `lettre_ref`
+   as they are: the PDF server still opens them (SRV-04).
 
 ## 7. Report (APPLY-14)
 

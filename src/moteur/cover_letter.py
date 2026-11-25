@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from moteur.claude_cli import Assistant, ClaudeError
 from moteur.config import Paths
+from moteur.folders import folder_for_writing
 from moteur.generation import (
     Compiler,
     GenerationError,
@@ -29,8 +30,7 @@ def generate_letter(
     compile_fn: Compiler,
 ) -> str:
     """Writes and compiles the folder's `lettre.tex`; returns the PDF reference."""
-    folder = paths.applications / folder_name(application.ad)
-    folder.mkdir(parents=True, exist_ok=True)
+    folder = folder_for_writing(paths.applications, folder_name(application.ad))  # CV-21
     _write_sheet(folder, application.ad)
     letter = folder / "lettre.tex"
     write_letter(application, letter, application.letter_instruction, assistant, paths, model)

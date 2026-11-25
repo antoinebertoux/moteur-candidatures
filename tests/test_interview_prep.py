@@ -252,7 +252,7 @@ def test_a_failed_sheet_stays_pending_and_others_continue(base: LocalDb, paths: 
     assert base.pending_preparations() == [AD.key]
 
 
-@pytest.mark.spec("PREP-32", "ECH-03")
+@pytest.mark.spec("PREP-32", "ECH-03", "CV-21")
 def test_the_sheet_is_written_stored_and_sent_to_the_page(base: LocalDb, paths: Paths) -> None:
     ask(base, paths)
     answer = f"Voici la fiche.\n\n{SHEET}"
@@ -264,7 +264,7 @@ def test_the_sheet_is_written_stored_and_sent_to_the_page(base: LocalDb, paths: 
         "",
         clock=lambda: "2026-11-19T10:05:00.000Z",
     )
-    folder = paths.applications / folder_name(AD)
+    folder = paths.applications / "sent" / folder_name(AD)
     assert (folder / SHEET_FILE).read_text(encoding="utf-8") == SHEET + "\n"
     assert (folder / "offre.md").exists()
     (row,) = for_the_page(base.for_the_page(), paths.root)
@@ -501,7 +501,7 @@ def test_the_technical_sheet_is_written_apart_and_sent(base: LocalDb, paths: Pat
         "",
         clock=lambda: "2026-11-25T09:20:00.000Z",
     )
-    folder = paths.applications / folder_name(AD)
+    folder = paths.applications / "sent" / folder_name(AD)
     assert (folder / TECH_SHEET_FILE).read_text(encoding="utf-8") == TECH_SHEET + "\n"
     assert (folder / SHEET_FILE).read_text(encoding="utf-8") == SHEET + "\n"
     (row,) = for_the_page(base.for_the_page(), paths.root)
