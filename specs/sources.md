@@ -72,7 +72,7 @@ stays empty.
   | workable | `apply.workable.com/api/v1/widget/accounts/<id>?details=true` |
 
   Workday, Radancy, Welcome Kit, Talentsoft, Oracle, SuccessFactors, Phenom, Avature,
-  Magnet, Gestmax, Taleez, WeRecruit, the sitemap of offers, McKinsey and SNCF have
+  Magnet, Gestmax, Taleez, WeRecruit, Eightfold, the sitemap of offers, McKinsey and SNCF have
   sections of their own below. A company without a supported ATS cannot become a
   source.
 - **SRC-33** · Greenhouse boards hosted in Europe: an identifier written `eu:<id>` is
@@ -503,3 +503,27 @@ giving the others; each offer's page describes it with `JobPosting` data.
   `idParam` is skipped (SRC-01).
 - **SRC-124** · The page of each **retained** ad is opened and read as in SRC-51 (title,
   text, date). A page without `JobPosting` data leaves the ad unchanged.
+
+## Eightfold
+
+Career sites built on Eightfold (for instance DSM-Firmenich,
+`jobs.dsm-firmenich.com/careers?domain=dsm.com`). The page queries a public search
+address of the same host, `/api/pcsx`, which `robots.txt` allows; every request needs the
+site's `domain`, shown in the page's own address.
+
+- **SRC-125** · The identifier is the career page address as shown in the browser, with
+  its `domain` (`https://jobs.dsm-firmenich.com/careers?domain=dsm.com`); only the host
+  and the `domain` are used. An address without `domain` is rejected.
+- **SRC-126** · Each term of `[criteres] recherches` (CONF-11) is searched at
+  `https://<host>/api/pcsx/search?domain=<domain>&query=<term>&start=<n>`, 10 ads per
+  page (the site's size, which cannot be changed), at most 10 pages; a search stops when
+  a page is incomplete or the announced total (`count`) is reached. Searches run as in
+  SRC-05. An ad found by several keywords (same `id`) is kept once. From each position:
+  title = `name`; location = its first `locations` entry (« Princeton (NJ), United
+  States »); date = the day of `postedTs` (seconds since 1970); link =
+  `https://<host>/careers/job/<id>`; no text (see SRC-127). A position without a name or
+  an `id` is skipped (SRC-01).
+- **SRC-127** · The details of each **retained** ad are read (as in SRC-24) from
+  `https://<host>/api/pcsx/position_details?position_id=<id>&domain=<domain>`: its
+  `jobDescription` (plain, SRC-02) becomes the ad text. Unreadable details leave the ad
+  without text.

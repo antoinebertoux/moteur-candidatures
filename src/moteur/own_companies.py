@@ -25,6 +25,7 @@ from moteur.sources.ats import SourceAts
 from moteur.sources.avature import SourceAvature
 from moteur.sources.base import HttpClient, Source, SourceError
 from moteur.sources.cornerstone import SourceCornerstone
+from moteur.sources.eightfold import SourceEightfold
 from moteur.sources.gestmax import SourceGestmax
 from moteur.sources.join import SourceJoin
 from moteur.sources.magnet import SourceMagnet
@@ -102,6 +103,8 @@ def source_for(
         return SourceRippling(client, target)
     if target.ats == "cornerstone":
         return SourceCornerstone(client, target)
+    if target.ats == "eightfold":
+        return SourceEightfold(client, target)
     if target.ats:
         return SourceAts(client, target, countries)
     return None

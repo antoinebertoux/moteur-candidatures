@@ -52,7 +52,7 @@ ask Claude to find or add others. Engine B keeps these choices and companies;
 - **CAT-06** · The companies followed are the catalogue's plus User's own. An own company
   with the same normalised name as a catalogue entry replaces it entirely.
 - **CAT-07** · Every company whose tool is searched by keyword (Workday, SmartRecruiters,
-  Oracle, SuccessFactors, Phenom, Avature, McKinsey, Cornerstone), from the catalogue or User's own, is
+  Oracle, SuccessFactors, Phenom, Avature, McKinsey, Cornerstone, Eightfold), from the catalogue or User's own, is
   searched with the same terms, `[criteres] recherches` (CONF-11), since the
   catalogue cannot know the job sought. No company has search terms of its own.
 

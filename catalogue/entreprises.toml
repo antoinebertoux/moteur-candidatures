@@ -48,6 +48,9 @@
 #   taleez: the Taleez career site host (e.g. tehtris.taleez.com)
 #   werecruit: the WeRecruit career site address with its language
 #              (e.g. careers.werecruit.io/fr/glimps)
+#   eightfold: the Eightfold career page address with its domain
+#              (e.g. jobs.dsm-firmenich.com/careers?domain=dsm.com), searched with
+#              [criteres] recherches
 
 [[entreprises]]
 nom = "Thales"
