@@ -18,6 +18,7 @@ from pathlib import Path
 
 from moteur.claude_cli import Assistant, ClaudeError
 from moteur.config import Paths
+from moteur.folders import SENT, folder_for_writing, locate
 from moteur.generation import _write_sheet, folder_name
 from moteur.local_db import LocalDb
 from moteur.models import Application, PrepKind, PrepRequest, normalise
@@ -172,7 +173,8 @@ def preparation_prompt(
 ) -> str:
     """What Claude receives for one sheet (PREP-10 to PREP-12)."""
     ad = application.ad
-    folder = paths.applications / folder_name(ad)
+    name = folder_name(ad)
+    folder = locate(paths.applications, name) or paths.applications / name  # PREP-10
     rows = [f"Entreprise : {ad.company}", f"Poste : {ad.title}"]
     if ad.type == "spontanee":
         rows.append("Candidature spontanée (pas d'offre publiée).")
@@ -264,8 +266,7 @@ def prepare_sheet(
         delay=TECH_DELAY_SECONDS if technical else DELAY_SECONDS,
     )
     sheet = clean_sheet(answer, TECH_MAX_LENGTH, TECH_CUT) if technical else clean_sheet(answer)
-    folder = paths.applications / folder_name(application.ad)
-    folder.mkdir(parents=True, exist_ok=True)
+    folder = folder_for_writing(paths.applications, folder_name(application.ad), SENT)  # CV-21
     _write_sheet(folder, application.ad)
     (folder / (TECH_SHEET_FILE if technical else SHEET_FILE)).write_text(sheet, encoding="utf-8")
     return sheet

@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from moteur.pdf_server import local_path, make_server
+from moteur.pdf_server import filed_path, local_path, make_server
 
 
 @pytest.mark.spec("SRV-02")
@@ -58,3 +58,20 @@ def test_refuses_the_rest(address: str, path: str) -> None:
     with pytest.raises(urllib.error.HTTPError) as error:
         urllib.request.urlopen(address + path)
     assert error.value.code == 404
+
+
+@pytest.mark.spec("SRV-04", "SRV-02")
+def test_a_link_written_before_filing_still_opens(tmp_path: Path) -> None:
+    folder = tmp_path / "Candidatures"
+    held = folder / "hold" / "Acme - Lead AI"
+    held.mkdir(parents=True)
+    (held / "cv.pdf").write_bytes(b"%PDF")
+    for link in (
+        "/Candidatures/Acme%20-%20Lead%20AI/cv.pdf",
+        "/Candidatures/sent/Acme%20-%20Lead%20AI/cv.pdf",
+        "/Candidatures/hold/Acme%20-%20Lead%20AI/cv.pdf",
+    ):
+        assert filed_path(link, folder) == (held / "cv.pdf").resolve()
+    assert filed_path("/Candidatures/Acme%20-%20Lead%20AI/lettre.pdf", folder) is None
+    assert filed_path("/Candidatures/sent/%2e%2e/%2e%2e/secret.txt", folder) is None
+    assert filed_path("/latex/Acme%20-%20Lead%20AI/cv.pdf", folder) is None

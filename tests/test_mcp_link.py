@@ -98,6 +98,7 @@ def test_decisions_applies_like_the_command(paths: Paths) -> None:
         "to_generate",
         "letters_to_add",
         "preparations",
+        "folders_filed",
     }
     assert status(paths) == "acceptee"
 

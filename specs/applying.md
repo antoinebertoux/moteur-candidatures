@@ -51,7 +51,9 @@ by a test.
 - **APPLY-12** · Claude writes `reponses-formulaire.md` in the application's folder: date,
   form address, account used (never a password), salary given, validated texts, other
   notable answers. *(untested: behaviour of Claude)*
-- **APPLY-13** · The application's folder moves to `Candidatures/sent/`, and `cv_ref` /
-  `lettre_ref` in the page follow the new paths. *(untested: behaviour of Claude)*
+- **APPLY-13** · Claude does not move the application's folder: engine B files it into
+  `Candidatures/sent/` at the next synchronisation (CV-18), at once when `decisions` is
+  called (APPLY-11). `cv_ref` / `lettre_ref` in the page are left as they are: the PDF
+  server still opens them (SRV-04). *(untested: behaviour of Claude)*
 - **APPLY-14** · Claude ends with the applications sent, those waiting for User and
   those not sent, with the reason. *(untested: behaviour of Claude)*

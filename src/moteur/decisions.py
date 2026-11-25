@@ -5,7 +5,8 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
-from moteur import exchange
+from moteur import exchange, folders
+from moteur.generation import folder_name
 from moteur.local_db import ACCEPTED, CLOSE, LocalDb
 
 
@@ -20,6 +21,8 @@ class Outcome:
     letters_to_add: int
     preparations: int = 0
     """New interview preparation requests recorded (PREP-01)."""
+    folders_filed: int = 0
+    """Application folders moved into `sent/` or `hold/` (CV-18)."""
 
     def as_dict(self) -> dict[str, int]:
         return asdict(self)
@@ -29,7 +32,8 @@ class Outcome:
             f"{self.decisions} decisions recorded, {self.completed} ads added or completed"
             f" from the page, {self.letters} letter choices or regenerations,"
             f" {self.to_generate} folders to generate, {self.letters_to_add} letters to add,"
-            f" {self.preparations} interview preparations requested"
+            f" {self.preparations} interview preparations requested,"
+            f" {self.folders_filed} folders filed"
         )
 
 
@@ -68,9 +72,36 @@ def requested_preparations(base: LocalDb, decisions: list[exchange.Decision]) ->
     return new_ones
 
 
+def file_folders(base: LocalDb, decisions: list[exchange.Decision], root: Path) -> int:
+    """Files the folders of applied applications into `sent/` or `hold/` (CV-18, CV-19)
+    and points the stored PDF paths to where they are (CV-20); returns how many moved."""
+    applications = root / "Candidatures"
+    filed = 0
+    for decision in decisions:
+        place = folders.place_for(decision.status, decision.follow_up)
+        if place is None:
+            continue
+        known = base.find(decision.key)
+        ad = known.ad if known is not None else decision.ad
+        if ad is None:
+            continue
+        name = folder_name(ad)
+        if folders.file_folder(applications, name, place) is not None:
+            filed += 1
+        folder = folders.locate(applications, name)
+        if known is not None and folder is not None:
+            base.set_refs(
+                decision.key,
+                folders.moved_ref(known.cv_ref, root, folder),
+                folders.moved_ref(known.letter_ref, root, folder),
+            )
+    return filed
+
+
 def apply(base: LocalDb, decisions: list[exchange.Decision], root: Path) -> Outcome:
     """ECH-12 order: unknown accepted ones, letter choices, statuses, letter
-    regenerations, then interview preparation requests and company link corrections."""
+    regenerations, interview preparation requests and company link corrections, then
+    filing of the applied folders (CV-18)."""
     completed = sum(
         base.complete_from_the_page(d.key, d.ad, d.with_letter)
         for d in decisions
@@ -99,6 +130,7 @@ def apply(base: LocalDb, decisions: list[exchange.Decision], root: Path) -> Outc
     for decision in decisions:
         if decision.ad is not None:
             base.correct_links(decision.key, decision.ad.company, decision.links)
+    filed = file_folders(base, decisions, root)
     return Outcome(
         changed,
         completed,
@@ -106,4 +138,5 @@ def apply(base: LocalDb, decisions: list[exchange.Decision], root: Path) -> Outc
         len(base.to_generate()),
         len(base.missing_letters()),
         preparations,
+        filed,
     )
