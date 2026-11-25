@@ -509,3 +509,147 @@ site = "https://www.sncf-voyageurs.com"
 secteur = "transport-logistique"
 taille = "grand-groupe"
 pays = ["fr"]
+
+[[entreprises]]
+nom = "Cargill"
+ats = "radancy"
+identifiant = "careers.cargill.com"
+site = "https://www.cargill.com"
+secteur = "agroalimentaire"
+taille = "grand-groupe"
+pays = []
+
+[[entreprises]]
+nom = "Bunge"
+ats = "successfactors"
+identifiant = "jobs.bunge.com"
+site = "https://www.bunge.com"
+secteur = "agroalimentaire"
+taille = "grand-groupe"
+pays = []
+
+[[entreprises]]
+nom = "ofi (Olam Food Ingredients)"
+ats = "successfactors"
+identifiant = "careers.ofi.com"
+site = "https://www.ofi.com"
+secteur = "agroalimentaire"
+taille = "grand-groupe"
+pays = []
+
+[[entreprises]]
+nom = "Ingredion"
+ats = "workday"
+identifiant = "https://ingredion.wd1.myworkdayjobs.com/IngredionCareers"
+site = "https://www.ingredion.com"
+secteur = "agroalimentaire"
+taille = "grand-groupe"
+pays = []
+
+[[entreprises]]
+nom = "Tate & Lyle"
+ats = "phenom"
+identifiant = "careers.tateandlyle.com/global/en"
+site = "https://www.tateandlyle.com"
+secteur = "agroalimentaire"
+taille = "grand-groupe"
+pays = []
+
+[[entreprises]]
+nom = "Roquette"
+ats = "sitemap"
+identifiant = "https://www.roquette.com/careers/job-opportunities"
+site = "https://www.roquette.com"
+secteur = "agroalimentaire"
+taille = "grand-groupe"
+pays = ["fr"]
+
+[[entreprises]]
+nom = "Tereos"
+ats = "cornerstone"
+identifiant = "tereos.csod.com/ux/ats/careersite/1/home?c=tereos"
+site = "https://www.tereos.com"
+secteur = "agroalimentaire"
+taille = "grand-groupe"
+pays = ["fr"]
+
+[[entreprises]]
+nom = "Givaudan"
+ats = "phenom"
+identifiant = "careers.givaudan.com/global/en"
+site = "https://www.givaudan.com"
+secteur = "agroalimentaire"
+taille = "grand-groupe"
+pays = []
+
+[[entreprises]]
+nom = "IFF"
+ats = "workday"
+identifiant = "https://iff.wd5.myworkdayjobs.com/iff_careers"
+site = "https://www.iff.com"
+secteur = "agroalimentaire"
+taille = "grand-groupe"
+pays = []
+
+[[entreprises]]
+nom = "Kerry Group"
+ats = "phenom"
+identifiant = "jobs.kerry.com/gb/en"
+site = "https://www.kerry.com"
+secteur = "agroalimentaire"
+taille = "grand-groupe"
+pays = []
+
+[[entreprises]]
+nom = "Mane"
+ats = "talentsoft"
+identifiant = "hrs.emea.mane.com"
+site = "https://www.mane.com"
+secteur = "agroalimentaire"
+taille = "grand-groupe"
+pays = ["fr"]
+
+[[entreprises]]
+nom = "Sensient Technologies"
+ats = "radancy"
+identifiant = "careers.sensient.com"
+site = "https://www.sensient.com"
+secteur = "agroalimentaire"
+taille = "grand-groupe"
+pays = []
+
+[[entreprises]]
+nom = "Novonesis"
+ats = "workday"
+identifiant = "https://novonesis.wd103.myworkdayjobs.com/Novonesis_Careers"
+site = "https://www.novonesis.com"
+secteur = "pharmacie-biotech"
+taille = "grand-groupe"
+pays = []
+
+[[entreprises]]
+nom = "Lesaffre"
+ats = "smartrecruiters"
+identifiant = "Lesaffre"
+site = "https://www.lesaffre.com"
+secteur = "agroalimentaire"
+taille = "grand-groupe"
+pays = ["fr"]
+
+[[entreprises]]
+nom = "Corbion"
+ats = "successfactors"
+identifiant = "jobs.corbion.com"
+site = "https://www.corbion.com"
+secteur = "agroalimentaire"
+taille = "grand-groupe"
+pays = []
+
+[[entreprises]]
+nom = "Darling Ingredients"
+ats = "oracle"
+identifiant = "https://ekgz.fa.us6.oraclecloud.com/hcmUI/CandidateExperience/en/sites/DarlingII"
+site = "https://www.darlingii.com"
+secteur = "agroalimentaire"
+taille = "grand-groupe"
+pays = []
