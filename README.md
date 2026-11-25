@@ -222,6 +222,21 @@ queries each company's job board before keeping it, and says why it refuses one
 removes one. Install the skill once: zip the `skills/trouver-entreprises` folder and
 upload it in the desktop app's settings (Capabilities, Skills).
 
+### Applying
+
+Ask Claude in the desktop app: "postule aux offres validées", "envoie la candidature
+Alstom". The skill [`skills/postuler`](skills/postuler/SKILL.md) takes only the
+applications in **To send** in the tracking page, opens each employer's form in the
+browser and fills it with your CV, your letter and the facts of
+`prive/profil-candidature.md` (copy
+[`skills/postuler/profil-candidature.exemple.md`](skills/postuler/profil-candidature.exemple.md)
+there and fill it in). It always asks you for the salary, proposes every free-text
+answer for you to validate, applies without an account when the site allows it and
+otherwise waits for you to create the account. It sends only after your recap approval,
+then marks the application *Postulée*, writes `candidature.md` in its folder and moves the
+folder to `Candidatures/sent/` ([`specs/applying.md`](specs/applying.md)). Install it
+like the other skill.
+
 ### Interview preparation
 
 On an application marked *Postulée* whose follow-up is *Entretien RH*, the page's
