@@ -656,3 +656,12 @@ site = "https://www.darlingii.com"
 secteur = "agroalimentaire"
 taille = "grand-groupe"
 pays = []
+
+[[entreprises]]
+nom = "DSM-Firmenich"
+ats = "eightfold"
+identifiant = "https://jobs.dsm-firmenich.com/careers?domain=dsm.com"
+site = "https://www.dsm-firmenich.com"
+secteur = "agroalimentaire"
+taille = "grand-groupe"
+pays = []
