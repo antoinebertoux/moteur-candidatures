@@ -86,12 +86,15 @@ missing = `manuel`), `statut`, `score`, `resume`, `lettre_demandee`, `lettre`
   `preparation_technique_demandee_le` (PREP-50). While a request is more recent than its
   sheet, a "Preparation in progress" chip shows. Once a sheet has arrived (`preparation`,
   `preparation_technique`), an "HR preparation" or "Technical preparation" button opens
-  it (Markdown shown formatted, readable on mobile) with its date, whatever the current
+  it (Markdown shown formatted, readable on mobile: headings, bold, italics, links,
+  numbered and bulleted lists, nested lists, tables, horizontal rules; a numbered list is
+  numbered 1, 2, 3… from its first number even when every item is written `1.` or items are
+  separated by blank lines or indented answers; a wide table scrolls sideways) with its date, whatever the current
   follow-up, and the request button becomes "Redo the preparation".
 - **PAGE-12** · Ad text: every application whose `texte_offre` is not empty shows a
   small, discreet "View ad text" link (French: "Voir le texte de l'offre"), smaller than
   the action buttons, whatever its step. It is read-only: it opens a window showing the
-  stored text as Markdown (headings, lists, bold; plain text shows as is), readable on
+  stored text as Markdown (same rendering as the PAGE-11 sheets; plain text shows as is), readable on
   mobile, with a "Copy" button and the ad link when it is http(s); nothing can be
   edited there. The text is kept in
   the page's database, so it stays readable after the employer removes the ad.

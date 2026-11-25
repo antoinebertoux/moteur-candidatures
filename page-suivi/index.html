@@ -108,6 +108,12 @@ body.depot .wrap{outline:3px dashed var(--accent);outline-offset:-6px}
 .fiche h3{font-size:15px;margin:12px 0 2px}
 .fiche p,.fiche ul,.fiche ol{margin:4px 0;max-width:75ch}
 .fiche ul,.fiche ol{padding-left:22px}
+.fiche hr{border:0;border-top:1px solid var(--line);margin:12px 0}
+.fiche li+li{margin-top:2px}
+.fiche .mdtable{overflow-x:auto;margin:8px 0}
+.fiche .mdtable table{border-collapse:collapse;font-size:13px}
+.fiche .mdtable th,.fiche .mdtable td{border:1px solid var(--line);padding:4px 8px;white-space:normal;vertical-align:top;min-width:8ch;overflow-wrap:normal}
+.fiche .mdtable th{background:var(--sunken);font-weight:600}
 .fiche code{font-family:var(--mono);font-size:13px;background:var(--sunken);border-radius:4px;padding:0 4px}
 .lang{position:relative}
 .lang-btn{display:inline-flex;align-items:center;gap:6px;padding:5px 8px;font-size:13px;font-family:var(--mono)}
@@ -508,31 +514,72 @@ function prepEnCours(d,kind){
   var p=PREP[kind];return !!d[p.req]&&String(d[p.req])>String(d[p.at]||"");
 }
 function prepPossible(d){return d.statut==="postulee"&&(d.suite==="entretien"||d.suite==="entretien_technique");}
-// Minimal Markdown for the sheet: everything is escaped first, only http(s) links are kept.
+// Minimal Markdown for the sheets and the ad text (PAGE-11, PAGE-12): everything is escaped
+// first, only http(s) links are kept.
 function mdInline(s){
   return esc(s).replace(/`([^`]+)`/g,"<code>$1</code>").replace(/\*\*([^*]+)\*\*/g,"<strong>$1</strong>")
     .replace(/(^|[^*])\*([^*\s][^*]*)\*/g,"$1<em>$2</em>")
     .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,function(_,txt,u){return '<a href="'+u+'" target="_blank" rel="noopener noreferrer">'+txt+'</a>';});
 }
 function md(src){
-  var out="",liste="",para=[];
-  function fermer(){if(para.length){out+="<p>"+para.map(mdInline).join("<br>")+"</p>";para=[];}if(liste){out+="</"+liste+">";liste="";}}
-  String(src||"").split(/\r?\n/).forEach(function(l){
-    var m;
-    if(!l.trim()){fermer();return;}
-    if((m=/^(#{1,4})\s+(.*)$/.exec(l))){fermer();var n=Math.min(m[1].length,3);out+="<h"+n+">"+mdInline(m[2])+"</h"+n+">";return;}
-    if((m=/^\s*(?:[-*]|(\d+)[.)])\s+(.*)$/.exec(l))){
-      var type=m[1]?"ol":"ul";
-      if(para.length){out+="<p>"+para.map(mdInline).join("<br>")+"</p>";para=[];}
-      if(liste!==type){if(liste)out+="</"+liste+">";out+="<"+type+">";liste=type;}
-      out+="<li>"+mdInline(m[2])+"</li>";return;
+  // Lists are a stack of {type, indent}; the current <li> stays open so that a nested list goes in it.
+  var out="",para=[],stack=[],lines=String(src||"").replace(/\t/g,"    ").split(/\r?\n/),i=0;
+  var ITEM=/^(\s*)(?:[-*+]|(\d+)[.)])\s+(.*)$/,SEP=/^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$/,HR=/^\s{0,3}([-*_])(\s*\1){2,}\s*$/;
+  function flushPara(){if(para.length){out+="<p>"+para.map(mdInline).join("<br>")+"</p>";para=[];}}
+  function closeList(){var top=stack.pop();out+="</li></"+top.type+">";}
+  function closeAll(){flushPara();while(stack.length)closeList();}
+  function indent(l){return /^\s*/.exec(l)[0].length;}
+  function cells(l){
+    l=l.trim().replace(/^\|/,"").replace(/(^|[^\\])\|$/,"$1");
+    return l.replace(/\\\|/g,"\u0000").split("|").map(function(c){return c.trim().replace(/\u0000/g,"|");});
+  }
+  function isTable(k){return k+1<lines.length&&lines[k].indexOf("|")>=0&&lines[k+1].indexOf("|")>=0&&SEP.test(lines[k+1])&&lines[k+1].indexOf("-")>=0;}
+  for(;i<lines.length;i++){
+    var l=lines[i],m;
+    if(!l.trim()){
+      flushPara();
+      if(stack.length){
+        // A blank line keeps the list open when the next text is another item or an indented answer.
+        var j=i+1;while(j<lines.length&&!lines[j].trim())j++;
+        if(j<lines.length&&(ITEM.test(lines[j])||indent(lines[j])>stack[0].indent))continue;
+        closeAll();
+      }
+      continue;
     }
-    // An indented line right under a list item (a suggested answer) stays in that item.
-    if(liste&&/^\s+\S/.test(l)&&/<\/li>$/.test(out)){out=out.slice(0,-5)+"<br>"+mdInline(l.trim())+"</li>";return;}
-    if(liste){out+="</"+liste+">";liste="";}
+    if((m=/^\s{0,3}(#{1,6})\s+(.*?)\s*#*\s*$/.exec(l))){closeAll();var n=Math.min(m[1].length,3);out+="<h"+n+">"+mdInline(m[2])+"</h"+n+">";continue;}
+    if(HR.test(l)&&!(stack.length&&ITEM.test(l))){closeAll();out+="<hr>";continue;}
+    if(isTable(i)){
+      closeAll();
+      var head=cells(l),al=cells(lines[i+1]).map(function(c){return /^:-+:$/.test(c)?"center":/-:$/.test(c)?"right":"left";});
+      var h='<div class="mdtable"><table><thead><tr>'+head.map(function(c,k){return '<th style="text-align:'+(al[k]||"left")+'">'+mdInline(c)+"</th>";}).join("")+"</tr></thead><tbody>";
+      for(i+=2;i<lines.length&&lines[i].trim()&&lines[i].indexOf("|")>=0;i++){
+        var row=cells(lines[i]);
+        h+="<tr>"+head.map(function(_,k){return '<td style="text-align:'+(al[k]||"left")+'">'+mdInline(row[k]||"")+"</td>";}).join("")+"</tr>";
+      }
+      i--;out+=h+"</tbody></table></div>";continue;
+    }
+    if((m=ITEM.exec(l))){
+      flushPara();
+      var ind=m[1].length,type=m[2]?"ol":"ul";
+      while(stack.length&&ind<stack[stack.length-1].indent)closeList();
+      var top=stack[stack.length-1];
+      if(top&&ind<top.indent+2&&top.type===type)out+="</li><li>";
+      else{
+        if(top&&ind<top.indent+2)closeList();
+        var start=m[2]&&+m[2]!==1?' start="'+(+m[2])+'"':"";
+        out+="<"+type+start+"><li>";stack.push({type:type,indent:ind});
+      }
+      out+=mdInline(m[3]);continue;
+    }
+    // An indented line under a list item (a suggested answer) stays in that item.
+    if(stack.length&&indent(l)>stack[0].indent){
+      while(stack.length>1&&indent(l)<=stack[stack.length-1].indent)closeList();
+      out+=(/<\/[ou]l>$/.test(out)?"":"<br>")+mdInline(l.trim());continue;
+    }
+    if(stack.length)closeAll();
     para.push(l.trim());
-  });
-  fermer();
+  }
+  closeAll();
   return out;
 }
 function dateFiche(s){var d=new Date(s);return isNaN(d)?"":d.toLocaleString(locale(),{day:"numeric",month:"long",hour:"2-digit",minute:"2-digit"});}
