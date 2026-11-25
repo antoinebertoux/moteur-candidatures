@@ -43,6 +43,7 @@ AtsType = Literal[
     "rippling",
     "talentry",
     "join",
+    "eightfold",
     "",
 ]
 
