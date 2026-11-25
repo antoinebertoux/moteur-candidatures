@@ -35,16 +35,18 @@ original user: `~/Téléchargements/Recherche emploi/`). If it is not connected,
 with `device_request_folder_access`.
 
 - CV: `cv_ref`, path relative to the work folder. Letter: `lettre_ref` (may be empty).
-- Facts for the forms, in this order: `moteur/prive/profil-candidature.md` (template:
-  [`profil-candidature.exemple.md`](profil-candidature.exemple.md)), then
-  `latex/commun/coordonnees.tex`, then the CV itself.
-- If `profil-candidature.md` does not exist, create it from the template with what the
+- Facts for the forms, in this order: `latex/commun/infos-candidature.md` (personal,
+  ignored by Git; template:
+  [`latex-exemple/commun/infos-candidature.exemple.md`](../../latex-exemple/commun/infos-candidature.exemple.md)),
+  then `latex/commun/coordonnees.tex`, then the CV itself. Follow the instructions
+  written in it (e.g. "demander à …").
+- If `infos-candidature.md` does not exist, create it from the template with what the
   other files give, ask User for the rest, and save it.
 
 Facts found there may be entered without asking: identity, contact details, address,
 nationality, gender, diversity survey answers, languages, degrees, experience, current
 job, notice period, work authorisation, links. A factual question the files do not
-answer: ask User, then offer to add the answer to `profil-candidature.md`.
+answer: ask User, then offer to add the answer to `infos-candidature.md`.
 
 ## 3. Open the form and accounts (APPLY-04, APPLY-05)
 
@@ -74,10 +76,10 @@ Open the ad's `url` in the browser (User's preferred one), find "Postuler" / "Ap
 - **Free text: always propose, User validates.** Every free-text answer (motivation,
   "why us", "why this role", cover letter box, additional information, open questions):
   draft it from the ad (`texte_offre`), the letter, the CV and the rules of
-  `profil-candidature.md`; show it; enter exactly the validated version. Invent no fact
+  `infos-candidature.md`; show it; enter exactly the validated version. Invent no fact
   about User.
 - Choice questions that are not facts in the files (relocation, travel, availability
-  date, sponsorship…): answer from `profil-candidature.md` when it covers them,
+  date, sponsorship…): answer from `infos-candidature.md` when it covers them,
   otherwise ask.
 - Ask everything an application needs **in one message** (salary, every free text,
   missing facts), not one question per message.
@@ -97,7 +99,7 @@ confirmation (page or message) before going on.
 2. Engine B: if the `moteur` tools are there, call `decisions` with the updated document
    (`{"candidatures": [<data with its id>]}`) so that it closes it; otherwise the page
    does it at its next sync.
-3. Notes: write `candidature.md` in the application's folder: date sent, address of the
+3. Notes: write `reponses-formulaire.md` in the application's folder: date sent, address of the
    form, account used (site and e-mail, never a password), salary given, the validated
    free texts, the other notable answers.
 4. Folder: move it from `Candidatures/` to `Candidatures/sent/`, then update `cv_ref`

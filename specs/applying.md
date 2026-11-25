@@ -13,8 +13,9 @@ by a test.
 - **APPLY-02** · Only applications whose `statut` is `validee` (To send) are sent. An
   application in another status is not sent, even when User names it; Claude says so.
   *(untested: behaviour of Claude)*
-- **APPLY-03** · Facts entered in forms come from `prive/profil-candidature.md` (template
-  `skills/postuler/profil-candidature.exemple.md`), then `latex/commun/coordonnees.tex`,
+- **APPLY-03** · Facts entered in forms come from `latex/commun/infos-candidature.md`
+  (personal, ignored by Git; template `latex-exemple/commun/infos-candidature.exemple.md`),
+  then `latex/commun/coordonnees.tex`,
   then the CV. Claude enters them without asking; a fact found nowhere is asked, and
   may then be added to the profile. *(untested: behaviour of Claude)*
 
@@ -47,7 +48,7 @@ by a test.
 - **APPLY-11** · Once sent, the page's document gets `statut` `postulee`, and
   `date_postulee` and `date_maj` set to today; engine B is told through `decisions`
   when its tools are available. *(untested: behaviour of Claude)*
-- **APPLY-12** · Claude writes `candidature.md` in the application's folder: date,
+- **APPLY-12** · Claude writes `reponses-formulaire.md` in the application's folder: date,
   form address, account used (never a password), salary given, validated texts, other
   notable answers. *(untested: behaviour of Claude)*
 - **APPLY-13** · The application's folder moves to `Candidatures/sent/`, and `cv_ref` /

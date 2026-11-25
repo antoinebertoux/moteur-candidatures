@@ -145,6 +145,7 @@ Then replace Jane Doe with yourself:
 | File | What to put in it |
 | --- | --- |
 | `commun/coordonnees.tex` | name, e-mail, phone, LinkedIn, years of experience |
+| `commun/infos-candidature.md` | facts for application forms (personal, keep it out of Git; template `infos-candidature.exemple.md`) |
 | `cv/banque-fr.tex`, `cv/banque-en.tex` | **every** block you may want on a CV: titles, headlines with their `% Usage :` comment, skills, bullets, projects, interests. Claude only picks blocks; it never writes text |
 | `cv/modele-cv.tex` | your reference CV, built from the bank's macros |
 | `lettres/banque-paragraphes.md` | validated letter paragraphs: Claude invents no fact about you |
@@ -228,12 +229,12 @@ Ask Claude in the desktop app: "postule aux offres validées", "envoie la candid
 Alstom". The skill [`skills/postuler`](skills/postuler/SKILL.md) takes only the
 applications in **To send** in the tracking page, opens each employer's form in the
 browser and fills it with your CV, your letter and the facts of
-`prive/profil-candidature.md` (copy
-[`skills/postuler/profil-candidature.exemple.md`](skills/postuler/profil-candidature.exemple.md)
-there and fill it in). It always asks you for the salary, proposes every free-text
+`latex/commun/infos-candidature.md` (copy
+[`latex-exemple/commun/infos-candidature.exemple.md`](latex-exemple/commun/infos-candidature.exemple.md)
+there, fill it in and keep it out of Git). It always asks you for the salary, proposes every free-text
 answer for you to validate, applies without an account when the site allows it and
 otherwise waits for you to create the account. It sends only after your recap approval,
-then marks the application *Postulée*, writes `candidature.md` in its folder and moves the
+then marks the application *Postulée*, writes `reponses-formulaire.md` in its folder and moves the
 folder to `Candidatures/sent/` ([`specs/applying.md`](specs/applying.md)). Install it
 like the other skill.
 
