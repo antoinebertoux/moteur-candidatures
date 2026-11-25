@@ -68,6 +68,7 @@ code, at 0 tokens.
 | [interview-prep.md](interview-prep.md) | `PREP` | interview preparation sheet |
 | [company-links.md](company-links.md) | `LNK` | company website and LinkedIn links |
 | [cli.md](cli.md) | `CLI`, `SRV` | commands and local PDF server |
+| [applying.md](applying.md) | `APPLY` | sending approved applications with Claude (skill `postuler`) |
 | [tracking-page.md](tracking-page.md) | `PAGE` | tracking page (claude.ai artifact) |
 | [scheduled-tasks.md](scheduled-tasks.md) | `TACHE` | engine A: scheduled tasks |
 | this file | `INV` | invariants of the whole tool |
